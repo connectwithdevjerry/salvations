@@ -16,11 +16,53 @@ export interface TenantDocument extends Document {
   workspaceId: string;
 }
 
-/** Merges the workspace into any caller-supplied filter. */
+export class ScopeViolationError extends Error {
+  constructor(detail: string) {
+    super(
+      `${detail} The scope already determines the workspace, so naming it in a scoped ` +
+        'call is either a bug or an attempt to reach another tenant. Silently rewriting ' +
+        'it would hide both.',
+    );
+    this.name = 'ScopeViolationError';
+  }
+}
+
+/**
+ * Merges the workspace into a caller-supplied filter.
+ *
+ * A caller that specifies workspaceId is REJECTED rather than overridden. There
+ * is no legitimate reason for a scoped query to name a workspace — the scope
+ * has already fixed it — so an override would quietly turn a forged filter into
+ * a successful read of the caller's own data and leave the bug in place.
+ */
 const scopeFilter = <T extends TenantDocument>(
   workspaceId: string,
   filter: Filter<T> = {},
-): Filter<T> => ({ ...filter, workspaceId } as Filter<T>);
+): Filter<T> => {
+  if (Object.prototype.hasOwnProperty.call(filter, 'workspaceId')) {
+    throw new ScopeViolationError('Filter must not specify workspaceId.');
+  }
+  return { ...filter, workspaceId } as Filter<T>;
+};
+
+/**
+ * Inserts are more forgiving than filters: round-tripping a document read from
+ * this same scope legitimately carries its workspaceId. A MATCHING value is
+ * accepted and a mismatching one is rejected, so forging stays loud without
+ * making read-modify-write awkward.
+ */
+const scopeInsert = <T extends TenantDocument>(
+  workspaceId: string,
+  doc: Record<string, unknown>,
+): T => {
+  const claimed = doc['workspaceId'];
+  if (claimed !== undefined && claimed !== workspaceId) {
+    throw new ScopeViolationError(
+      `Document claims workspace ${String(claimed)} but the scope is ${workspaceId}.`,
+    );
+  }
+  return { ...doc, workspaceId } as unknown as T;
+};
 
 export class ScopedCollection<T extends TenantDocument> {
   readonly #collection: Collection<T>;
@@ -35,39 +77,37 @@ export class ScopedCollection<T extends TenantDocument> {
     return this.#workspaceId;
   }
 
-  findOne(filter: Filter<T> = {}, options?: FindOptions): Promise<T | null> {
-    return this.#collection.findOne(scopeFilter(this.#workspaceId, filter), options) as Promise<T | null>;
+  async findOne(filter: Filter<T> = {}, options?: FindOptions): Promise<T | null> {
+    return (await this.#collection.findOne(scopeFilter(this.#workspaceId, filter), options)) as T | null;
   }
 
-  find(filter: Filter<T> = {}, options?: FindOptions): Promise<T[]> {
-    return this.#collection.find(scopeFilter(this.#workspaceId, filter), options).toArray() as Promise<T[]>;
+  async find(filter: Filter<T> = {}, options?: FindOptions): Promise<T[]> {
+    return (await this.#collection.find(scopeFilter(this.#workspaceId, filter), options).toArray()) as T[];
   }
 
-  countDocuments(filter: Filter<T> = {}): Promise<number> {
-    return this.#collection.countDocuments(scopeFilter(this.#workspaceId, filter));
+  async countDocuments(filter: Filter<T> = {}): Promise<number> {
+    return await this.#collection.countDocuments(scopeFilter(this.#workspaceId, filter));
   }
 
   async insertOne(doc: Omit<T, 'workspaceId'> & Partial<Pick<T, 'workspaceId'>>): Promise<T> {
-    // Stamped here rather than trusted from the caller: a caller that forgot is
-    // exactly the case this layer exists to make impossible.
-    const stamped = { ...doc, workspaceId: this.#workspaceId } as unknown as T;
+    const stamped = scopeInsert<T>(this.#workspaceId, doc as Record<string, unknown>);
     await this.#collection.insertOne(stamped as OptionalUnlessRequiredId<T>);
     return stamped;
   }
 
   async insertMany(docs: readonly (Omit<T, 'workspaceId'> & Partial<Pick<T, 'workspaceId'>>)[]): Promise<T[]> {
     if (docs.length === 0) return [];
-    const stamped = docs.map((d) => ({ ...d, workspaceId: this.#workspaceId }) as unknown as T);
+    const stamped = docs.map((d) => scopeInsert<T>(this.#workspaceId, d as Record<string, unknown>));
     await this.#collection.insertMany(stamped as OptionalUnlessRequiredId<T>[]);
     return stamped;
   }
 
-  updateOne(filter: Filter<T>, update: UpdateFilter<T>, options?: UpdateOptions) {
-    return this.#collection.updateOne(scopeFilter(this.#workspaceId, filter), update, options ?? {});
+  async updateOne(filter: Filter<T>, update: UpdateFilter<T>, options?: UpdateOptions) {
+    return await this.#collection.updateOne(scopeFilter(this.#workspaceId, filter), update, options ?? {});
   }
 
-  updateMany(filter: Filter<T>, update: UpdateFilter<T>, options?: UpdateOptions) {
-    return this.#collection.updateMany(scopeFilter(this.#workspaceId, filter), update, options ?? {});
+  async updateMany(filter: Filter<T>, update: UpdateFilter<T>, options?: UpdateOptions) {
+    return await this.#collection.updateMany(scopeFilter(this.#workspaceId, filter), update, options ?? {});
   }
 
   async findOneAndUpdate(
@@ -83,12 +123,12 @@ export class ScopedCollection<T extends TenantDocument> {
     return result as T | null;
   }
 
-  deleteOne(filter: Filter<T>) {
-    return this.#collection.deleteOne(scopeFilter(this.#workspaceId, filter));
+  async deleteOne(filter: Filter<T>) {
+    return await this.#collection.deleteOne(scopeFilter(this.#workspaceId, filter));
   }
 
-  deleteMany(filter: Filter<T>) {
-    return this.#collection.deleteMany(scopeFilter(this.#workspaceId, filter));
+  async deleteMany(filter: Filter<T>) {
+    return await this.#collection.deleteMany(scopeFilter(this.#workspaceId, filter));
   }
 
   /**

@@ -78,10 +78,12 @@ describe.skipIf(URI === undefined || URI === '')('tenant isolation (AC-10)', () 
     expect(agents[0]?._id).toBe(`agt_${WS_A}`);
   });
 
-  it('ignores a forged workspaceId in the caller’s filter', async () => {
+  it('refuses a filter that names a workspace, forged or not', async () => {
     const a = new ScopedDb(db, WS_A);
-    const forged = await a.collection('agents').find({ workspaceId: WS_B } as never);
-    expect(forged).toHaveLength(0);
+    await expect(a.collection('agents').find({ workspaceId: WS_B } as never))
+      .rejects.toThrow(/must not specify workspaceId/);
+    await expect(a.collection('agents').find({ workspaceId: WS_A } as never))
+      .rejects.toThrow(/must not specify workspaceId/);
   });
 
   it('cannot update another workspace’s document', async () => {
@@ -104,16 +106,28 @@ describe.skipIf(URI === undefined || URI === '')('tenant isolation (AC-10)', () 
     expect(await b.collection('credentials').countDocuments()).toBe(1);
   });
 
-  it('stamps inserts with the scope, not the caller’s claim', async () => {
+  it('refuses an insert that claims another workspace', async () => {
+    const a = new ScopedDb(db, WS_A);
+    await expect(a.collection('conversations').insertOne({
+      _id: 'cnv_forged', agentId: 'x', workspaceId: WS_B, status: 'active',
+      messageCount: 0, nextSeq: 1, createdAt: new Date(), updatedAt: new Date(),
+    } as never)).rejects.toThrow(/claims workspace/);
+
+    const b = new ScopedDb(db, WS_B);
+    expect(await b.collection('conversations').findOne({ _id: 'cnv_forged' } as never)).toBeNull();
+    expect(await a.collection('conversations').findOne({ _id: 'cnv_forged' } as never)).toBeNull();
+  });
+
+  it('stamps an insert that omits the workspace entirely', async () => {
     const a = new ScopedDb(db, WS_A);
     await a.collection('conversations').insertOne({
-      _id: 'cnv_forged', agentId: 'x', workspaceId: WS_B, status: 'active',
+      _id: 'cnv_stamped', agentId: 'x', status: 'active',
       messageCount: 0, nextSeq: 1, createdAt: new Date(), updatedAt: new Date(),
     } as never);
 
     const b = new ScopedDb(db, WS_B);
-    expect(await b.collection('conversations').findOne({ _id: 'cnv_forged' } as never)).toBeNull();
-    expect(await a.collection('conversations').findOne({ _id: 'cnv_forged' } as never)).not.toBeNull();
+    expect(await b.collection('conversations').findOne({ _id: 'cnv_stamped' } as never)).toBeNull();
+    expect(await a.collection('conversations').findOne({ _id: 'cnv_stamped' } as never)).not.toBeNull();
   });
 
   it('gates aggregations before any stage can reach data', async () => {

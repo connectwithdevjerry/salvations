@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Collection } from 'mongodb';
-import { ScopedCollection, ScopedDb, type TenantDocument } from './scoped.js';
+import { ScopedCollection, ScopedDb, ScopeViolationError, type TenantDocument } from './scoped.js';
 
 interface Recorded { op: string; args: unknown[] }
 
@@ -52,10 +52,15 @@ describe('ScopedCollection — every read is scoped', () => {
     expect(calls[0]?.args[0]).toEqual({ status: 'queued', workspaceId: WS });
   });
 
-  it('overrides a caller-supplied workspaceId — the caller does not get to choose', async () => {
+  it('rejects a filter that names a workspace at all', async () => {
+    // Overriding silently would turn a forged filter into a successful read of
+    // the caller's OWN data — safe, but it hides the bug. Loud is better here.
     const { sc, calls } = scoped();
-    await sc.findOne({ workspaceId: 'wks_ATTACKER' } as never);
-    expect(calls[0]?.args[0]).toEqual({ workspaceId: WS });
+    await expect(sc.findOne({ workspaceId: 'wks_ATTACKER' } as never))
+      .rejects.toThrow(ScopeViolationError);
+    await expect(sc.findOne({ workspaceId: WS } as never))
+      .rejects.toThrow(ScopeViolationError);
+    expect(calls).toHaveLength(0);
   });
 
   it('scopes find, count, update, delete and findOneAndUpdate alike', async () => {
@@ -82,16 +87,22 @@ describe('ScopedCollection — every write is stamped', () => {
     expect(calls[0]?.args[0]).toMatchObject({ workspaceId: WS });
   });
 
-  it('overrides a forged workspace on insert', async () => {
+  it('rejects an insert claiming another workspace, but allows a matching one', async () => {
+    // Inserts are more forgiving than filters: re-writing a document read from
+    // this same scope legitimately carries its workspaceId.
     const { sc } = scoped();
-    const doc = await sc.insertOne({ _id: 'a', workspaceId: 'wks_ATTACKER' });
-    expect(doc.workspaceId).toBe(WS);
+    await expect(sc.insertOne({ _id: 'a', workspaceId: 'wks_ATTACKER' }))
+      .rejects.toThrow(ScopeViolationError);
+    const ok = await sc.insertOne({ _id: 'b', workspaceId: WS });
+    expect(ok.workspaceId).toBe(WS);
   });
 
-  it('stamps every document in insertMany', async () => {
+  it('stamps every document in insertMany and rejects any forged member', async () => {
     const { sc } = scoped();
-    const docs = await sc.insertMany([{ _id: 'a' }, { _id: 'b', workspaceId: 'wks_X' }]);
+    const docs = await sc.insertMany([{ _id: 'a' }, { _id: 'b', workspaceId: WS }]);
     expect(docs.map((d) => d.workspaceId)).toEqual([WS, WS]);
+    await expect(sc.insertMany([{ _id: 'c' }, { _id: 'd', workspaceId: 'wks_X' }]))
+      .rejects.toThrow(ScopeViolationError);
   });
 
   it('short-circuits an empty insertMany without touching the driver', async () => {

@@ -184,6 +184,34 @@ Change streams need a replica set; Atlas clusters always are. A `PollingEventBus
 
 ---
 
+## 3.5 Current deployment
+
+| Fact | Value |
+|---|---|
+| Vercel project | `salvations` (`prj_mBtq5RkZZmzniXFbL1iQ9El0gG0z`) |
+| Team | Kenny's projects — **hobby plan** |
+| Repository | `connectwithdevjerry/salvations` (**public**) |
+| Production branch | `claude/epic-gates-clsnom` |
+| Root directory | `apps/web` (pnpm workspace; Vercel installs from the repo root) |
+| Region | `iad1` |
+| Production URL | https://salvations-delta.vercel.app |
+
+Two constraints this imposes, both worth revisiting before Phase 1 ships:
+
+- **Hobby plan caps function duration at 300 s.** §1 assumes up to 800 s on
+  Pro. The sliced executor still works — `RESERVE_MS` and slice length are
+  configuration — but slices are shorter, so runs yield and resume more often.
+  Tune `RESERVE_MS` against the p95 step, not the maximum, and expect a higher
+  slice-yield rate on this plan.
+- **The production branch is a feature branch**, because the repository had no
+  other branch when the project was linked. Once `main` exists, switch the
+  project's production branch to it so feature work stops deploying to
+  production.
+
+No environment variables are set yet. Before the data layer lands, the project
+needs `MONGODB_URI`, `MONGODB_DB_NAME`, `BETTER_AUTH_SECRET`, `CREDENTIAL_KEK`,
+`INTERNAL_HMAC_SECRET` and `PUBLIC_BASE_URL` — see `.env.example`.
+
 ## 4. Environments
 
 | Environment | Vercel | Atlas | Notes |

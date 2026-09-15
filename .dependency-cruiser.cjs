@@ -69,6 +69,7 @@ module.exports = {
         pathNot: [
           '\\.d\\.ts$', 'index\\.ts$', '(^|/)tsconfig',
           '^apps/web/src/app/.*\\.tsx?$', '^apps/[^/]+/src/main\\.ts$',
+          '(^|/)next\\.config\\.ts$', '(^|/)next-env\\.d\\.ts$',
         ],
       },
       to: {},
@@ -76,6 +77,8 @@ module.exports = {
   ],
   options: {
     doNotFollow: { path: 'node_modules' },
+    // Build output is generated, not authored — cruising it reports noise.
+    exclude: { path: '(^|/)(\\.next|\\.turbo|dist|coverage)/' },
     tsConfig: { fileName: 'tsconfig.base.json' },
     tsPreCompilationDeps: true,
     enhancedResolveOptions: { exportsFields: ['exports'], conditionNames: ['import', 'require', 'default'] },

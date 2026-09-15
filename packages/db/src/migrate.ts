@@ -6,6 +6,7 @@
  */
 import { MongoClient } from 'mongodb';
 import { syncIndexes, indexCount } from './indexes';
+import { syncValidators, unvalidatedCollections } from './validators';
 
 export async function runMigrations(uri: string, dbName: string): Promise<void> {
   // Command monitoring is off here: migrations are platform-wide by definition
@@ -14,6 +15,18 @@ export async function runMigrations(uri: string, dbName: string): Promise<void> 
   try {
     await client.connect();
     const db = client.db(dbName);
+
+    // Validators first: a collection created by an index sync would otherwise
+    // exist without one, and collMod cannot retroactively validate what is
+    // already inside it.
+    const validators = await syncValidators(db);
+    process.stdout.write(`validators: ${validators.applied.length} applied\n`);
+    for (const problem of validators.skipped) process.stderr.write(`  ! ${problem}\n`);
+
+    const pending = unvalidatedCollections();
+    if (pending.length > 0) {
+      process.stdout.write(`  (no validator yet: ${pending.join(', ')})\n`);
+    }
 
     const result = await syncIndexes(db);
     process.stdout.write(

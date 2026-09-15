@@ -220,6 +220,25 @@ needs `MONGODB_URI`, `MONGODB_DB_NAME`, `BETTER_AUTH_SECRET`, `CREDENTIAL_KEK`,
 | Preview | Vercel Preview (per PR) | shared preview cluster, **database per branch** | seeded; never shares a DB with production |
 | Production | Vercel Production | dedicated M10+ | |
 
+**Database users** — generate the role script with `pnpm db:roles`, review it, and run it
+against the cluster's `admin` database. It creates two users:
+
+| User | Can | Cannot |
+|---|---|---|
+| `salvations_app` | CRUD on every collection; **find + insert only** on `auditLog` | create/drop collections, manage indexes, update or delete audit entries |
+| `salvations_migrate` | schema and index management (`createCollection`, `createIndex`, `collMod`) | `dropDatabase` |
+
+The app role enumerates privileges **per collection on purpose**. MongoDB unions
+privileges across matching resources, so a single database-wide write grant would
+silently re-grant `update` and `remove` on `auditLog` and defeat its append-only
+guarantee. The generated script ends with two commands that must fail — run them, so the
+guarantee is verified rather than assumed.
+
+Schema and indexes are applied by `pnpm db:migrate`, which runs as the migrate user.
+Validators are applied before indexes, because a collection created by an index sync
+would otherwise exist without one, and `collMod` cannot retroactively validate rows that
+are already inside it.
+
 **Atlas configuration (all environments)**
 - Network: IP access list. Vercel egress is not a fixed IP on all plans — Phase 1 uses Atlas
   **Network Peering / Private Endpoint where the plan allows**, otherwise a documented,

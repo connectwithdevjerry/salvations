@@ -49,15 +49,15 @@ Companion to [ARCHITECTURE.md](./ARCHITECTURE.md) and the documents in [docs/](.
       `$lookup`/`$unionWith` sub-pipeline enforcement, audited `unsafeUnscoped()` escape hatch
 - [x] 🔒 **Command-monitoring tenancy guard** — throws in dev/test/CI, alerts in prod; small
       reviewed allowlist (Better Auth globals, `runs` claim index, platform catalog)
-- [ ] Collection definitions + `$jsonSchema` validators generated from Zod
+- [x] Collection definitions + `$jsonSchema` validators generated from Zod
 - [x] All indexes from `DATA-MODEL.md` §8; idempotent index-sync migration runner
 - [x] Mappers (`toDomain` / `toDocument`); UUIDv7 ID generation
-- [ ] Repositories: workspaces, apiKeys, agents, agentVersions, providerConfigs, modelBindings,
+- [x] Repositories: workspaces, apiKeys, agents, agentVersions, providerConfigs, modelBindings,
       credentials, oauthConnections, mcpServers, mcpServerBindings, mcpCapabilities, policies,
       conversations, messages, runs, runSteps, runEvents, approvals, channels, auditLog, usageDaily
-- [ ] Seed script (demo workspace, agent, provider configs)
+- [x] Seed script (demo workspace, agent, provider configs)
 - [x] 🔒 **(AC-10)** Adversarial tenant-isolation suite — every repository method, wrong workspace
-- [ ] Atlas setup: separate `app` / `migrate` users; `app` has no update/delete on `auditLog`
+- [x] Atlas setup: separate `app` / `migrate` users; `app` has no update/delete on `auditLog`
 
 ### 1.3 Crypto & secrets
 

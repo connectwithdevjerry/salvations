@@ -61,28 +61,28 @@ Companion to [ARCHITECTURE.md](./ARCHITECTURE.md) and the documents in [docs/](.
 
 ### 1.3 Crypto & secrets
 
-- [ ] `KeyProvider` port; `LocalFileKeyProvider` (dev) + `EnvKeyProvider` (Vercel);
+- [x] `KeyProvider` port; `LocalFileKeyProvider` (dev) + `EnvKeyProvider` (Vercel);
       `KmsKeyProvider` / `VaultKeyProvider` interfaces stubbed
-- [ ] 🔒 Envelope encryption (AES-256-GCM, per-credential DEK, workspace KEK, `kekVersion`)
-- [ ] `CredentialResolver` — short-lived, non-serialisable handles
-- [ ] 🔒 Redaction: schema-driven + entropy heuristic; applied at write time
-- [ ] 🔒 **(AC-17)** Redaction corpus test across runs / steps / events / audit / logs
-- [ ] Online KEK rotation path
+- [x] 🔒 Envelope encryption (AES-256-GCM, per-credential DEK, workspace KEK, `kekVersion`)
+- [x] `CredentialResolver` — short-lived, non-serialisable handles
+- [x] 🔒 Redaction: schema-driven + entropy heuristic; applied at write time
+- [x] 🔒 **(AC-17)** Redaction corpus test across runs / steps / events / audit / logs
+- [x] Online KEK rotation path
 
 ### 1.4 Auth & authorization 🔒
 
-- [ ] Better Auth + `@better-auth/mongo-adapter`: email/password (Argon2id), one OAuth provider,
+- [x] Better Auth + `@better-auth/mongo-adapter`: email/password (Argon2id), one OAuth provider,
       TOTP 2FA, email verification, rate limiting
-- [ ] Session hardening: httpOnly/SameSite/Secure, rotation, global revocation on credential change
-- [ ] Workspaces: create, invite (hashed tokens), accept, membership, role changes — all via
+- [x] Session hardening: httpOnly/SameSite/Secure, rotation, global revocation on credential change
+- [x] Workspaces: create, invite (hashed tokens), accept, membership, role changes — all via
       targeted `$push`/`$pull`/arrayFilter updates, never whole-array rewrites
-- [ ] API keys: `sk_<env>_<prefix>_<secret>`, SHA-256 storage, constant-time compare
-- [ ] `Principal` resolution middleware + `WorkspaceScope` derivation
-- [ ] 🔒 RBAC permission sets + **server-side** route guards (UI hiding is never enforcement)
-- [ ] 🔒 `PermissionBroker` — full evaluation order, deny-wins, annotations-as-floor, fail-closed
-- [ ] 🔒 Delegation: `effective(agent) = agentVersion ∩ onBehalfOf ∩ workspacePolicy`, snapshotted
+- [x] API keys: `sk_<env>_<prefix>_<secret>`, SHA-256 storage, constant-time compare
+- [x] `Principal` resolution middleware + `WorkspaceScope` derivation
+- [x] 🔒 RBAC permission sets + **server-side** route guards (UI hiding is never enforcement)
+- [x] 🔒 `PermissionBroker` — full evaluation order, deny-wins, annotations-as-floor, fail-closed
+- [x] 🔒 Delegation: `effective(agent) = agentVersion ∩ onBehalfOf ∩ workspacePolicy`, snapshotted
       into `run.principal`, **re-validated on resume**
-- [ ] 🔒 HMAC auth for `/api/internal/*` — unreachable with a session cookie
+- [x] 🔒 HMAC auth for `/api/internal/*` — unreachable with a session cookie
 - [ ] **(AC-1)** end-to-end signup → workspace → invite → shared agent
 
 ### 1.5 Provider abstraction ⚓
@@ -146,7 +146,7 @@ Companion to [ARCHITECTURE.md](./ARCHITECTURE.md) and the documents in [docs/](.
 - [ ] `SlicedExecutor` — loop to deadline − `RESERVE_MS`, persist, release, re-queue, continue
 - [ ] `BackgroundTrigger` port + Vercel implementation (`waitUntil` + HMAC self-call) — **the only
       Vercel-aware adapter**
-- [ ] `/api/internal/execute` (maxDuration 800) and `/api/internal/sweep` (stalled-lease reclaim)
+- [x] `/api/internal/execute` (maxDuration 800) and `/api/internal/sweep` (stalled-lease reclaim)
 - [ ] `attempts` cap → clean failure with partial result
 - [ ] 🔒 **(AC-9)** kill executor mid-run **and** force a lease steal → completes once, no duplicate
       side effects

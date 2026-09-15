@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { hashApiKey, mintApiKey, parseApiKey, verifyApiKey } from './api-key.js';
-import { Secret } from './secret.js';
+import { hashApiKey, mintApiKey, parseApiKey, verifyApiKey } from './api-key';
+import { Secret } from './secret';
 
 describe('api keys', () => {
   it('mints a parseable key and returns it exactly once, wrapped', () => {

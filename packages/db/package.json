@@ -3,7 +3,17 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "exports": { ".": "./src/index.ts", "./*": "./src/*.ts" },
-  "scripts": { "typecheck": "tsc --noEmit -p tsconfig.json" },
-  "dependencies": { "mongodb": "^7.6.0", "zod": "^4.6.5", "@salvations/core": "workspace:*" }
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "mongodb": "^7.6.0",
+    "zod": "^4.6.5",
+    "@salvations/core": "workspace:*",
+    "@salvations/crypto": "workspace:*"
+  }
 }

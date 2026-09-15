@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, afterEach } from 'vitest';
 import { inspect } from 'node:util';
-import { EphemeralSecret, Secret, isSecret } from './secret.js';
+import { EphemeralSecret, Secret, isSecret } from './secret';
 
 afterEach(() => { vi.useRealTimers(); });
 

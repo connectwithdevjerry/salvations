@@ -1,7 +1,7 @@
-import type { AgentId, ConversationId, ModelBindingId, RunId, WorkspaceId } from '../ids.js';
-import type { AgentSnapshot, RunBudget, RunConsumption } from '../entities/run.js';
-import type { Principal } from '../entities/principal.js';
-import type { ModelCapabilities, ProviderKey } from './index-types.js';
+import type { AgentId, ConversationId, ModelBindingId, RunId, WorkspaceId } from '../ids';
+import type { AgentSnapshot, RunBudget, RunConsumption } from '../entities/run';
+import type { Principal } from '../entities/principal';
+import type { ModelCapabilities, ProviderKey } from './index-types';
 
 /** Immutable frame resolved once per run and read by every phase. */
 export interface RunContext {

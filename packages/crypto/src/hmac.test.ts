@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   SIGNATURE_HEADER, TIMESTAMP_HEADER, generateHmacSecret, sign, verify,
   type SignedHeaders, type VerifyResult, type VerifyFailure,
-} from './hmac.js';
+} from './hmac';
 
 const SECRET = 'internal-secret';
 const NOW = 1_789_000_000_000;

@@ -11,8 +11,8 @@
  * tool is still approved, and no cross-document race to reason about.
  */
 import { createHash } from 'node:crypto';
-import type { McpCapabilityDoc } from '../documents.js';
-import type { ScopedCollection } from '../scoped.js';
+import type { McpCapabilityDoc } from '../documents';
+import type { ScopedCollection } from '../scoped';
 
 export interface DiscoveredCapability {
   readonly kind: 'tool' | 'resource' | 'resource_template' | 'prompt';

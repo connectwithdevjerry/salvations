@@ -5,8 +5,8 @@
  * The runtime must never ask which vendor it is talking to — see
  * docs/PROVIDER-ABSTRACTION.md §1 and the `no-provider-branching` lint rule.
  */
-import type { AgentId, RunId, WorkspaceId } from '../ids.js';
-import type { CanonicalMessage, ContentBlock } from './conversation.js';
+import type { AgentId, RunId, WorkspaceId } from '../ids';
+import type { CanonicalMessage, ContentBlock } from './conversation';
 
 /**
  * An opaque adapter identifier.

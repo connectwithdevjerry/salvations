@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { EnvelopeCipher, DecryptionError, safeEqual, type CredentialBinding } from './envelope.js';
-import { InMemoryKeyProvider, ephemeralKeyProvider, generateKek, envKeyProvider, InvalidKeyError } from './key-provider.js';
-import { Secret } from './secret.js';
+import { EnvelopeCipher, DecryptionError, safeEqual, type CredentialBinding } from './envelope';
+import { InMemoryKeyProvider, ephemeralKeyProvider, generateKek, envKeyProvider, InvalidKeyError } from './key-provider';
+import { Secret } from './secret';
 
 const binding: CredentialBinding = {
   workspaceId: 'wks_a', credentialId: 'crd_1', kind: 'api_key',

@@ -8,11 +8,11 @@
  *   - Fail closed. No matching rule means the workspace default, which ships as 'ask'.
  *   - Server-supplied metadata can only TIGHTEN a decision, never loosen it.
  */
-import type { McpBindingId, PolicyId, WorkspaceId } from '../ids.js';
-import type { McpCapability, TrustTier } from '../entities/mcp.js';
-import { capabilityBlockReason } from '../entities/mcp.js';
-import type { PermissionEffect } from '../entities/run.js';
-import { globMatches, patternSpecificity } from './pattern.js';
+import type { McpBindingId, PolicyId, WorkspaceId } from '../ids';
+import type { McpCapability, TrustTier } from '../entities/mcp';
+import { capabilityBlockReason } from '../entities/mcp';
+import type { PermissionEffect } from '../entities/run';
+import { globMatches, patternSpecificity } from './pattern';
 
 export type PolicyScopeType = 'workspace' | 'agent' | 'member' | 'apiKey' | 'channel';
 

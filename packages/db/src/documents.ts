@@ -6,7 +6,7 @@
  * storage change never ripples into the domain and `_id` never leaks upward.
  */
 import type { Document } from 'mongodb';
-import type { TenantDocument } from './scoped.js';
+import type { TenantDocument } from './scoped';
 
 export interface BaseDoc extends Document {
   _id: string;

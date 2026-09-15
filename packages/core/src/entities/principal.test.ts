@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { effectiveGrants, hasPermission, rootUserId, type Principal } from './principal.js';
-import { asId } from '../ids.js';
-import type { AgentId, ApiKeyId, RunId, UserId, WorkspaceId } from '../ids.js';
+import { effectiveGrants, hasPermission, rootUserId, type Principal } from './principal';
+import { asId } from '../ids';
+import type { AgentId, ApiKeyId, RunId, UserId, WorkspaceId } from '../ids';
 
 const WS = asId<WorkspaceId>('wks_1');
 const USER = asId<UserId>('usr_1');

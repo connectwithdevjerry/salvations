@@ -6,7 +6,7 @@
  * That is what lets one conversation continue across different vendors and
  * outlive any single vendor relationship.
  */
-import type { ConversationId, MessageId, RunId } from '../ids.js';
+import type { ConversationId, MessageId, RunId } from '../ids';
 
 export type MessageRole = 'user' | 'assistant' | 'tool' | 'system';
 

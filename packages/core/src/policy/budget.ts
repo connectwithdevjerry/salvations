@@ -1,7 +1,7 @@
 /**
  * Budget accounting. Enforced by the runtime, independent of any vendor feature.
  */
-import type { RunBudget, RunConsumption } from '../entities/run.js';
+import type { RunBudget, RunConsumption } from '../entities/run';
 
 export type BudgetBreach =
   | 'max_steps' | 'max_tool_calls' | 'max_tokens'

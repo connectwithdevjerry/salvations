@@ -8,7 +8,7 @@
  * HMAC over the request, using a secret distinct from every other secret.
  */
 import { createHmac, randomBytes } from 'node:crypto';
-import { safeEqual } from './envelope.js';
+import { safeEqual } from './envelope';
 
 export const SIGNATURE_HEADER = 'x-salvations-signature';
 export const TIMESTAMP_HEADER = 'x-salvations-timestamp';

@@ -4,17 +4,17 @@
  * Entities, ports and policy. No I/O, no driver, no SDK, no deployment platform.
  * The only runtime dependency permitted here is zod.
  */
-export * from './ids.js';
-export * from './errors.js';
+export * from './ids';
+export * from './errors';
 
-export * from './entities/conversation.js';
-export * from './entities/model.js';
-export * from './entities/run.js';
-export * from './entities/principal.js';
-export * from './entities/mcp.js';
+export * from './entities/conversation';
+export * from './entities/model';
+export * from './entities/run';
+export * from './entities/principal';
+export * from './entities/mcp';
 
-export * from './policy/pattern.js';
-export * from './policy/permission.js';
-export * from './policy/budget.js';
+export * from './policy/pattern';
+export * from './policy/permission';
+export * from './policy/budget';
 
-export * from './ports/index.js';
+export * from './ports/index';

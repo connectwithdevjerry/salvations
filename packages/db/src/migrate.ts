@@ -5,7 +5,7 @@
  * has no business changing schema. Idempotent, so it is safe on every deploy.
  */
 import { MongoClient } from 'mongodb';
-import { syncIndexes, indexCount } from './indexes.js';
+import { syncIndexes, indexCount } from './indexes';
 
 export async function runMigrations(uri: string, dbName: string): Promise<void> {
   // Command monitoring is off here: migrations are platform-wide by definition

@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
   CapabilityRepository, canonicalJson, computeDefinitionHash, type DiscoveredCapability,
-} from './capabilities.js';
+} from './capabilities';
 import { isCapabilityUsable, capabilityBlockReason } from '@salvations/core';
 import type { McpCapability } from '@salvations/core';
-import { capabilityToDomain } from './capability-mapper.js';
-import type { McpCapabilityDoc } from '../documents.js';
+import { capabilityToDomain } from './capability-mapper';
+import type { McpCapabilityDoc } from '../documents';
 
 const tool = (over: Partial<DiscoveredCapability> = {}): DiscoveredCapability => ({
   kind: 'tool',

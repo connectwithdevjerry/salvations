@@ -16,8 +16,8 @@
  *      a slow executor may still be mid-step when its lease lapses.
  */
 import type { Collection, Db } from 'mongodb';
-import type { RunDoc } from './documents.js';
-import { PlatformDb, type PlatformReason } from './scoped.js';
+import type { RunDoc } from './documents';
+import { PlatformDb, type PlatformReason } from './scoped';
 
 export type RunStatusLike =
   | 'queued' | 'running' | 'waiting_approval' | 'waiting_input' | 'waiting_tool'

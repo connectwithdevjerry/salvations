@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   analyzeCommand, filterConstrainsWorkspace, pipelineConstrainsWorkspace,
   handleCommandStarted, TenancyViolationError, defaultGuardMode,
-} from './guard.js';
+} from './guard';
 
 const WS = 'wks_1';
 

@@ -1,7 +1,7 @@
 /**
  * Principals — everything that can act. There is no ambient authority.
  */
-import type { AgentId, ApiKeyId, RunId, UserId, WorkspaceId } from '../ids.js';
+import type { AgentId, ApiKeyId, RunId, UserId, WorkspaceId } from '../ids';
 
 export type Role = 'owner' | 'admin' | 'member' | 'viewer';
 

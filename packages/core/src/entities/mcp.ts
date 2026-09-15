@@ -5,8 +5,8 @@
  * the definition invalidates approval in the same write — there is no window in
  * which a changed tool is still approved, and no join to get wrong.
  */
-import type { McpBindingId, McpCapabilityId, McpServerId, UserId, WorkspaceId } from '../ids.js';
-import type { JsonSchema } from './model.js';
+import type { McpBindingId, McpCapabilityId, McpServerId, UserId, WorkspaceId } from '../ids';
+import type { JsonSchema } from './model';
 
 export type McpTransport = 'streamable_http' | 'stdio';
 export type McpAuthMode = 'none' | 'oauth2' | 'header' | 'passthrough';

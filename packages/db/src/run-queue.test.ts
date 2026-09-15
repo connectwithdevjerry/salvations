@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Db } from 'mongodb';
-import { LeaseLostError, MongoRunQueue, backoffMs } from './run-queue.js';
-import { analyzeCommand } from './guard.js';
+import { LeaseLostError, MongoRunQueue, backoffMs } from './run-queue';
+import { analyzeCommand } from './guard';
 
 interface Call { op: string; filter?: unknown; update?: unknown; options?: Record<string, unknown> }
 

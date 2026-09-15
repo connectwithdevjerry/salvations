@@ -9,8 +9,8 @@ import type {
   Collection, Db, Document, Filter, FindOptions, OptionalUnlessRequiredId,
   UpdateFilter, UpdateOptions, WithoutId,
 } from 'mongodb';
-import { isTenantCollection, type CollectionName } from './collections.js';
-import { PLATFORM_MARKER } from './guard.js';
+import { isTenantCollection, type CollectionName } from './collections';
+import { PLATFORM_MARKER } from './guard';
 
 export interface TenantDocument extends Document {
   workspaceId: string;
@@ -205,7 +205,15 @@ export type PlatformReason =
   | 'queue-sweep'
   | 'migration'
   | 'catalog-read'
-  | 'index-sync';
+  | 'index-sync'
+  /**
+   * "Which workspaces does this user belong to?" is scoped by USER, not by
+   * workspace, so it cannot carry a workspaceId filter. It is narrow and
+   * legitimate — and it has to say so rather than slip past the guard.
+   */
+  | 'user-workspaces'
+  /** Resolving an API key by its prefix, before any workspace is known. */
+  | 'api-key-lookup';
 
 export class PlatformDb {
   readonly #db: Db;

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   REDACTED, isSensitiveKey, looksSecret, redact, sensitiveKeysFromSchema, shannonEntropy,
-} from './redaction.js';
-import { Secret, EphemeralSecret } from './secret.js';
+} from './redaction';
+import { Secret, EphemeralSecret } from './secret';
 
 /**
  * The AC-17 corpus: no secret material may be reachable from run steps, audit

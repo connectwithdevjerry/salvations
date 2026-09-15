@@ -1,7 +1,7 @@
 import type { McpCapability } from '@salvations/core';
 import type { McpBindingId, McpCapabilityId, WorkspaceId } from '@salvations/core';
-import type { McpCapabilityDoc } from '../documents.js';
-import { optional, toDomainId } from '../mappers.js';
+import type { McpCapabilityDoc } from '../documents';
+import { optional, toDomainId } from '../mappers';
 
 export function capabilityToDomain(doc: McpCapabilityDoc): McpCapability {
   return {

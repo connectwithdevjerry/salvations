@@ -9,8 +9,8 @@
  * key is persisted; the key itself is shown once, at creation.
  */
 import { createHash, randomBytes } from 'node:crypto';
-import { Secret } from './secret.js';
-import { safeEqual } from './envelope.js';
+import { Secret } from './secret';
+import { safeEqual } from './envelope';
 
 const PREFIX_BYTES = 6;
 const SECRET_BYTES = 24;

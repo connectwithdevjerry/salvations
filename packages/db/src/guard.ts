@@ -14,7 +14,7 @@
  * The analysis is a pure function over the command document, so it is fully
  * testable without a server.
  */
-import { tenancyOf } from './collections.js';
+import { tenancyOf } from './collections';
 
 /** A command deliberately crossing workspaces declares itself. */
 export const PLATFORM_MARKER = 'salvations:platform';

@@ -2,10 +2,10 @@
  * The ONLY path from the runtime to MCP. There is no second route and no
  * exemption for platform-owned servers.
  */
-import type { ToolDeclaration } from '../entities/model.js';
-import type { ContentBlock } from '../entities/conversation.js';
-import type { ApprovalId, McpBindingId } from '../ids.js';
-import type { RunContext } from './run-context.js';
+import type { ToolDeclaration } from '../entities/model';
+import type { ContentBlock } from '../entities/conversation';
+import type { ApprovalId, McpBindingId } from '../ids';
+import type { RunContext } from './run-context';
 
 export type ToolOutcome =
   | {

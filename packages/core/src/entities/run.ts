@@ -8,10 +8,10 @@
 import type {
   AgentId, AgentVersionId, ApprovalId, ConversationId, LeaseToken,
   McpBindingId, ModelBindingId, RunId, RunStepId, UserId, WorkspaceId,
-} from '../ids.js';
-import type { ProviderKey } from './conversation.js';
-import type { Usage } from './model.js';
-import type { Principal } from './principal.js';
+} from '../ids';
+import type { ProviderKey } from './conversation';
+import type { Usage } from './model';
+import type { Principal } from './principal';
 
 export type RunStatus =
   | 'queued'

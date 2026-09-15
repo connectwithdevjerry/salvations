@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   artifactsForModel, messageText, providerKey, shouldReplayArtifact, toolUseBlocks,
   type ContentBlock, type ProviderArtifacts,
-} from './conversation.js';
+} from './conversation';
 
 /**
  * The replay rule is the acceptance test for cross-vendor continuation (AC-6).

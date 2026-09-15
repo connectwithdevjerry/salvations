@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { newId, uuidv7 } from './ids.js';
+import { newId, uuidv7 } from './ids';
 
 describe('uuidv7', () => {
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;

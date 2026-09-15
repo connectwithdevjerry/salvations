@@ -9,10 +9,10 @@
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { MongoClient, type Db } from 'mongodb';
-import { ScopedDb } from './scoped.js';
-import { handleCommandStarted, TenancyViolationError, type GuardViolation } from './guard.js';
-import { TENANT_COLLECTIONS } from './collections.js';
-import { syncIndexes } from './indexes.js';
+import { ScopedDb } from './scoped';
+import { handleCommandStarted, TenancyViolationError, type GuardViolation } from './guard';
+import { TENANT_COLLECTIONS } from './collections';
+import { syncIndexes } from './indexes';
 
 const URI = process.env['MONGODB_URI'];
 const DB_NAME = `${process.env['MONGODB_DB_NAME'] ?? 'salvations_test'}_isolation`;

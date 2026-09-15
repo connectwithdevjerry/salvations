@@ -3,9 +3,9 @@
  *
  * Plaintext never leaves this boundary except through an explicit `expose()`.
  */
-export * from './secret.js';
-export * from './key-provider.js';
-export * from './envelope.js';
-export * from './redaction.js';
-export * from './api-key.js';
-export * from './hmac.js';
+export * from './secret';
+export * from './key-provider';
+export * from './envelope';
+export * from './redaction';
+export * from './api-key';
+export * from './hmac';

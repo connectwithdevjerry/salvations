@@ -13,7 +13,7 @@
  */
 import { createCipheriv, createDecipheriv, randomBytes, timingSafeEqual } from 'node:crypto';
 import type { KeyProvider } from '@salvations/core';
-import { Secret } from './secret.js';
+import { Secret } from './secret';
 
 const ALGORITHM = 'aes-256-gcm';
 const IV_BYTES = 12;

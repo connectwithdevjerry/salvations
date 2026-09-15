@@ -5,8 +5,8 @@
  * is the entire migration strategy: a serverless slice and a long-lived worker
  * differ only in how long they are willing to keep looping.
  */
-import type { RunId, LeaseToken, WorkspaceId } from '../ids.js';
-import type { Run, RunEvent, RunStatus } from '../entities/run.js';
+import type { RunId, LeaseToken, WorkspaceId } from '../ids';
+import type { Run, RunEvent, RunStatus } from '../entities/run';
 
 /** Remaining wall clock for this execution slice. */
 export interface Deadline {

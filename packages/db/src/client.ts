@@ -9,7 +9,7 @@
 import { MongoClient, type Db, type MongoClientOptions } from 'mongodb';
 import {
   defaultGuardMode, handleCommandStarted, type GuardMode, type GuardViolation,
-} from './guard.js';
+} from './guard';
 
 export interface DbConfig {
   readonly uri: string;

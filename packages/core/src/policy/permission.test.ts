@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { decidePermission, type PermissionInput, type PolicyDocument } from './permission.js';
-import type { McpCapability, TrustTier } from '../entities/mcp.js';
-import { asId } from '../ids.js';
-import type { McpBindingId, PolicyId, WorkspaceId } from '../ids.js';
+import { decidePermission, type PermissionInput, type PolicyDocument } from './permission';
+import type { McpCapability, TrustTier } from '../entities/mcp';
+import { asId } from '../ids';
+import type { McpBindingId, PolicyId, WorkspaceId } from '../ids';
 
 const WS = asId<WorkspaceId>('wks_1');
 const BINDING = asId<McpBindingId>('mcb_linear');

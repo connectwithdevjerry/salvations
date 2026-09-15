@@ -7,7 +7,7 @@
  * operation that must see across workspaces to schedule fairly.
  */
 import type { Db, IndexSpecification, CreateIndexesOptions } from 'mongodb';
-import type { CollectionName } from './collections.js';
+import type { CollectionName } from './collections';
 
 export interface IndexDef {
   readonly name: string;

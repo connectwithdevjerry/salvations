@@ -8,7 +8,7 @@
 import type {
   EmbeddingRequest, EmbeddingResult, GenerationRequest, ModelCapabilities,
   ProviderEvent, ProviderType, TokenCount,
-} from '../entities/model.js';
+} from '../entities/model';
 
 export interface AgentProvider {
   readonly providerType: ProviderType;

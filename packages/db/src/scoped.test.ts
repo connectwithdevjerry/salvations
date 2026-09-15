@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Collection } from 'mongodb';
-import { ScopedCollection, ScopedDb, ScopeViolationError, type TenantDocument } from './scoped.js';
+import { ScopedCollection, ScopedDb, ScopeViolationError, type TenantDocument } from './scoped';
 
 interface Recorded { op: string; args: unknown[] }
 

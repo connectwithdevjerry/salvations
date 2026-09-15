@@ -18,6 +18,17 @@ export {
 } from './gateway';
 
 export {
+  CapabilityDiscovery,
+  type DiscoveryOptions, type DiscoveryOutcome,
+} from './discovery';
+
+export {
+  BindingUnavailableError, MAX_TOOL_TIMEOUT_MS, McpServerRegistry, effectiveMrtrPolicy,
+  type BindingRecord, type BindingSource, type BindingStatus, type ConnectionAuthSource,
+  type ResolvedBinding, type ServerRecord,
+} from './registry';
+
+export {
   DEFAULT_MRTR_POLICY, classifyInputRequest, classifyInputRequests, decideMrtr, isInputRequired,
   requestStateFingerprint,
   type ClassifiedInputRequest, type InputRequestKind, type MrtrContinuation, type MrtrDecision,
@@ -37,7 +48,8 @@ export {
 } from './resilience';
 
 export {
-  MAX_TTL_MS, ScopedResponseCache, cacheKeyFor, clampTtl, parseCacheScope, type CacheScope,
+  MAX_TTL_MS, ScopedResponseCache, cacheKeyFor, clampTtl, isShareableAcrossUsers,
+  parseCacheScope, type CacheScope,
 } from './cache';
 
 export {

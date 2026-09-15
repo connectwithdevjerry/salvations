@@ -119,6 +119,24 @@ export const capabilityBlockReason = (
   return undefined;
 };
 
+/**
+ * One capability as a server just described it, before it is persisted.
+ *
+ * Lives in the domain rather than in the MCP or database package because both
+ * sides speak it: discovery produces it, the capability store reconciles it,
+ * and neither should have to import the other to name it.
+ */
+export interface DiscoveredCapability {
+  readonly kind: CapabilityKind;
+  readonly name: string;
+  readonly canonicalName: string;
+  readonly title?: string;
+  readonly description?: string;
+  readonly inputSchema?: JsonSchema;
+  readonly outputSchema?: JsonSchema;
+  readonly annotations?: Readonly<Record<string, unknown>>;
+}
+
 /** Canonical namespacing: `<alias>__<tool>`. */
 export const canonicalCapabilityName = (alias: string, name: string): string => `${alias}__${name}`;
 

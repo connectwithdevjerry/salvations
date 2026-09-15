@@ -11,19 +11,13 @@
  * tool is still approved, and no cross-document race to reason about.
  */
 import { createHash } from 'node:crypto';
+import type { DiscoveredCapability } from '@salvations/core';
 import type { McpCapabilityDoc } from '../documents';
 import type { ScopedCollection } from '../scoped';
 
-export interface DiscoveredCapability {
-  readonly kind: 'tool' | 'resource' | 'resource_template' | 'prompt';
-  readonly name: string;
-  readonly canonicalName: string;
-  readonly title?: string;
-  readonly description?: string;
-  readonly inputSchema?: Record<string, unknown>;
-  readonly outputSchema?: Record<string, unknown>;
-  readonly annotations?: Record<string, unknown>;
-}
+// Defined in the domain: discovery produces it and this repository reconciles
+// it, so neither package owns it.
+export type { DiscoveredCapability };
 
 /**
  * Canonical JSON with sorted keys.

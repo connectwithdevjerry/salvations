@@ -127,18 +127,18 @@ Companion to [ARCHITECTURE.md](./ARCHITECTURE.md) and the documents in [docs/](.
 
 ### 1.7 Agent Runtime ⚓
 
-- [ ] `RunBudget` + `BudgetMeter` (steps, tool calls, tokens, wall clock, cost, MRTR rounds)
-- [ ] `Resolver` — pin `agentSnapshot`, model binding, principal, budget into the run
-- [ ] `ContextAssembler` — fixed cache-stable ordering; no timestamps or unsorted maps in the prefix
-- [ ] 🔒 **(I9)** prefix-stability CI test
-- [ ] `CapabilitySelector` — pre-filter denied capabilities before the model sees them
-- [ ] `ModelCall` — streaming → `runEvents`, retry with jitter, `fallbackBindingId`
-- [ ] `ToolPhase` — parallel calls, **all results in one tool message**
-- [ ] **`AgentRuntime.stepOnce()`** — the environment-agnostic unit ⚓
-- [ ] Suspension states (`waiting_approval`, `waiting_input`, `waiting_tool`) + resumption
-- [ ] Compaction at threshold → summary message + `compaction` step (never silent truncation)
-- [ ] Loop detection on repeated identical tool calls; per-agent + per-workspace kill switch
-- [ ] 🔒 **(AC-8)** budget exhaustion → clean partial result + accurate cost
+- [x] `RunBudget` + `BudgetMeter` (steps, tool calls, tokens, wall clock, cost, MRTR rounds)
+- [x] `Resolver` — pin `agentSnapshot`, model binding, principal, budget into the run
+- [x] `ContextAssembler` — fixed cache-stable ordering; no timestamps or unsorted maps in the prefix
+- [x] 🔒 **(I9)** prefix-stability CI test
+- [x] `CapabilitySelector` — pre-filter denied capabilities before the model sees them
+- [x] `ModelCall` — streaming → `runEvents`, retry with jitter, `fallbackBindingId`
+- [x] `ToolPhase` — parallel calls, **all results in one tool message**
+- [x] **`AgentRuntime.stepOnce()`** — the environment-agnostic unit ⚓
+- [x] Suspension states (`waiting_approval`, `waiting_input`, `waiting_tool`) + resumption
+- [x] Compaction at threshold → summary message + `compaction` step (never silent truncation)
+- [x] Loop detection on repeated identical tool calls; per-agent + per-workspace kill switch
+- [x] 🔒 **(AC-8)** budget exhaustion → clean partial result + accurate cost
 
 ### 1.8 Execution & queue ⚓
 

@@ -67,6 +67,27 @@ check "I6 " "provider SDKs confined to adapters" \
   "from ['\"](@anthropic-ai/sdk|openai|@google/genai)['\"]" \
   packages/core packages/runtime packages/mcp packages/db apps
 
+# I7 — every provider adapter runs the shared conformance suite. (AC-14)
+#      Without this, a fourth adapter can be added that quietly skips it, and
+#      "all adapters pass the identical suite" stops being true the moment
+#      nobody is looking.
+if [ -d packages/providers ]; then
+  missing=""
+  for dir in packages/providers/*/; do
+    name=$(basename "$dir")
+    case "$name" in testkit|registry) continue ;; esac
+    if ! grep -rqs "runConformanceSuite" "$dir"; then
+      missing="$missing $name"
+    fi
+  done
+  if [ -n "$missing" ]; then
+    printf '%s✗ %s %s%s\n' "$RED" "I7 " "adapters missing the conformance suite:$missing" "$RESET"
+    fail=1
+  else
+    printf '%s✓%s %s %s\n' "$GREEN" "$RESET" "I7 " "every provider adapter runs the conformance suite"
+  fi
+fi
+
 echo
 if [ "$fail" -ne 0 ]; then
   printf '%sInvariant violation — this is an architecture failure, not a lint nit.%s\n' "$RED" "$RESET"

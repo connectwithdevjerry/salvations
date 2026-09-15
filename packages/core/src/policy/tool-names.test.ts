@@ -53,8 +53,26 @@ describe('tool name normalisation', () => {
     expect(wireNameOf(map, 'binding__some_long_tool_name').length).toBeLessThanOrEqual(20);
   });
 
-  it('ensures a name starts with an alphanumeric', () => {
-    expect(wireNameOf(buildToolNameMap(['__leading'], RULES), '__leading')).toMatch(/^[a-zA-Z0-9]/);
+  it('ensures a name starts with a letter or underscore, never a digit', () => {
+    // At least one vendor rejects a leading digit outright.
+    expect(wireNameOf(buildToolNameMap(['__leading'], RULES), '__leading')).toMatch(/^[a-zA-Z_]/);
+    expect(wireNameOf(buildToolNameMap(['9lives__go'], RULES), '9lives__go')).toMatch(/^[a-zA-Z_]/);
+  });
+
+  it('satisfies a vendor alphabet that forbids hyphens', () => {
+    // Hyphens are legal for some vendors and rejected by others, so nothing
+    // depends on them; the reverse map restores the original either way.
+    const strict = { namePattern: '^[a-zA-Z_][a-zA-Z0-9_]{0,62}$', maxNameLength: 63 };
+    const canonical = 'a-very-long-binding-alias__a_tool_name';
+    const map = buildToolNameMap([canonical], strict);
+    const wire = wireNameOf(map, canonical);
+    expect(new RegExp(strict.namePattern).test(wire)).toBe(true);
+    expect(canonicalNameOf(map, wire)).toBe(canonical);
+  });
+
+  it('fails loudly rather than emitting a name the provider will reject', () => {
+    const impossible = { namePattern: '^[0-9]+$', maxNameLength: 10 };
+    expect(() => buildToolNameMap(['tool__name'], impossible)).toThrow(/does not satisfy/);
   });
 
   it('surfaces an unknown wire name rather than mapping it to something else', () => {

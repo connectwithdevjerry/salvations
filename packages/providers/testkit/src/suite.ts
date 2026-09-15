@@ -185,9 +185,14 @@ export function runConformanceSuite(target: ConformanceTarget): void {
           ],
         });
 
-      it('replays reasoning state produced by this same model', async () => {
+      it('replays reasoning state produced by this same model, when it has any', async () => {
+        // Not every vendor exposes reasoning state. One that does not has
+        // nothing to replay, and forcing it to fake an artifact would make the
+        // suite lie. The capability it declares decides which rule applies.
+        const caps = await target.create(scriptedFetch([]).fetch).describeModel(modelId);
         const { requests } = await drive([target.scenarios.text], withArtifacts(own));
-        expect(target.inspect.replayedArtifact(requests[0]?.body, own)).toBe(true);
+        expect(target.inspect.replayedArtifact(requests[0]?.body, own))
+          .toBe(caps.reasoning.artifactsMustReplay);
       });
 
       it('drops reasoning state produced by a different model', async () => {

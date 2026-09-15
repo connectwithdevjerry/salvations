@@ -42,11 +42,32 @@ export interface ToolNameMap {
   readonly toCanonical: ReadonlyMap<string, string>;
 }
 
+/**
+ * Reduces a name to the intersection of every vendor's accepted alphabet.
+ *
+ * Deliberately conservative: letters, digits and underscore, starting with a
+ * letter or underscore. Hyphens are legal for some vendors and rejected by
+ * others, and a leading digit is rejected by at least one, so nothing depends
+ * on either. The reverse map restores the original, so the loss costs nothing.
+ */
 const sanitise = (name: string): string => {
-  const cleaned = name.replace(/[^a-zA-Z0-9_-]/g, '_').replace(/_{3,}/g, '__');
-  // A leading non-alphanumeric is rejected by some vendors' patterns.
-  return /^[a-zA-Z0-9]/.test(cleaned) ? cleaned : `t${cleaned}`;
+  const cleaned = name.replace(/[^a-zA-Z0-9_]/g, '_').replace(/_{3,}/g, '__');
+  return /^[a-zA-Z_]/.test(cleaned) ? cleaned : `t${cleaned}`;
 };
+
+/**
+ * A wire name that still fails the vendor's own pattern is a bug in this
+ * function, not a recoverable condition: sending it produces a request the API
+ * rejects, far from the cause. Fail here instead.
+ */
+function assertLegal(wire: string, canonical: string, rules: ToolNameRules): void {
+  if (!new RegExp(rules.namePattern).test(wire)) {
+    throw new Error(
+      `Normalised tool name "${wire}" (from "${canonical}") does not satisfy the provider ` +
+        `pattern ${rules.namePattern}. Widen sanitise() rather than letting the request fail.`,
+    );
+  }
+}
 
 export function buildToolNameMap(
   canonicalNames: readonly string[],
@@ -71,6 +92,7 @@ export function buildToolNameMap(
       wire = wire.slice(0, Math.max(1, rules.maxNameLength - suffix.length)) + suffix;
     }
 
+    assertLegal(wire, canonical, rules);
     toWire.set(canonical, wire);
     toCanonical.set(wire, canonical);
   }

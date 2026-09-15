@@ -26,6 +26,14 @@ export interface ProviderCredentials {
   readonly apiKey?: string;
   readonly baseUrl?: string;
   readonly extra?: Readonly<Record<string, string>>;
+  /**
+   * Overrides how requests leave the process.
+   *
+   * Not only a test seam: an egress proxy, request instrumentation, or a
+   * per-workspace network policy all need this hook, and without it each
+   * adapter would grow its own bespoke escape hatch.
+   */
+  readonly fetch?: typeof globalThis.fetch;
 }
 
 export interface AgentProviderFactory {

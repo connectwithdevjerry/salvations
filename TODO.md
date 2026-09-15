@@ -87,18 +87,18 @@ Companion to [ARCHITECTURE.md](./ARCHITECTURE.md) and the documents in [docs/](.
 
 ### 1.5 Provider abstraction ⚓
 
-- [ ] `packages/core/src/ports/agent-provider.ts` — port, `ModelCapabilities`,
+- [x] `packages/core/src/ports/agent-provider.ts` — port, `ModelCapabilities`,
       `GenerationRequest`, `ProviderEvent`, canonical `ContentBlock`
-- [ ] Canonical message serialisation + `providerArtifacts` sidecar semantics
-- [ ] **`packages/providers/testkit` — conformance suite written BEFORE the first adapter**
-- [ ] Anthropic adapter — adaptive thinking + effort, explicit cache breakpoints, no prefill,
+- [x] Canonical message serialisation + `providerArtifacts` sidecar semantics
+- [x] **`packages/providers/testkit` — conformance suite written BEFORE the first adapter**
+- [x] Anthropic adapter — adaptive thinking + effort, explicit cache breakpoints, no prefill,
       artifact replay rules
-- [ ] OpenAI adapter
-- [ ] Google adapter
-- [ ] Provider registry; capabilities cache + TTL refresh onto `modelBindings`
-- [ ] Cost computation → `run.usage` + `usageDaily` `$inc` upsert
-- [ ] 🔒 **(AC-14)** all three adapters pass the identical suite
-- [ ] 🔒 **(AC-6)** cross-provider continuation: verbatim replay same-model, drop cross-model
+- [x] OpenAI adapter
+- [x] Google adapter
+- [x] Provider registry; capabilities cache + TTL refresh onto `modelBindings`
+- [x] Cost computation → `run.usage` + `usageDaily` `$inc` upsert
+- [x] 🔒 **(AC-14)** all three adapters pass the identical suite
+- [x] 🔒 **(AC-6)** cross-provider continuation: verbatim replay same-model, drop cross-model
 
 ### 1.6 MCP client ⚓
 
@@ -265,6 +265,7 @@ Companion to [ARCHITECTURE.md](./ARCHITECTURE.md) and the documents in [docs/](.
 | I4 | `mongodb` imported only inside `packages/db` |
 | I5 | `packages/core` imports nothing but `zod` |
 | I6 | `packages/runtime` never imports providers, MCP concretes, or `db` |
+| I7 | Every provider adapter runs the shared conformance suite (AC-14) |
 | I7 | Every provider adapter passes the conformance suite |
 | I8 | No unscoped tenant query (command-monitoring guard throws) |
 | I9 | Prompt prefix is byte-stable across identical state |

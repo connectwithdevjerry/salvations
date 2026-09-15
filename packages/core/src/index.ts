@@ -6,6 +6,7 @@
  */
 export * from './ids';
 export * from './errors';
+export * from './canonical';
 
 export * from './entities/conversation';
 export * from './entities/model';

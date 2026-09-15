@@ -11,7 +11,7 @@
  * tool is still approved, and no cross-document race to reason about.
  */
 import { createHash } from 'node:crypto';
-import type { DiscoveredCapability } from '@salvations/core';
+import { canonicalJson, type DiscoveredCapability } from '@salvations/core';
 import type { McpCapabilityDoc } from '../documents';
 import type { ScopedCollection } from '../scoped';
 
@@ -19,21 +19,9 @@ import type { ScopedCollection } from '../scoped';
 // it, so neither package owns it.
 export type { DiscoveredCapability };
 
-/**
- * Canonical JSON with sorted keys.
- *
- * Key order is not semantic, so hashing raw JSON would report a change every
- * time a server reserialised a schema — and a hash that cries wolf trains
- * operators to click through re-approvals without reading the diff.
- */
-export function canonicalJson(value: unknown): string {
-  if (value === null || typeof value !== 'object') return JSON.stringify(value) ?? 'null';
-  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
-  const entries = Object.entries(value as Record<string, unknown>)
-    .filter(([, v]) => v !== undefined)
-    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
-  return `{${entries.map(([k, v]) => `${JSON.stringify(k)}:${canonicalJson(v)}`).join(',')}}`;
-}
+// Canonical JSON lives in the domain: the prompt-prefix fingerprint needs the
+// identical definition, and two implementations would drift.
+export { canonicalJson };
 
 /**
  * Everything the model can see, and everything that changes what a call does.

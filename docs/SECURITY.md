@@ -86,10 +86,18 @@ Input: (principal, agentVersion, bindingId, capabilityName, arguments, runContex
 3. Flatten rules; order by (priority DESC, specificity DESC)
 
 4. Resolve effect:
-     any DENY match            → DENY (deny always wins, regardless of priority)
-     else most specific ASK    → ASK
-     else most specific ALLOW  → ALLOW
-     else                      → workspace.settings.defaultToolEffect   (ships as 'ask')
+     any DENY match  → DENY (deny is absolute — it outranks any priority)
+     else            → highest priority wins; ties broken by specificity;
+                       an exact tie favours ASK
+     else            → workspace.settings.defaultToolEffect   (ships as 'ask')
+
+   Specificity ranks pattern precision first, then binding precision, then scope:
+       specificity = patternPrecision*100 + bindingPrecision*10 + scopeRank
+   Pattern-first is deliberate. An earlier draft had ASK unconditionally beat
+   ALLOW, which makes "generally ask, but these specific read-only tools are
+   fine" inexpressible — and that rule is the main defence against approval
+   fatigue (R14). Safety is preserved by deny being absolute and the default
+   being `ask`, not by refusing to let an operator write a narrower allow.
 
 5. Evaluate constraints: argument matchers, maxCallsPerRun, maxCallsPerHour,
    time windows, value thresholds

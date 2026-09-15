@@ -1,0 +1,23 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "jsx": "preserve",
+    "allowJs": true,
+    "incremental": true,
+    "plugins": [{ "name": "next" }],
+    "paths": {
+      "@/*": ["./src/*"],
+      "@salvations/core": ["../../packages/core/src/index.ts"],
+      "@salvations/contracts": ["../../packages/contracts/src/index.ts"],
+      "@salvations/crypto": ["../../packages/crypto/src/index.ts"],
+      "@salvations/db": ["../../packages/db/src/index.ts"],
+      "@salvations/mcp": ["../../packages/mcp/src/index.ts"],
+      "@salvations/runtime": ["../../packages/runtime/src/index.ts"],
+      "@salvations/observability": ["../../packages/observability/src/index.ts"],
+      "@salvations/provider-registry": ["../../packages/providers/registry/src/index.ts"]
+    }
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx", "next-env.d.ts", ".next/types/**/*.ts"],
+  "exclude": ["node_modules"]
+}

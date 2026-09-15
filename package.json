@@ -1,0 +1,32 @@
+{
+  "name": "salvations",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "typecheck": "turbo run typecheck",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "boundaries": "depcruise packages apps --config .dependency-cruiser.cjs",
+    "invariants": "./tools/scripts/check-invariants.sh",
+    "verify": "pnpm invariants && pnpm boundaries && pnpm lint && pnpm typecheck && pnpm test && pnpm worker:smoke",
+    "db:up": "docker compose up -d mongo && ./tools/scripts/wait-for-mongo.sh",
+    "db:down": "docker compose down -v",
+    "worker:smoke": "tsx apps/worker/src/main.ts --smoke"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^26.5.1",
+    "dependency-cruiser": "^18.3.1",
+    "eslint": "^10.10.0",
+    "tsx": "^4.23.13",
+    "turbo": "^2.10.13",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.70.0",
+    "vitest": "^5.0.0"
+  }
+}

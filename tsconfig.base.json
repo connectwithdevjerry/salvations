@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["ES2023"],
+    "types": ["node"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "moduleDetection": "force",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "noPropertyAccessFromIndexSignature": false,
+    "useUnknownInCatchVariables": true,
+    "forceConsistentCasingInFileNames": true,
+    "paths": {
+      "@salvations/core": ["./packages/core/src/index.ts"],
+      "@salvations/core/*": ["./packages/core/src/*"],
+      "@salvations/contracts": ["./packages/contracts/src/index.ts"],
+      "@salvations/crypto": ["./packages/crypto/src/index.ts"],
+      "@salvations/db": ["./packages/db/src/index.ts"],
+      "@salvations/db/*": ["./packages/db/src/*"],
+      "@salvations/mcp": ["./packages/mcp/src/index.ts"],
+      "@salvations/runtime": ["./packages/runtime/src/index.ts"],
+      "@salvations/observability": ["./packages/observability/src/index.ts"],
+      "@salvations/provider-testkit": ["./packages/providers/testkit/src/index.ts"],
+      "@salvations/provider-anthropic": ["./packages/providers/anthropic/src/index.ts"],
+      "@salvations/provider-openai": ["./packages/providers/openai/src/index.ts"],
+      "@salvations/provider-google": ["./packages/providers/google/src/index.ts"],
+      "@salvations/provider-registry": ["./packages/providers/registry/src/index.ts"]
+    }
+  },
+  "exclude": ["node_modules", "dist", ".next", ".turbo"]
+}

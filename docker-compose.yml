@@ -1,0 +1,20 @@
+# Local MongoDB as a SINGLE-NODE REPLICA SET.
+# A replica set is required for change streams (SSE event bus) and transactions.
+# A standalone mongod will silently break both.
+services:
+  mongo:
+    image: mongo:8.1
+    container_name: salvations-mongo
+    command: ["--replSet", "rs0", "--bind_ip_all", "--port", "27017"]
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  mongo-data:

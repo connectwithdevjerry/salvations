@@ -1,0 +1,86 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '22'
+
+jobs:
+  # The architecture, expressed as tests. Runs first and fastest: if a boundary
+  # broke, nothing else matters.
+  invariants:
+    name: Architectural invariants
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with: { node-version: '${{ env.NODE_VERSION }}', cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - name: Grep gates (AC-11, AC-12, AC-13)
+        run: pnpm invariants
+      - name: Package boundaries
+        run: pnpm boundaries
+
+  verify:
+    name: Lint, typecheck, test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with: { node-version: '${{ env.NODE_VERSION }}', cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+
+  # Integration tests need a REPLICA SET: change streams (SSE event bus) and
+  # transactions both require one. A standalone mongod silently breaks both.
+  integration:
+    name: Integration (MongoDB replica set)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with: { node-version: '${{ env.NODE_VERSION }}', cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - name: Start MongoDB replica set
+        run: pnpm db:up
+      - name: Integration tests
+        run: pnpm test
+        env:
+          MONGODB_URI: mongodb://localhost:27017/salvations_test?replicaSet=rs0&directConnection=true
+          MONGODB_DB_NAME: salvations_test
+
+  # AC-16: the container must BUILD AND BOOT. A Dockerfile that is never built
+  # is a Dockerfile that does not work, and deployment-agnosticism rests on it.
+  containers:
+    name: Container build and boot
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Build web image
+        run: docker build -f apps/web/Dockerfile -t salvations-web:ci .
+      - name: Boot web image
+        run: |
+          docker run -d --name web -p 3000:3000 \
+            -e MONGODB_URI=mongodb://unused/salvations \
+            salvations-web:ci
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:3000/ >/dev/null 2>&1; then
+              echo "web container booted"; exit 0
+            fi
+            sleep 2
+          done
+          echo "web container failed to boot"; docker logs web; exit 1
+      - name: Build worker image
+        run: docker build -f apps/worker/Dockerfile -t salvations-worker:ci .

@@ -1,0 +1,29 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# build output
+.next/
+out/
+dist/
+build/
+*.tsbuildinfo
+
+# environment — NEVER commit real credentials
+.env
+.env.*
+!.env.example
+
+# secrets / local key material
+*.pem
+*.key
+.keys/
+local-kek.json
+
+# logs, coverage, caches
+*.log
+npm-debug.log*
+coverage/
+.turbo/
+.vercel/
+.DS_Store

@@ -1,258 +1,271 @@
 # Salvations — Implementation Roadmap
 
-Companion to [ARCHITECTURE.md](./ARCHITECTURE.md). Section references (§) point there.
+Companion to [ARCHITECTURE.md](./ARCHITECTURE.md) and the documents in [docs/](./docs).
 
-**Current state:** Phase 0 complete (architecture proposed). **No application code has been
-written.** Implementation starts only after the architecture is signed off.
+**Current state:** Phase 0 — architecture revised for MongoDB Atlas + Vercel.
+**No application code has been written.** Implementation begins only after final approval.
 
-**Legend:** `[ ]` todo · `[~]` in progress · `[x]` done · **(AC)** = acceptance-criteria item from
-§15.3 · 🔒 = security-critical, requires review
-
----
-
-## Phase 0 — Architecture & sign-off  ✅
-
-- [x] Inspect repository (empty; git initialised, zero commits)
-- [x] Verify current MCP specification revision (`2026-07-28`) and its breaking changes
-- [x] Verify official MCP SDK + transport approach (TypeScript SDK **V2**, split packages,
-      Streamable HTTP + stdio, HTTP+SSE deprecated)
-- [x] Verify MCP authorization direction (OAuth 2.1 resource server, RFC 9728 / 8707 / 9207,
-      DCR → CIMD)
-- [x] Verify provider landscape and current model identifiers
-- [x] Propose technical architecture, DB schema, authn/authz, MCP client, `AgentProvider`,
-      Agent Runtime, multi-tenancy, folder structure
-- [x] Identify architectural risks (R1–R14) and spec conflicts (§14)
-- [x] Define Phase 1 plan and definition of done
-- [ ] **Architecture sign-off from the product owner** ← *gate: nothing below starts until this is done*
-- [ ] Open ADR-0001 … ADR-0010 in `docs/adr/` capturing each decision in §3, §7, §9
+**Legend:** `[ ]` todo · `[x]` done · **(AC-n)** = acceptance criterion from ARCHITECTURE.md §10.3
+· 🔒 = security-critical · ⚓ = load-bearing for a later migration
 
 ---
 
-## Phase 1 — Vertical slice: the abstractions, proven
+## Phase 0 — Architecture & sign-off
 
-> Goal: one conversation, three providers, one real third-party MCP server, real permissions.
-> Not feature breadth — load-bearing depth.
+- [x] Inspect repository (greenfield)
+- [x] Verify MCP spec `2026-07-28` + official TypeScript SDK **V2** + transports
+- [x] Verify MCP authorization direction (OAuth 2.1 RS, RFC 9728/8707/9207, DCR → CIMD)
+- [x] Verify MongoDB driver 7.x, Better Auth Mongo adapter, Atlas Vector Search + `$rankFusion`
+- [x] Verify Vercel duration limits and `waitUntil` semantics (**it does not outlive `maxDuration`**)
+- [x] Revision 2: MongoDB-native data model, Vercel deployment, sliced/resumable execution
+- [x] ARCHITECTURE.md · TODO.md · DATA-MODEL.md · DEPLOYMENT.md · SECURITY.md ·
+      PROVIDER-ABSTRACTION.md · MCP-CLIENT.md
+- [ ] **Final approval** ← *gate: nothing below starts until this is given*
+- [ ] ADR-0001…0012 in `docs/adr/` capturing each decision (Mongo over Postgres; no ODM; embedded
+      approval; runs-as-queue; sliced executor; three adapters; CIMD; no Redis in Phase 1)
+
+---
+
+## Phase 1 — Vertical slice
 
 ### 1.1 Repository foundation
 
-- [ ] pnpm workspace + Turborepo; Node 22 LTS pinned via `.nvmrc` / `engines`
+- [ ] pnpm workspace + Turborepo; Node 22 pinned
 - [ ] `tsconfig.base.json` — `strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`
-- [ ] Package skeletons per §12 (`core`, `runtime`, `providers/*`, `mcp`, `db`, `crypto`,
-      `contracts`, `observability`, `channels`, `apps/{api,worker,web}`)
-- [ ] 🔒 `.dependency-cruiser.cjs` enforcing the §4.2 dependency rule
-- [ ] 🔒 Custom ESLint rule `no-provider-branching` in `tools/eslint-rules`
-- [ ] 🔒 CI guard scripts implementing **(AC-11)** and **(AC-12)** — grep gates on
-      `packages/runtime` + `packages/core`
-- [ ] `docker-compose.yml`: postgres 17 + pgvector, redis/valkey, minio
-- [ ] CI: typecheck · lint · boundary check · unit · integration (testcontainers) · grep gates
-- [ ] Vitest setup; `packages/testkit` shared fixtures
+- [ ] Package skeletons per ARCHITECTURE.md §6
+- [ ] 🔒 `.dependency-cruiser.cjs` — invariants **I4, I5, I6**
+- [ ] 🔒 ESLint rule `no-provider-branching` in `tools/eslint-rules`
+- [ ] 🔒 CI grep gates — **(AC-11) (AC-12) (AC-13)**
+- [ ] `docker-compose.yml` — local single-node **replica set** (`--replSet rs0`; change streams and
+      transactions require one)
+- [ ] `.env.example` + secret-scanning pre-commit hook
+- [ ] CI: typecheck · lint · boundaries · grep gates · unit · integration · Docker build
+- [ ] Vitest + `mongodb-memory-server` (replica-set mode) or a disposable Atlas test database
 
-### 1.2 Database (§5)
+### 1.2 Data layer — MongoDB ⚓
 
-- [ ] Drizzle schema for identity/tenancy/access (`users`, `sessions`, `accounts`, `workspaces`,
-      `workspace_members`, `workspace_invitations`, `api_keys`)
-- [ ] Schema: `credentials`, `oauth_connections`
-- [ ] Schema: `provider_configs`, `model_bindings`
-- [ ] Schema: `agents`, `agent_versions`, `agent_capability_bindings`
-- [ ] Schema: `mcp_servers`, `mcp_server_bindings`, `mcp_capabilities`,
-      `mcp_capability_approvals`, `tool_permissions`, `mcp_connection_health`
-- [ ] Schema: `conversations`, `messages`, `runs`, `run_steps`, `tool_invocations`,
-      `approvals`, `run_events`
-- [ ] Schema: `conversation_summaries`, `outbox`, `channels`, `channel_identities`,
-      `channel_events`, `audit_log`, `usage_records`
-- [ ] UUIDv7 generation helper; migration + seed scripts
-- [ ] 🔒 **RLS policies on every tenant-scoped table**, keyed on `app.workspace_id`
-- [ ] 🔒 Restricted application DB role (no `BYPASSRLS`); separate migration role
-- [ ] Repository layer requiring a `WorkspaceScope`; `SET LOCAL app.workspace_id` per transaction
-- [ ] 🔒 **(AC-10)** Test: unscoped query under the app role returns zero rows
-- [ ] `audit_log` hardening: no `UPDATE`/`DELETE` grant to the app role
+- [ ] `MongoClient` singleton cached on `globalThis`, `monitorCommands: true`, tuned `maxPoolSize`
+- [ ] 🔒 `ScopedDb` / `ScopedCollection` — filter merge, insert stamping, pipeline `$match` prefix,
+      `$lookup`/`$unionWith` sub-pipeline enforcement, audited `unsafeUnscoped()` escape hatch
+- [ ] 🔒 **Command-monitoring tenancy guard** — throws in dev/test/CI, alerts in prod; small
+      reviewed allowlist (Better Auth globals, `runs` claim index, platform catalog)
+- [ ] Collection definitions + `$jsonSchema` validators generated from Zod
+- [ ] All indexes from `DATA-MODEL.md` §8; idempotent index-sync migration runner
+- [ ] Mappers (`toDomain` / `toDocument`); UUIDv7 ID generation
+- [ ] Repositories: workspaces, apiKeys, agents, agentVersions, providerConfigs, modelBindings,
+      credentials, oauthConnections, mcpServers, mcpServerBindings, mcpCapabilities, policies,
+      conversations, messages, runs, runSteps, runEvents, approvals, channels, auditLog, usageDaily
+- [ ] Seed script (demo workspace, agent, provider configs)
+- [ ] 🔒 **(AC-10)** Adversarial tenant-isolation suite — every repository method, wrong workspace
+- [ ] Atlas setup: separate `app` / `migrate` users; `app` has no update/delete on `auditLog`
 
-### 1.3 Crypto & secrets (§6.5)
+### 1.3 Crypto & secrets
 
-- [ ] `KeyProvider` port + `LocalFileKeyProvider`; `KmsKeyProvider` interface stub
-- [ ] 🔒 Envelope encryption service (AES-256-GCM, per-credential DEK, wrapped by workspace KEK)
-- [ ] `CredentialResolver` returning short-lived non-serialisable handles
-- [ ] 🔒 Redaction utilities (schema-driven + entropy heuristic) used by
-      `tool_invocations.arguments_redacted` and the logger
-- [ ] 🔒 Test: no plaintext secret appears in any `runs` / `run_steps` / `audit_log` / log line
-- [ ] KEK rotation path (`kek_version`, incremental online re-wrap)
+- [ ] `KeyProvider` port; `LocalFileKeyProvider` (dev) + `EnvKeyProvider` (Vercel);
+      `KmsKeyProvider` / `VaultKeyProvider` interfaces stubbed
+- [ ] 🔒 Envelope encryption (AES-256-GCM, per-credential DEK, workspace KEK, `kekVersion`)
+- [ ] `CredentialResolver` — short-lived, non-serialisable handles
+- [ ] 🔒 Redaction: schema-driven + entropy heuristic; applied at write time
+- [ ] 🔒 **(AC-17)** Redaction corpus test across runs / steps / events / audit / logs
+- [ ] Online KEK rotation path
 
-### 1.4 Auth & authorization (§6)
+### 1.4 Auth & authorization 🔒
 
-- [ ] Better Auth wired to our Postgres (email/password + one OAuth provider, TOTP 2FA)
-- [ ] Workspace creation, invitations, membership, role assignment
-- [ ] API keys: `sk_<prefix>_<secret>`, SHA-256 storage, constant-time compare, async `last_used_at`
-- [ ] `Principal` resolution middleware; `WorkspaceScope` derivation
-- [ ] RBAC permission sets per role; route guards
-- [ ] 🔒 `PermissionBroker` (§6.4) — full evaluation order, fail-closed default `ask`
-- [ ] 🔒 Delegation rule: `effective(agent) = agentVersion ∩ onBehalfOf ∩ workspacePolicy`
-- [ ] 🔒 `PermissionBroker` unit tests incl. deny-wins, specificity ordering, annotation-as-floor
+- [ ] Better Auth + `@better-auth/mongo-adapter`: email/password (Argon2id), one OAuth provider,
+      TOTP 2FA, email verification, rate limiting
+- [ ] Session hardening: httpOnly/SameSite/Secure, rotation, global revocation on credential change
+- [ ] Workspaces: create, invite (hashed tokens), accept, membership, role changes — all via
+      targeted `$push`/`$pull`/arrayFilter updates, never whole-array rewrites
+- [ ] API keys: `sk_<env>_<prefix>_<secret>`, SHA-256 storage, constant-time compare
+- [ ] `Principal` resolution middleware + `WorkspaceScope` derivation
+- [ ] 🔒 RBAC permission sets + **server-side** route guards (UI hiding is never enforcement)
+- [ ] 🔒 `PermissionBroker` — full evaluation order, deny-wins, annotations-as-floor, fail-closed
+- [ ] 🔒 Delegation: `effective(agent) = agentVersion ∩ onBehalfOf ∩ workspacePolicy`, snapshotted
+      into `run.principal`, **re-validated on resume**
+- [ ] 🔒 HMAC auth for `/api/internal/*` — unreachable with a session cookie
+- [ ] **(AC-1)** end-to-end signup → workspace → invite → shared agent
 
-### 1.5 `AgentProvider` abstraction (§7)
+### 1.5 Provider abstraction ⚓
 
 - [ ] `packages/core/src/ports/agent-provider.ts` — port, `ModelCapabilities`,
       `GenerationRequest`, `ProviderEvent`, canonical `ContentBlock`
-- [ ] Canonical message serialisation + `provider_artifacts` sidecar semantics (§7.4)
-- [ ] `packages/providers/testkit` — **conformance suite written before any adapter**:
-      golden conversations, tool round-trips, parallel tool calls, streaming order,
-      error taxonomy, schema down-conversion, artifact replay/drop
-- [ ] Anthropic adapter (`@anthropic-ai/sdk`) — adaptive thinking + `output_config.effort`,
-      explicit `cache_control` breakpoints, no prefill, thinking-block replay rules
-- [ ] OpenAI adapter (`openai`)
-- [ ] Google adapter (`@google/genai`)
-- [ ] Provider registry (`provider_type` → factory); `model_bindings.capabilities` cache +
-      refresh job
-- [ ] Cost calculation from `model_bindings` rates → `usage_records`
-- [ ] 🔒 Test: every adapter passes the conformance suite identically
+- [ ] Canonical message serialisation + `providerArtifacts` sidecar semantics
+- [ ] **`packages/providers/testkit` — conformance suite written BEFORE the first adapter**
+- [ ] Anthropic adapter — adaptive thinking + effort, explicit cache breakpoints, no prefill,
+      artifact replay rules
+- [ ] OpenAI adapter
+- [ ] Google adapter
+- [ ] Provider registry; capabilities cache + TTL refresh onto `modelBindings`
+- [ ] Cost computation → `run.usage` + `usageDaily` `$inc` upsert
+- [ ] 🔒 **(AC-14)** all three adapters pass the identical suite
+- [ ] 🔒 **(AC-6)** cross-provider continuation: verbatim replay same-model, drop cross-model
 
-### 1.6 MCP client layer (§9)
+### 1.6 MCP client ⚓
 
-- [ ] `@modelcontextprotocol/client@2` wired; Streamable HTTP transport
-- [ ] `versionNegotiation: 'auto'`; persist `negotiated_protocol_version` per binding
-- [ ] `McpServerRegistry` + `McpConnectionFactory` + `ConnectionScopeKey` typing
-- [ ] `McpClientManager`: per-binding concurrency semaphore, circuit breaker,
-      `mcp_connection_health`
-- [ ] 🔒 `McpOAuthClient`: RFC 9728 discovery, PKCE, **CIMD `client_id`** (+ hosted
-      `/.well-known/mcp-client-metadata.json`), **RFC 8707 `resource` indicator**,
+- [ ] `@modelcontextprotocol/client@2` + Streamable HTTP transport
+- [ ] `versionNegotiation: 'auto'`; persist `negotiatedProtocolVersion` per binding
+- [ ] `McpServerRegistry`, `McpConnectionFactory`, typed `ConnectionScopeKey`
+- [ ] `McpClientManager` — concurrency semaphore, circuit breaker, health tracking
+- [ ] 🔒 `McpOAuthClient` — RFC 9728 discovery, PKCE, **CIMD `client_id`** + hosted
+      `/.well-known/mcp-client-metadata.json`, **RFC 8707 resource indicator**,
       **RFC 9207 issuer validation**, DCR fallback, refresh + revocation
-- [ ] `CapabilityDiscovery`: `server/discover` → `tools/list`; honour `ttlMs`
-- [ ] 🔒 `cacheScope` handling — shareable vs per-user cache keys, **fail closed when absent** (R4)
-- [ ] `CapabilityStore`: normalise, `definition_hash`, diff (new/changed/removed), soft-delete
-- [ ] 🔒 Approval invalidation on `definition_hash` change (R2) + **(AC-7)**
-- [ ] `ToolGateway`: resolve → permit → validate (Ajv 2020-12) → invoke → normalise → audit
-- [ ] Capability namespacing `alias__tool` + provider-legal transform with hash suffix (§9.6)
-- [ ] MRTR: `input_required` → classify → human path suspends the run; 🔒 **inference path denied
-      by default** (R3); `requestState` echoed verbatim, never parsed or logged in full
-- [ ] Result size capping + blob-store spill
-- [ ] 🔒 Test: two users on a `per_user_auth` binding never share a discovery cache entry
+- [ ] `CapabilityDiscovery` — `server/discover` → `tools/list`, honouring `ttlMs`
+- [ ] 🔒 `cacheScope` handling — workspace vs user cache keys; **fail closed when absent**
+- [ ] `CapabilityStore` — normalise, `definitionHash`, diff, soft-delete
+- [ ] 🔒 **(AC-7)** atomic approval invalidation in the same write as the hash update + diff UI
+- [ ] `ToolGateway` — resolve → permit → Ajv 2020-12 validate → invoke → normalise → audit;
+      denial returned as an `is_error` tool result
+- [ ] Canonical namespacing `alias__tool`; provider-legal transform with hash suffix + reverse map
+- [ ] 🔒 **(AC-15)** MRTR — human path suspends; **inference path denied by default**;
+      `requestState` echoed verbatim, never parsed or logged in full
+- [ ] Result size capping + blob spill
+- [ ] Per-tool-call timeout **shorter than `RESERVE_MS`**
+- [ ] 🔒 Test: two users on a `perUserAuth` binding never share a discovery cache entry
+- [ ] **(AC-3)** real third-party server installed end-to-end
 
-### 1.7 Agent Runtime (§8)
+### 1.7 Agent Runtime ⚓
 
 - [ ] `RunBudget` + `BudgetMeter` (steps, tool calls, tokens, wall clock, cost, MRTR rounds)
-- [ ] `Resolver` — pin `agent_version`, `model_binding`, principal, budget
-- [ ] `ContextAssembler` with the fixed cache-stable ordering (§8.3)
-- [ ] 🔒 Prefix-stability CI test: two builds of identical state produce byte-identical prefixes (R9)
-- [ ] `CapabilitySelector` incl. pre-filtering denied capabilities before the model sees them
-- [ ] `ModelCall` phase: streaming → `run_events`, retry w/ jitter, fallback model binding
-- [ ] `ToolPhase`: parallel execution, **all results in one tool message**, denial-as-tool-error
-- [ ] Step persistence; `U(run_id, seq)`; idempotent step replay
+- [ ] `Resolver` — pin `agentSnapshot`, model binding, principal, budget into the run
+- [ ] `ContextAssembler` — fixed cache-stable ordering; no timestamps or unsorted maps in the prefix
+- [ ] 🔒 **(I9)** prefix-stability CI test
+- [ ] `CapabilitySelector` — pre-filter denied capabilities before the model sees them
+- [ ] `ModelCall` — streaming → `runEvents`, retry with jitter, `fallbackBindingId`
+- [ ] `ToolPhase` — parallel calls, **all results in one tool message**
+- [ ] **`AgentRuntime.stepOnce()`** — the environment-agnostic unit ⚓
 - [ ] Suspension states (`waiting_approval`, `waiting_input`, `waiting_tool`) + resumption
-- [ ] Compaction at threshold → `conversation_summaries` + `compaction` step
-- [ ] Loop detection on repeated identical tool calls (R7)
-- [ ] Per-agent and per-workspace kill switch
-- [ ] 🔒 **(AC-9)** Test: kill a worker mid-run; another resumes without duplicate side effects
-- [ ] 🔒 **(AC-8)** Test: budget exhaustion → clean partial result + accurate cost record
-- [ ] 🔒 **(AC-6)** Test: continue one conversation across Anthropic → OpenAI → Google;
-      artifacts replay on same-model, drop on cross-model
+- [ ] Compaction at threshold → summary message + `compaction` step (never silent truncation)
+- [ ] Loop detection on repeated identical tool calls; per-agent + per-workspace kill switch
+- [ ] 🔒 **(AC-8)** budget exhaustion → clean partial result + accurate cost
 
-### 1.8 Background execution
+### 1.8 Execution & queue ⚓
 
-- [ ] BullMQ queues: `run`, `discovery`, `outbox`, `mcp-task` (+ priority tiers)
-- [ ] Transactional outbox + dispatcher (never enqueue inside a DB transaction)
-- [ ] `apps/worker` composition root + processors
-- [ ] Run heartbeat + stalled-run reclamation
-- [ ] Per-workspace rate limits / queue groups (R13)
+- [ ] `RunQueue` port + `MongoRunQueue` — atomic lease claim, heartbeat, release
+- [ ] 🔒 **Every run write guarded by `lease.token`** (prevents stolen-lease double writes)
+- [ ] `Deadline` + `RunExecutor` ports
+- [ ] `SlicedExecutor` — loop to deadline − `RESERVE_MS`, persist, release, re-queue, continue
+- [ ] `BackgroundTrigger` port + Vercel implementation (`waitUntil` + HMAC self-call) — **the only
+      Vercel-aware adapter**
+- [ ] `/api/internal/execute` (maxDuration 800) and `/api/internal/sweep` (stalled-lease reclaim)
+- [ ] `attempts` cap → clean failure with partial result
+- [ ] 🔒 **(AC-9)** kill executor mid-run **and** force a lease steal → completes once, no duplicate
+      side effects
+- [ ] Metrics: slice-yield rate, sweeper reclaims, cold starts, Mongo connection churn
 
-### 1.9 API & web channel
+### 1.9 API, streaming & web
 
-- [ ] `apps/api` Hono composition root; `packages/contracts` Zod schemas shared with web
-- [ ] Routes: auth, workspaces, members, api-keys, provider-configs, model-bindings, agents,
-      mcp-servers, mcp-bindings, capabilities, approvals, permissions, conversations, runs,
-      credentials, health
-- [ ] SSE run-event stream with cursor-based replay from `run_events`
-- [ ] `apps/web` (Next.js 16): auth pages, workspace switcher, agent editor, chat with token
-      streaming, run timeline (steps + tool calls + usage/cost), MCP install + OAuth flow,
-      capability approval UI **with definition diffs**, permission editor, approval modal
-- [ ] Web `ChannelAdapter` implementation
+- [ ] `packages/contracts` — Zod contracts shared by API and UI
+- [ ] API routes: auth, workspaces, members, apiKeys, providerConfigs, modelBindings, agents,
+      mcpServers, mcpBindings, capabilities, approvals, policies, conversations, runs, credentials,
+      health
+- [ ] `RunEventBus` port + `ChangeStreamEventBus` (+ `PollingEventBus` fallback, capability-probed)
+- [ ] `/api/runs/:id/events` — SSE with `after=<seq>` cursor replay ⚓
+- [ ] Web UI: auth pages, workspace switcher, agent editor, chat with token streaming, run timeline
+      (steps · tool calls · usage · cost), MCP install + OAuth flow, **capability approval with
+      definition diffs**, policy editor, approval modal, provider/model binding management
+- [ ] **(AC-2) (AC-4) (AC-5)** exercised through the UI
 
-### 1.10 Observability
+### 1.10 Observability & containers
 
-- [ ] OTel tracing: run → step → model call → tool call (span per MCP request)
-- [ ] Structured JSON logging with 🔒 redaction middleware
-- [ ] `audit_log` writer used by `PermissionBroker`, `ToolGateway`, credential access, admin actions
-- [ ] `usage_records` + cost dashboards; 🔒 cache-hit-rate alert (R9)
-- [ ] Health/readiness endpoints; DB + Redis + provider reachability checks
+- [ ] OTel traces `run → step → model_call | tool_call`; OTLP export
+- [ ] Structured logging + 🔒 redaction middleware
+- [ ] `auditLog` writer wired to broker, gateway, credential resolution, admin actions
+- [ ] `usageDaily` rollups; cache-hit-rate alert
+- [ ] `/api/health` + `/api/health/ready`
+- [ ] ⚓ **(AC-16)** `apps/web` Dockerfile built **and booted** in CI against a test database
+- [ ] ⚓ `apps/worker` placeholder: Dockerfile + entrypoint that claims and runs one run via
+      `ContinuousExecutor` — *not deployed*, but compiled and smoke-tested so Phase 4 is a
+      configuration change rather than a discovery exercise
 
 ### 1.11 Phase 1 exit
 
-- [ ] All twelve **(AC)** criteria in §15.3 green in CI
-- [ ] Threat model review against R1–R14 documented in `docs/adr/`
-- [ ] Runbooks: credential rotation, stuck run, MCP server outage, cost spike
+- [ ] All 17 acceptance criteria green; the 11 starred ones in CI
+- [ ] Threat-model review against `SECURITY.md` §7 recorded in `docs/adr/`
+- [ ] Runbooks: credential rotation · stuck run · MCP server outage · cost spike ·
+      Mongo connection exhaustion
 
 ---
 
-## Phase 2 — Memory, documents & RAG
+## Phase 2 — Documents, memory & RAG (Atlas Vector Search)
 
-- [ ] `MemoryStore` / `VectorStore` / `DocumentStore` ports
-- [ ] `chunk_embeddings_<D>` sidecar tables + HNSW indexes (§5.3)
-- [ ] `collections`, `documents`, `document_chunks` + `tsv` generated column
+- [ ] `VectorStore` / `MemoryStore` / `DocumentStore` ports
+- [ ] `collections`, `documents`, `documentChunks` with model-keyed `embeddings` sub-document
+- [ ] Atlas **Vector Search** indexes per embedding path (`numDimensions`, `similarity`)
+- [ ] 🔒 **`workspaceId` as a `filter` field inside every vector index** — a `$vectorSearch` is not
+      constrained by a later `$match` (`SECURITY.md` R15)
+- [ ] Atlas Search (lexical) index on chunk content
+- [ ] **`$rankFusion`** hybrid retrieval — native, server-side RRF (requires MongoDB 8.1+)
 - [ ] Resumable ingestion pipeline: fetch → extract → chunk → embed → index, per-stage checkpoints
 - [ ] Extractors: PDF, DOCX, HTML, Markdown, plain text
-- [ ] Hybrid retrieval: HNSW + full-text, fused with RRF; optional rerank via the `cheap` model role
-- [ ] Bitemporal `memory_entries` (supersede, never update) + `memory_write` run steps
-- [ ] Memory scopes: workspace / agent / user / conversation
-- [ ] Ingest documents from **MCP resources** (`source_type = 'mcp_resource'`)
-- [ ] Shadow-collection re-embedding with atomic swap (R12)
-- [ ] Document ACLs enforced at retrieval time 🔒
+- [ ] Embedding model bindings (`role: 'embedding'`) through the same provider abstraction
+- [ ] Bitemporal `memoryEntries` (supersede, never update) + `memory_write` run steps
+- [ ] Ingest from MCP resources (`sourceType: 'mcp_resource'`)
+- [ ] Re-embedding as an additive field write + new index (no collection rebuild)
+- [ ] 🔒 Document ACLs enforced inside the search stage
 
 ## Phase 3 — MCP breadth
 
-- [ ] MCP **resources** + `resources/read` exposed to the runtime as context, not tools
-- [ ] MCP **prompts** surfaced as agent-selectable templates
+- [ ] MCP **resources** + `resources/read` as context (not tools)
+- [ ] MCP **prompts** as agent-selectable templates
 - [ ] `subscriptions/listen` opt-in → live `list_changed` invalidation
-- [ ] **Tasks extension**: `tasks/get` / `tasks/update` / `tasks/cancel`; `waiting_tool` resumption
-- [ ] 🔒 **stdio transport, sandboxed** (R6): container, read-only rootfs, no ambient credentials,
-      egress allowlist, CPU/memory/PID caps — first-party & verified servers only in hosted tier
-- [ ] Platform MCP catalog (`workspace_id IS NULL`) + one-click install
-- [ ] `trust_tier` driven approval defaults + risk-tiered UX (R14)
-- [ ] Scoped remembered approvals ("allow with these arg constraints for 24h")
+- [ ] **Tasks extension** (`tasks/get` / `tasks/update` / `tasks/cancel`) → `waiting_tool`
+- [ ] 🔒 **stdio transport, sandboxed** — container, read-only rootfs, no ambient credentials,
+      egress allowlist, CPU/memory/PID caps; first-party + verified tiers only
+- [ ] Platform MCP catalog (`workspaceId: null`) + one-click install
+- [ ] `trustTier`-driven approval defaults; scoped remembered decisions (R14)
 
-## Phase 4 — Scheduling, orchestration & Telegram
+## Phase 4 — Separate worker service ⚓
 
-- [ ] `schedules` + `schedule_runs`; BullMQ repeatable jobs; `overlap_policy`
-- [ ] 🔒 Schedule principal re-validation on each firing (fail closed when the creator loses access)
-- [ ] Timezone/DST-correct cron; next-run preview in the UI
-- [ ] `spawn_subagent` as a permission-gated first-party MCP capability
-- [ ] Sub-agent budget carving + `maxSubagentDepth` enforcement
-- [ ] Telegram `ChannelAdapter`: webhook + secret verification 🔒, throttled message edits,
-      inline-keyboard approvals, file handling
-- [ ] 🔒 `channel_identities` linking flow; unlinked identities are minimal-privilege
+*This phase should be small. If it is not, the Phase 1 seams were wrong.*
+
+- [ ] Promote `apps/worker` to a real service: `ContinuousExecutor` + long-lived Mongo connection
+- [ ] `RedisRunQueue` (BullMQ) as a **notification** layer — MongoDB stays the source of truth
+- [ ] `RedisEventBus` alongside the change-stream bus
+- [ ] Per-workspace rate limits and queue groups (noisy-neighbour control)
+- [ ] Deploy to ECS/Fargate (or any container host) against the same Atlas cluster
+- [ ] Vercel keeps serving UI, API and SSE — **frontend unchanged**
+- [ ] 🔒 Verify: no change required in `packages/core`, `packages/runtime`, or `packages/mcp`
+- [ ] Then: user-facing **scheduling** (`schedules` collection, cron UI, overlap policy) and
+      sub-agent orchestration, both of which want a long-lived executor
+
+## Phase 5 — Channels & first-party MCP servers
+
+- [ ] Telegram `ChannelAdapter`: webhook + secret verification 🔒, throttled edits, inline-keyboard
+      approvals
+- [ ] 🔒 `channelIdentities` linking flow; unlinked identities are minimal-privilege
 - [ ] Channel capability degradation matrix + tests
-
-## Phase 5 — First-party MCP servers (dogfooding, §9.7)
-
-- [ ] `mcp-servers/memory` — semantic memory search/write
-- [ ] `mcp-servers/documents` — collection retrieval
-- [ ] `mcp-servers/workspace-admin` — agent/schedule management
-- [ ] `mcp-servers/orchestration` — sub-agent spawning
-- [ ] In-process transport for first-party servers (same client interface, same `ToolGateway`)
+- [ ] First-party MCP servers (`@modelcontextprotocol/server`): memory, documents, workspace-admin,
+      orchestration
+- [ ] In-process transport — same client interface, same `ToolGateway`
 - [ ] 🔒 Verify no runtime back doors were added for our own servers
 
 ## Phase 6 — Platform hardening & scale
 
-- [ ] `KmsKeyProvider` / `VaultKeyProvider` for production
+- [ ] `KmsKeyProvider` / `VaultKeyProvider`; evaluate MongoDB **Queryable Encryption** for credentials
 - [ ] Public API + SDK; per-key rate limits and quotas
-- [ ] Billing: usage metering, plan limits, per-workspace cost caps (R7)
-- [ ] 🔒 Prompt-injection defence-in-depth (R1): untrusted-data framing, chain-gating by
-      `trust_tier`, adversarial test corpus in CI
-- [ ] Read replicas; partition `run_events` / `run_steps` / `audit_log` by time
-- [ ] Data export + workspace deletion (GDPR-grade, cascading through blob store)
-- [ ] SOC 2 evidence: audit completeness, access reviews, key rotation records
-- [ ] Load testing: 100 concurrent runs, 50 MCP bindings, 10k-document collections
-- [ ] MCP spec-upgrade drill (R10) — confirm a protocol bump touches only `packages/mcp`
+- [ ] Billing: metering, plan limits, per-workspace cost caps
+- [ ] 🔒 Deep prompt-injection defence (R1): untrusted-data framing, trust-tier chaining rules,
+      expanded adversarial corpus
+- [ ] 🔒 Cross-binding data-flow policy (confused-deputy, `SECURITY.md` §6.5)
+- [ ] Atlas: read preferences, sharding evaluation, archival of `runEvents` / `auditLog`
+- [ ] Data export + workspace deletion (cascading through blob storage)
+- [ ] SOC 2 evidence: audit completeness, access reviews, key-rotation records
+- [ ] Load testing: 100 concurrent runs, 50 MCP bindings
+- [ ] MCP spec-upgrade drill — confirm a protocol bump touches only `packages/mcp`
 
 ---
 
-## Standing invariants (checked in CI on every commit)
+## Standing invariants (CI, every commit)
 
-1. `packages/core` and `packages/runtime` contain **no** integration names (Gmail, Telegram,
-   Notion, GitHub, Slack, …) — **(AC-11)**
-2. `packages/core` and `packages/runtime` contain **no** provider names (Anthropic, OpenAI,
-   Gemini, Google) — **(AC-12)**
-3. `packages/runtime` does not import `packages/providers/*`, `packages/mcp/*` concretes, or
-   `packages/db`
-4. `packages/core` imports nothing but `zod`
-5. Every tenant-scoped table has an RLS policy
-6. Every new `AgentProvider` adapter passes the full conformance suite
-7. Every MCP invocation path passes through `ToolGateway`
-8. No secret material is reachable from `runs`, `run_steps`, `audit_log`, logs, or LLM context
+| # | Invariant |
+|---|---|
+| I1 | No integration names in `packages/runtime` / `packages/core` |
+| I2 | No provider names in `packages/runtime` / `packages/core` |
+| I3 | No platform names (`vercel`, `@vercel`) in `runtime` / `core` / `mcp` / `db` |
+| I4 | `mongodb` imported only inside `packages/db` |
+| I5 | `packages/core` imports nothing but `zod` |
+| I6 | `packages/runtime` never imports providers, MCP concretes, or `db` |
+| I7 | Every provider adapter passes the conformance suite |
+| I8 | No unscoped tenant query (command-monitoring guard throws) |
+| I9 | Prompt prefix is byte-stable across identical state |
+| I10 | No secret reachable from run / step / event / audit / log |

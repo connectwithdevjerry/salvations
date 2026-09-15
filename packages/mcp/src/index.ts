@@ -18,6 +18,14 @@ export {
 } from './gateway';
 
 export {
+  AuthorizationRequiredError, AuthorizationStateMismatchError, InMemoryOAuthCredentialStore,
+  PENDING_AUTHORIZATION_TTL_MS, ScopedOAuthProvider, beginAuthorization, clientMetadataDocument,
+  completeAuthorization,
+  type BeginAuthorizationResult, type OAuthClientConfig, type OAuthCredentialStore,
+  type PendingAuthorization,
+} from './oauth';
+
+export {
   CapabilityDiscovery,
   type DiscoveryOptions, type DiscoveryOutcome,
 } from './discovery';

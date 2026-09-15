@@ -102,26 +102,28 @@ Companion to [ARCHITECTURE.md](./ARCHITECTURE.md) and the documents in [docs/](.
 
 ### 1.6 MCP client ⚓
 
-- [ ] `@modelcontextprotocol/client@2` + Streamable HTTP transport
-- [ ] `versionNegotiation: 'auto'`; persist `negotiatedProtocolVersion` per binding
-- [ ] `McpServerRegistry`, `McpConnectionFactory`, typed `ConnectionScopeKey`
-- [ ] `McpClientManager` — concurrency semaphore, circuit breaker, health tracking
-- [ ] 🔒 `McpOAuthClient` — RFC 9728 discovery, PKCE, **CIMD `client_id`** + hosted
+- [x] `@modelcontextprotocol/client@2` + Streamable HTTP transport
+- [x] `versionNegotiation: 'auto'`; persist `negotiatedProtocolVersion` per binding
+- [x] `McpServerRegistry`, `McpConnectionFactory`, typed `ConnectionScopeKey`
+- [x] `McpClientManager` — concurrency semaphore, circuit breaker, health tracking
+- [x] 🔒 `McpOAuthClient` — RFC 9728 discovery, PKCE, **CIMD `client_id`** + hosted
       `/.well-known/mcp-client-metadata.json`, **RFC 8707 resource indicator**,
       **RFC 9207 issuer validation**, DCR fallback, refresh + revocation
-- [ ] `CapabilityDiscovery` — `server/discover` → `tools/list`, honouring `ttlMs`
-- [ ] 🔒 `cacheScope` handling — workspace vs user cache keys; **fail closed when absent**
-- [ ] `CapabilityStore` — normalise, `definitionHash`, diff, soft-delete
+- [x] `CapabilityDiscovery` — `server/discover` → `tools/list`, honouring `ttlMs`
+- [x] 🔒 `cacheScope` handling — workspace vs user cache keys; **fail closed when absent**
+- [x] `CapabilityStore` — normalise, `definitionHash`, diff, soft-delete
 - [x] 🔒 **(AC-7)** atomic approval invalidation in the same write as the hash update + diff UI
-- [ ] `ToolGateway` — resolve → permit → Ajv 2020-12 validate → invoke → normalise → audit;
+- [x] `ToolGateway` — resolve → permit → Ajv 2020-12 validate → invoke → normalise → audit;
       denial returned as an `is_error` tool result
-- [ ] Canonical namespacing `alias__tool`; provider-legal transform with hash suffix + reverse map
-- [ ] 🔒 **(AC-15)** MRTR — human path suspends; **inference path denied by default**;
+- [x] Canonical namespacing `alias__tool`; provider-legal transform with hash suffix + reverse map
+- [x] 🔒 **(AC-15)** MRTR — human path suspends; **inference path denied by default**;
       `requestState` echoed verbatim, never parsed or logged in full
-- [ ] Result size capping + blob spill
-- [ ] Per-tool-call timeout **shorter than `RESERVE_MS`**
-- [ ] 🔒 Test: two users on a `perUserAuth` binding never share a discovery cache entry
-- [ ] **(AC-3)** real third-party server installed end-to-end
+- [x] Result size capping + blob spill
+- [ ] Per-tool-call timeout **shorter than `RESERVE_MS`** — the gateway's timeout is in place
+      (30s default, 120s ceiling); the comparison itself lands with `RESERVE_MS` in §1.8
+- [x] 🔒 Test: two users on a `perUserAuth` binding never share a discovery cache entry
+- [ ] **(AC-3)** real third-party server installed end-to-end — needs a live server and real
+      OAuth consent, so it is a **manual verification**, not something CI can assert
 
 ### 1.7 Agent Runtime ⚓
 

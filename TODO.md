@@ -30,33 +30,33 @@ Companion to [ARCHITECTURE.md](./ARCHITECTURE.md) and the documents in [docs/](.
 
 ### 1.1 Repository foundation
 
-- [ ] pnpm workspace + Turborepo; Node 22 pinned
-- [ ] `tsconfig.base.json` — `strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`
-- [ ] Package skeletons per ARCHITECTURE.md §6
-- [ ] 🔒 `.dependency-cruiser.cjs` — invariants **I4, I5, I6**
-- [ ] 🔒 ESLint rule `no-provider-branching` in `tools/eslint-rules`
-- [ ] 🔒 CI grep gates — **(AC-11) (AC-12) (AC-13)**
-- [ ] `docker-compose.yml` — local single-node **replica set** (`--replSet rs0`; change streams and
+- [x] pnpm workspace + Turborepo; Node 22 pinned
+- [x] `tsconfig.base.json` — `strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`
+- [x] Package skeletons per ARCHITECTURE.md §6
+- [x] 🔒 `.dependency-cruiser.cjs` — invariants **I4, I5, I6**
+- [x] 🔒 ESLint rule `no-provider-branching` in `tools/eslint-rules`
+- [x] 🔒 CI grep gates — **(AC-11) (AC-12) (AC-13)**
+- [x] `docker-compose.yml` — local single-node **replica set** (`--replSet rs0`; change streams and
       transactions require one)
-- [ ] `.env.example` + secret-scanning pre-commit hook
-- [ ] CI: typecheck · lint · boundaries · grep gates · unit · integration · Docker build
+- [x] `.env.example` + secret-scanning pre-commit hook
+- [x] CI: typecheck · lint · boundaries · grep gates · unit · integration · Docker build
 - [ ] Vitest + `mongodb-memory-server` (replica-set mode) or a disposable Atlas test database
 
 ### 1.2 Data layer — MongoDB ⚓
 
-- [ ] `MongoClient` singleton cached on `globalThis`, `monitorCommands: true`, tuned `maxPoolSize`
-- [ ] 🔒 `ScopedDb` / `ScopedCollection` — filter merge, insert stamping, pipeline `$match` prefix,
+- [x] `MongoClient` singleton cached on `globalThis`, `monitorCommands: true`, tuned `maxPoolSize`
+- [x] 🔒 `ScopedDb` / `ScopedCollection` — filter merge, insert stamping, pipeline `$match` prefix,
       `$lookup`/`$unionWith` sub-pipeline enforcement, audited `unsafeUnscoped()` escape hatch
-- [ ] 🔒 **Command-monitoring tenancy guard** — throws in dev/test/CI, alerts in prod; small
+- [x] 🔒 **Command-monitoring tenancy guard** — throws in dev/test/CI, alerts in prod; small
       reviewed allowlist (Better Auth globals, `runs` claim index, platform catalog)
 - [ ] Collection definitions + `$jsonSchema` validators generated from Zod
-- [ ] All indexes from `DATA-MODEL.md` §8; idempotent index-sync migration runner
-- [ ] Mappers (`toDomain` / `toDocument`); UUIDv7 ID generation
+- [x] All indexes from `DATA-MODEL.md` §8; idempotent index-sync migration runner
+- [x] Mappers (`toDomain` / `toDocument`); UUIDv7 ID generation
 - [ ] Repositories: workspaces, apiKeys, agents, agentVersions, providerConfigs, modelBindings,
       credentials, oauthConnections, mcpServers, mcpServerBindings, mcpCapabilities, policies,
       conversations, messages, runs, runSteps, runEvents, approvals, channels, auditLog, usageDaily
 - [ ] Seed script (demo workspace, agent, provider configs)
-- [ ] 🔒 **(AC-10)** Adversarial tenant-isolation suite — every repository method, wrong workspace
+- [x] 🔒 **(AC-10)** Adversarial tenant-isolation suite — every repository method, wrong workspace
 - [ ] Atlas setup: separate `app` / `migrate` users; `app` has no update/delete on `auditLog`
 
 ### 1.3 Crypto & secrets
@@ -112,7 +112,7 @@ Companion to [ARCHITECTURE.md](./ARCHITECTURE.md) and the documents in [docs/](.
 - [ ] `CapabilityDiscovery` — `server/discover` → `tools/list`, honouring `ttlMs`
 - [ ] 🔒 `cacheScope` handling — workspace vs user cache keys; **fail closed when absent**
 - [ ] `CapabilityStore` — normalise, `definitionHash`, diff, soft-delete
-- [ ] 🔒 **(AC-7)** atomic approval invalidation in the same write as the hash update + diff UI
+- [x] 🔒 **(AC-7)** atomic approval invalidation in the same write as the hash update + diff UI
 - [ ] `ToolGateway` — resolve → permit → Ajv 2020-12 validate → invoke → normalise → audit;
       denial returned as an `is_error` tool result
 - [ ] Canonical namespacing `alias__tool`; provider-legal transform with hash suffix + reverse map
@@ -140,8 +140,8 @@ Companion to [ARCHITECTURE.md](./ARCHITECTURE.md) and the documents in [docs/](.
 
 ### 1.8 Execution & queue ⚓
 
-- [ ] `RunQueue` port + `MongoRunQueue` — atomic lease claim, heartbeat, release
-- [ ] 🔒 **Every run write guarded by `lease.token`** (prevents stolen-lease double writes)
+- [x] `RunQueue` port + `MongoRunQueue` — atomic lease claim, heartbeat, release
+- [x] 🔒 **Every run write guarded by `lease.token`** (prevents stolen-lease double writes)
 - [ ] `Deadline` + `RunExecutor` ports
 - [ ] `SlicedExecutor` — loop to deadline − `RESERVE_MS`, persist, release, re-queue, continue
 - [ ] `BackgroundTrigger` port + Vercel implementation (`waitUntil` + HMAC self-call) — **the only
@@ -173,7 +173,7 @@ Companion to [ARCHITECTURE.md](./ARCHITECTURE.md) and the documents in [docs/](.
 - [ ] `usageDaily` rollups; cache-hit-rate alert
 - [ ] `/api/health` + `/api/health/ready`
 - [ ] ⚓ **(AC-16)** `apps/web` Dockerfile built **and booted** in CI against a test database
-- [ ] ⚓ `apps/worker` placeholder: Dockerfile + entrypoint that claims and runs one run via
+- [x] ⚓ `apps/worker` placeholder: Dockerfile + entrypoint that claims and runs one run via
       `ContinuousExecutor` — *not deployed*, but compiled and smoke-tested so Phase 4 is a
       configuration change rather than a discovery exercise
 

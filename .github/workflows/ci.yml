@@ -84,3 +84,5 @@ jobs:
           echo "web container failed to boot"; docker logs web; exit 1
       - name: Build worker image
         run: docker build -f apps/worker/Dockerfile -t salvations-worker:ci .
+      - name: Smoke the worker image
+        run: docker run --rm salvations-worker:ci pnpm --filter @salvations/worker start --smoke

@@ -4,7 +4,8 @@ Companion to [../ARCHITECTURE.md](../ARCHITECTURE.md). Defines every collection,
 index, and relationship.
 
 **Database:** MongoDB Atlas (replica set — always, on Atlas), MongoDB **8.1+** required
-(`$rankFusion` for Phase 2 hybrid search).
+(`$rankFusion` for Phase 2 hybrid search). Local and CI run the `mongo:8.3` image —
+MongoDB's rapid releases skip some Docker tags, and there is no `8.1` image.
 **Driver:** official `mongodb` Node.js driver **7.x**. No ODM — see §0.2.
 
 ---

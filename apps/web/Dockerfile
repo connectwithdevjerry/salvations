@@ -6,34 +6,23 @@
 FROM node:22-alpine AS base
 RUN corepack enable
 WORKDIR /app
-
-FROM base AS deps
-COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
-COPY apps/web/package.json apps/web/
-COPY apps/worker/package.json apps/worker/
-COPY packages/core/package.json packages/core/
-COPY packages/contracts/package.json packages/contracts/
-COPY packages/crypto/package.json packages/crypto/
-COPY packages/db/package.json packages/db/
-COPY packages/mcp/package.json packages/mcp/
-COPY packages/runtime/package.json packages/runtime/
-COPY packages/observability/package.json packages/observability/
-COPY packages/providers/anthropic/package.json packages/providers/anthropic/
-COPY packages/providers/openai/package.json packages/providers/openai/
-COPY packages/providers/google/package.json packages/providers/google/
-COPY packages/providers/registry/package.json packages/providers/registry/
-COPY packages/providers/testkit/package.json packages/providers/testkit/
-RUN pnpm install --frozen-lockfile
+ENV NEXT_TELEMETRY_DISABLED=1
 
 FROM base AS build
-COPY --from=deps /app/node_modules ./node_modules
+# Install AFTER the full workspace is present. pnpm's isolated layout puts a
+# node_modules in every package, so copying only the root one leaves
+# apps/web/node_modules missing and `next` unresolvable. Correctness over
+# layer caching: a cached build that cannot find its own binaries is worthless.
 COPY . .
+RUN pnpm install --frozen-lockfile
 RUN pnpm --filter @salvations/web build
 
 FROM node:22-alpine AS runner
 WORKDIR /app
-ENV NODE_ENV=production PORT=3000 HOSTNAME=0.0.0.0
+ENV NODE_ENV=production PORT=3000 HOSTNAME=0.0.0.0 NEXT_TELEMETRY_DISABLED=1
 RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001
+# Standalone output is laid out from outputFileTracingRoot (the monorepo root),
+# so it already contains apps/web/server.js and a traced node_modules.
 COPY --from=build --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
 COPY --from=build --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/web/.next/static
 USER nextjs

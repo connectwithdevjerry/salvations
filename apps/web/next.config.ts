@@ -15,10 +15,12 @@ const config: NextConfig = {
   ],
   // Required for the container image (AC-16): a self-contained server bundle.
   output: 'standalone',
-  experimental: {
-    // The MongoDB driver and provider SDKs must stay external to the server bundle.
-    serverComponentsExternalPackages: ['mongodb'],
-  },
+  // The monorepo root, so standalone tracing follows workspace links correctly.
+  outputFileTracingRoot: new URL('../../', import.meta.url).pathname,
+  // Native/driver packages must stay external to the server bundle rather than
+  // being traced and re-bundled. Top-level since Next 15 — it was previously
+  // experimental.serverComponentsExternalPackages, which Next now ignores.
+  serverExternalPackages: ['mongodb'],
 };
 
 export default config;

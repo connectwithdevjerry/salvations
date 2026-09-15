@@ -16,7 +16,8 @@
     "verify": "pnpm invariants && pnpm boundaries && pnpm lint && pnpm typecheck && pnpm test && pnpm worker:smoke",
     "db:up": "docker compose up -d mongo && ./tools/scripts/wait-for-mongo.sh",
     "db:down": "docker compose down -v",
-    "worker:smoke": "tsx apps/worker/src/main.ts --smoke"
+    "worker:smoke": "tsx apps/worker/src/main.ts --smoke",
+    "db:migrate": "tsx packages/db/src/migrate.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

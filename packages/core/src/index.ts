@@ -16,5 +16,6 @@ export * from './entities/mcp';
 export * from './policy/pattern';
 export * from './policy/permission';
 export * from './policy/budget';
+export * from './policy/tool-names';
 
 export * from './ports/index';

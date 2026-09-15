@@ -177,6 +177,13 @@ importers:
       '@salvations/core':
         specifier: workspace:*
         version: link:../../core
+    devDependencies:
+      '@salvations/provider-testkit':
+        specifier: workspace:*
+        version: link:../testkit
+      vitest:
+        specifier: ^5.0.0
+        version: 5.0.0(@types/node@26.5.1)(vite@8.3.0(@types/node@26.5.1)(esbuild@0.28.2)(tsx@4.23.13))
 
   packages/providers/google:
     dependencies:
@@ -186,6 +193,13 @@ importers:
       '@salvations/core':
         specifier: workspace:*
         version: link:../../core
+    devDependencies:
+      '@salvations/provider-testkit':
+        specifier: workspace:*
+        version: link:../testkit
+      vitest:
+        specifier: ^5.0.0
+        version: 5.0.0(@types/node@26.5.1)(vite@8.3.0(@types/node@26.5.1)(esbuild@0.28.2)(tsx@4.23.13))
 
   packages/providers/openai:
     dependencies:
@@ -195,6 +209,13 @@ importers:
       openai:
         specifier: ^7.15.0
         version: 7.15.0(ws@8.21.3)(zod@4.6.5)
+    devDependencies:
+      '@salvations/provider-testkit':
+        specifier: workspace:*
+        version: link:../testkit
+      vitest:
+        specifier: ^5.0.0
+        version: 5.0.0(@types/node@26.5.1)(vite@8.3.0(@types/node@26.5.1)(esbuild@0.28.2)(tsx@4.23.13))
 
   packages/providers/registry:
     dependencies:
@@ -216,6 +237,9 @@ importers:
       '@salvations/core':
         specifier: workspace:*
         version: link:../../core
+      vitest:
+        specifier: ^5.0.0
+        version: 5.0.0(@types/node@26.5.1)(vite@8.3.0(@types/node@26.5.1)(esbuild@0.28.2)(tsx@4.23.13))
 
   packages/runtime:
     dependencies:

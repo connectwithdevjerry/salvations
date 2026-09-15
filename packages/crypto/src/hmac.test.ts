@@ -1,12 +1,20 @@
 import { describe, expect, it } from 'vitest';
-import { SIGNATURE_HEADER, TIMESTAMP_HEADER, generateHmacSecret, sign, verify } from './hmac.js';
+import {
+  SIGNATURE_HEADER, TIMESTAMP_HEADER, generateHmacSecret, sign, verify,
+  type SignedHeaders, type VerifyResult, type VerifyFailure,
+} from './hmac.js';
 
 const SECRET = 'internal-secret';
 const NOW = 1_789_000_000_000;
-const headersOf = (h: Record<string, string>) => ({
-  signature: h[SIGNATURE_HEADER] as string,
-  timestamp: h[TIMESTAMP_HEADER] as string,
+
+const headersOf = (h: SignedHeaders) => ({
+  signature: h[SIGNATURE_HEADER],
+  timestamp: h[TIMESTAMP_HEADER],
 });
+
+/** Narrows the result union so a failure reason can be asserted directly. */
+const failureReason = (result: VerifyResult): VerifyFailure | 'ok' =>
+  result.ok ? 'ok' : result.reason;
 
 describe('internal request signing', () => {
   it('verifies a correctly signed request', () => {
@@ -64,14 +72,14 @@ describe('internal request signing', () => {
   });
 
   it('rejects malformed signature material', () => {
-    expect(verify(SECRET, 'POST', '/p', '{}',
-      { signature: 'deadbeef', timestamp: String(NOW) }, { now: NOW }).reason)
+    expect(failureReason(verify(SECRET, 'POST', '/p', '{}',
+      { signature: 'deadbeef', timestamp: String(NOW) }, { now: NOW })))
       .toBe('malformed_signature');
-    expect(verify(SECRET, 'POST', '/p', '{}',
-      { signature: 'v1=abc', timestamp: 'not-a-number' }, { now: NOW }).reason)
+    expect(failureReason(verify(SECRET, 'POST', '/p', '{}',
+      { signature: 'v1=abc', timestamp: 'not-a-number' }, { now: NOW })))
       .toBe('malformed_signature');
-    expect(verify(SECRET, 'POST', '/p', '{}',
-      { signature: 'v1=abc', timestamp: null }, { now: NOW }).reason)
+    expect(failureReason(verify(SECRET, 'POST', '/p', '{}',
+      { signature: 'v1=abc', timestamp: null }, { now: NOW })))
       .toBe('missing_timestamp');
   });
 

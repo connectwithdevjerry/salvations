@@ -171,6 +171,32 @@ export interface RunDoc extends TenantDoc {
   heartbeatAt?: Date | null;
 }
 
+/**
+ * One tool call, as persisted.
+ *
+ * Carries BOTH halves deliberately: the result, so a suspended phase can replay
+ * instead of repeating a side effect, and the decision and redacted arguments,
+ * so a reviewer can answer "why was this allowed" without re-deriving it
+ * against a policy that has since changed.
+ */
+export interface ToolInvocationDoc {
+  id: string;
+  canonicalName: string;
+  bindingId?: string | null;
+  content?: unknown[];
+  structured?: unknown;
+  isError: boolean;
+  durationMs: number;
+  mrtrRounds: number;
+  /** Redacted at WRITE time. A display-time redaction is one call site from a leak. */
+  argumentsRedacted?: unknown;
+  permission?: {
+    effect: 'allow' | 'ask' | 'deny';
+    reason?: string | null;
+    matchedRuleId?: string | null;
+  } | null;
+}
+
 export interface RunStepDoc extends TenantDoc {
   runId: string;
   seq: number;
@@ -178,7 +204,7 @@ export interface RunStepDoc extends TenantDoc {
   status: 'running' | 'succeeded' | 'failed';
   request?: unknown;
   response?: unknown;
-  toolCalls?: unknown[];
+  toolCalls?: ToolInvocationDoc[];
   usage?: unknown;
   latencyMs?: number | null;
   error?: { code: string; message: string } | null;

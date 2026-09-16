@@ -42,3 +42,37 @@ export function computeCostUsd(
       usage.cacheWriteTokens * cacheWrite) / M
   );
 }
+
+/**
+ * Narrows a budget to what a caller is allowed to ask for.
+ *
+ * Every field takes the MINIMUM of what was requested and the ceiling. A caller
+ * can ask for less than the ceiling — a cheap exploratory run — and cannot ask
+ * for more, which is the whole point: a budget a client can raise is not a
+ * budget, and validating the request shape alone does not stop that, because a
+ * schema bound is still a number the client chose.
+ */
+export function clampBudget(
+  // Deliberately permits `undefined` per field: a parsed request body has
+  // optional keys present and unset, and a stricter type here would push a cast
+  // to every caller.
+  requested: { readonly [K in keyof RunBudget]?: number | undefined } | undefined,
+  ceiling: RunBudget,
+): RunBudget {
+  const pick = (key: keyof RunBudget): number => {
+    const value = requested?.[key];
+    return typeof value === 'number' && Number.isFinite(value) && value >= 0
+      ? Math.min(value, ceiling[key])
+      : ceiling[key];
+  };
+
+  return {
+    maxSteps: pick('maxSteps'),
+    maxToolCalls: pick('maxToolCalls'),
+    maxTotalTokens: pick('maxTotalTokens'),
+    maxWallClockMs: pick('maxWallClockMs'),
+    maxCostUsd: pick('maxCostUsd'),
+    maxMrtrRounds: pick('maxMrtrRounds'),
+    maxSubagentDepth: pick('maxSubagentDepth'),
+  };
+}

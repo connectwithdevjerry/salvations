@@ -123,11 +123,21 @@ export const capabilityBindingSchema = z.object({
   tools: z.array(z.string().max(120)).max(200).default([]),
 });
 
+export const modelRoleSchema = z.enum(['chat', 'reasoning', 'summarizer', 'cheap', 'embedding']);
+
+/**
+ * An agent names a ROLE, not a model binding.
+ *
+ * The role is resolved to a binding when a run starts, which is the point at
+ * which a workspace can swap vendors without editing every agent. A conversation
+ * may then override the binding for itself — that is how one conversation
+ * continues across Anthropic, OpenAI and Google.
+ */
 export const upsertAgentSchema = z.object({
   name: nameSchema,
   description: descriptionSchema.optional(),
   systemPrompt: boundedText(20_000),
-  modelBindingId: idSchema,
+  modelRole: modelRoleSchema.default('chat'),
   capabilityBindings: z.array(capabilityBindingSchema).max(50).default([]),
   budget: budgetRequestSchema.optional(),
   guardrails: z.object({
@@ -140,9 +150,10 @@ export const agentSchema = z.object({
   name: nameSchema,
   description: z.string().optional(),
   systemPrompt: z.string(),
-  modelBindingId: idSchema,
+  modelRole: modelRoleSchema,
   capabilityBindings: z.array(capabilityBindingSchema),
   versionId: idSchema,
+  version: z.number().int().min(1),
   updatedAt: z.string(),
 });
 
@@ -257,6 +268,7 @@ export const upsertPolicySchema = z.object({
 export const createConversationSchema = z.object({
   agentId: idSchema,
   title: nameSchema.optional(),
+  /** Overrides the agent's role resolution for this conversation only. */
   modelBindingId: idSchema.optional(),
 });
 

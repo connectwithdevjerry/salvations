@@ -4,6 +4,7 @@
  */
 import type { ToolDeclaration } from '../entities/model';
 import type { ContentBlock } from '../entities/conversation';
+import type { PermissionEffect } from '../entities/run';
 import type { ApprovalId, McpBindingId } from '../ids';
 import type { RunContext } from './run-context';
 
@@ -16,6 +17,19 @@ export type ToolOutcome =
       readonly bindingId: McpBindingId;
       readonly durationMs: number;
       readonly mrtrRounds: number;
+      /**
+       * Why this call was permitted.
+       *
+       * Carried on the OUTCOME rather than looked up afterwards: the decision
+       * was made against the arguments of this specific call, and re-deriving
+       * it later against a policy that has since changed would show a reviewer
+       * something that never happened.
+       */
+      readonly permission?: {
+        readonly effect: PermissionEffect;
+        readonly reason?: string;
+        readonly matchedRuleId?: string;
+      };
     }
   /** Policy requires a human. The run suspends; no process is held open. */
   | { readonly kind: 'needs_approval'; readonly approvalId: ApprovalId; readonly reason: string }

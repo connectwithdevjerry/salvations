@@ -191,6 +191,34 @@ export class CapabilityRepository {
     return result.matchedCount === 1;
   }
 
+  async findByIds(capabilityIds: readonly string[]): Promise<McpCapabilityDoc[]> {
+    if (capabilityIds.length === 0) return [];
+    return this.#collection.find({ _id: { $in: [...capabilityIds] } } as never);
+  }
+
+  /**
+   * Approves several capabilities at the hashes a reviewer was shown.
+   *
+   * One call per capability rather than one bulk write, because each carries
+   * its OWN hash guard: a bulk update would have to drop the guard or apply one
+   * hash to all of them, and either turns the rug-pull defence into decoration.
+   * A capability that moved in between is skipped and reported, not forced.
+   */
+  async approveMany(
+    expectedHashes: Readonly<Record<string, string>>,
+    userId: string,
+    now = new Date(),
+  ): Promise<{ approved: string[]; skipped: string[] }> {
+    const approved: string[] = [];
+    const skipped: string[] = [];
+
+    for (const [capabilityId, hash] of Object.entries(expectedHashes)) {
+      if (await this.approve(capabilityId, hash, userId, now)) approved.push(capabilityId);
+      else skipped.push(capabilityId);
+    }
+    return { approved, skipped };
+  }
+
   async revoke(capabilityId: string): Promise<void> {
     await this.#collection.updateOne(
       { _id: capabilityId },

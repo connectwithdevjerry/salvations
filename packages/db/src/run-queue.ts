@@ -80,6 +80,39 @@ export class MongoRunQueue {
   }
 
   /**
+   * Puts a run back in the queue.
+   *
+   * Used when a suspended run becomes runnable again — an approval answered, an
+   * MRTR question answered, a tool task finished. Deliberately does NOT clear a
+   * live lease: a run someone else is actively executing must not be quietly
+   * handed back, and the guard below makes that a no-op rather than a race.
+   */
+  async enqueue(
+    runId: string,
+    options: { priority?: number; scheduledFor?: Date } = {},
+  ): Promise<boolean> {
+    const { collection, comment } = this.#runs('queue-claim');
+    const result = await collection.updateOne(
+      {
+        _id: runId,
+        // Only from a state that is genuinely waiting. A `running` run has an
+        // owner; a finished one is finished.
+        status: { $in: ['waiting_approval', 'waiting_input', 'waiting_tool', 'queued'] },
+      },
+      {
+        $set: {
+          status: 'queued' as const,
+          scheduledFor: options.scheduledFor ?? this.#now(),
+          lease: null,
+          ...(options.priority !== undefined ? { priority: options.priority } : {}),
+        },
+      },
+      { comment },
+    );
+    return result.matchedCount === 1;
+  }
+
+  /**
    * Claim one runnable run.
    *
    * The filter deliberately spans workspaces: scheduling is a platform concern

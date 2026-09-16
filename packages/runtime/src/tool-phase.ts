@@ -16,9 +16,9 @@
  * re-invoked.
  */
 import {
-  toolResultBlock,
-  type ContentBlock, type McpBindingId, type RunContext, type ToolGateway,
-  type ToolOutcome,
+  redactDeep, toolResultBlock,
+  type ContentBlock, type McpBindingId, type PermissionEffect, type RunContext,
+  type ToolGateway, type ToolOutcome,
 } from '@salvations/core';
 import { LoopDetector, type LoopVerdict, type ObservedCall } from './loop-detection';
 import type { PublishEvent } from './model-call';
@@ -38,6 +38,19 @@ export interface CompletedCall {
   readonly bindingId?: McpBindingId;
   readonly durationMs: number;
   readonly mrtrRounds: number;
+  /**
+   * Arguments as they will be STORED.
+   *
+   * Redacted here, at write time, rather than when something displays them. A
+   * display-time redaction is one forgotten call site from a leak, and the
+   * secret is already in the database by then.
+   */
+  readonly argumentsRedacted?: unknown;
+  readonly permission?: {
+    readonly effect: PermissionEffect;
+    readonly reason?: string;
+    readonly matchedRuleId?: string;
+  };
 }
 
 export type PhaseOutcome =
@@ -133,6 +146,8 @@ export class ToolPhaseRunner {
             bindingId: outcome.bindingId,
             durationMs: outcome.durationMs,
             mrtrRounds: outcome.mrtrRounds,
+            argumentsRedacted: redactDeep(call.input),
+            ...(outcome.permission !== undefined ? { permission: outcome.permission } : {}),
           };
           completed.set(call.id, done);
           this.#detector.record({ canonicalName: call.canonicalName, args: call.input });

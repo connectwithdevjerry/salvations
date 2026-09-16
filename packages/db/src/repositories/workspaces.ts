@@ -6,7 +6,7 @@
  * indexed read rather than a join.
  */
 import type { Db } from 'mongodb';
-import type { Role } from '@salvations/core';
+import { IdPrefix, newId, type Role } from '@salvations/core';
 import type { WorkspaceDoc, WorkspaceMemberSub } from '../documents';
 import { PlatformDb, ScopedDb, type ScopedCollection } from '../scoped';
 
@@ -83,6 +83,51 @@ export class WorkspaceRepository {
       name: doc.name,
       role: (doc.members?.[0]?.role ?? 'viewer') as Role,
     }));
+  }
+
+  /**
+   * Creates a workspace with its creator as owner.
+   *
+   * The owner is embedded in the SAME insert rather than added afterwards:
+   * a workspace that exists for even a moment with no owner is a workspace
+   * nobody can administer, and recovering one needs support access.
+   */
+  async create(input: {
+    name: string;
+    slug: string;
+    createdBy: string;
+  }): Promise<WorkspaceDoc> {
+    const now = new Date();
+    const id = newId(IdPrefix.workspace);
+    const doc: WorkspaceDoc = {
+      _id: id,
+      workspaceId: id,
+      slug: input.slug,
+      name: input.name,
+      plan: 'free',
+      settings: {
+        // Ask by default. A new workspace that silently allows every tool is
+        // one nobody chose to trust.
+        defaultToolEffect: 'ask',
+        maxConcurrentRuns: 4,
+        dailyCostCapUsd: 25,
+        allowedMcpTrustTiers: ['first_party', 'verified'],
+      },
+      members: [{
+        userId: input.createdBy,
+        role: 'owner',
+        status: 'active',
+        joinedAt: now,
+      } as never],
+      invitations: [],
+      createdBy: input.createdBy,
+      createdAt: now,
+      updatedAt: now,
+      deletedAt: null,
+    };
+
+    await this.#scoped(id).insertOne(doc as never);
+    return doc;
   }
 
   async addMember(

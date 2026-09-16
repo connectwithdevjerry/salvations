@@ -8,6 +8,7 @@
  */
 import { SIGNATURE_HEADER, TIMESTAMP_HEADER, verify } from '@salvations/crypto';
 import { MongoRunQueue } from '@salvations/db';
+import { asId, type RunId } from '@salvations/core';
 import { db } from '@/lib/db';
 import { env } from '@/lib/env';
 import { VercelBackgroundTrigger } from '@/lib/trigger';
@@ -52,7 +53,7 @@ export async function POST(request: Request): Promise<Response> {
   const orphaned = await queue.findOrphanedQueued(ORPHAN_AFTER_MS);
   const trigger = new VercelBackgroundTrigger();
   for (const runId of orphaned) {
-    await trigger.trigger(runId as never);
+    await trigger.trigger(asId<RunId>(runId));
   }
 
   return Response.json({ ...swept, retriggered: orphaned.length }, { status: 200 });

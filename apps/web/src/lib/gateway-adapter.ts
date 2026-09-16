@@ -154,6 +154,20 @@ export function createToolGateway(deps: GatewayAdapterDeps): ToolGateway {
             bindingId: aliasOf(canonicalName),
             durationMs: outcome.durationMs,
             mrtrRounds: outcome.mrtrRounds,
+            // Carried from the decision that actually permitted this call, so
+            // the timeline shows what happened rather than what a re-derived
+            // policy would say today.
+            ...(outcome.permission !== undefined
+              ? {
+                  permission: {
+                    effect: outcome.permission.effect,
+                    reason: outcome.permission.reason,
+                    ...(outcome.permission.matchedRuleId !== undefined
+                      ? { matchedRuleId: outcome.permission.matchedRuleId }
+                      : {}),
+                  },
+                }
+              : {}),
           };
 
         case 'needs_approval':

@@ -161,6 +161,25 @@ export class RunRepository {
     } as never);
   }
 
+  /**
+   * Cancels a run.
+   *
+   * Marks it, rather than interrupting anything: the executor is elsewhere and
+   * possibly mid-tool-call. The lease is deliberately left alone — an executor
+   * that still holds one finishes its current step and finds the run cancelled
+   * on the next, which is the only point at which stopping is safe.
+   */
+  async cancel(runId: string): Promise<boolean> {
+    const result = await this.#runs.updateOne(
+      {
+        _id: runId,
+        status: { $nin: ['succeeded', 'failed', 'cancelled', 'expired'] },
+      } as never,
+      { $set: { status: 'cancelled', finishedAt: new Date() } } as never,
+    );
+    return result.matchedCount === 1;
+  }
+
   async listSteps(runId: string): Promise<RunStepDoc[]> {
     return this.#steps.find({ runId } as never, { sort: { seq: 1 } });
   }

@@ -18,6 +18,7 @@ export * from './policy/pattern';
 export * from './policy/permission';
 export * from './policy/budget';
 export * from './policy/timeouts';
+export * from './policy/redaction';
 export * from './policy/tool-names';
 
 export * from './ports/index';

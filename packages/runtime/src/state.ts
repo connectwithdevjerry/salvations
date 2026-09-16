@@ -10,8 +10,8 @@
  * boundary with no authoritative state in the process.
  */
 import type {
-  CanonicalMessage, ContentBlock, Message, MessageId, ProviderArtifacts, RunConsumption,
-  RunStepType, ToolInvocation, Usage,
+  CanonicalMessage, ContentBlock, Message, MessageId, PermissionEffect, ProviderArtifacts,
+  RunConsumption, RunStepType, ToolInvocation, Usage,
 } from '@salvations/core';
 
 export interface AppendMessage {
@@ -61,6 +61,13 @@ export interface ToolInvocationResult {
   readonly bindingId?: string;
   readonly durationMs: number;
   readonly mrtrRounds: number;
+  /** Already redacted by the phase that produced it. Stored as given. */
+  readonly argumentsRedacted?: unknown;
+  readonly permission?: {
+    readonly effect: PermissionEffect;
+    readonly reason?: string;
+    readonly matchedRuleId?: string;
+  };
 }
 
 /** Summarising is a model call; the runtime takes it as a function. */

@@ -137,13 +137,28 @@ export class MongoRunStateStore implements RunStateStore {
   }
 
   async saveToolResult(result: ToolInvocationResult): Promise<void> {
+    const now = new Date();
     await this.#runs.appendStep(this.#deps.runId, this.#deps.leaseToken, {
       type: 'tool_call',
       status: result.isError ? 'failed' : 'succeeded',
-      toolCalls: [result],
+      // The whole invocation, not just its result: the replay half keeps a
+      // suspended phase from repeating a side effect, and the audit half lets a
+      // reviewer answer "why was this allowed" later.
+      toolCalls: [{
+        id: result.id,
+        canonicalName: result.canonicalName,
+        bindingId: result.bindingId ?? null,
+        content: result.content as unknown[],
+        ...(result.structured !== undefined ? { structured: result.structured } : {}),
+        isError: result.isError,
+        durationMs: result.durationMs,
+        mrtrRounds: result.mrtrRounds,
+        argumentsRedacted: result.argumentsRedacted,
+        permission: result.permission ?? null,
+      }],
       latencyMs: result.durationMs,
-      startedAt: new Date(),
-      finishedAt: new Date(),
+      startedAt: now,
+      finishedAt: now,
     } as never);
   }
 

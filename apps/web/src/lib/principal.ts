@@ -93,3 +93,22 @@ export function requirePermission(principal: Principal, permission: Permission):
     throw Errors.forbidden(`Missing permission: ${permission}`);
   }
 }
+
+/**
+ * A principal's own id, for attribution.
+ *
+ * One function rather than a ternary at each call site: an attribution that
+ * silently records 'system' for a real user is the kind of thing nobody notices
+ * until an audit needs it.
+ */
+export function actorIdOf(principal: Principal): string {
+  switch (principal.type) {
+    case 'user': return String(principal.userId);
+    case 'api_key': return String(principal.apiKeyId);
+    case 'channel_identity': return principal.identityId;
+    // An agent acts on someone's behalf and holds no authority of its own, so
+    // the attribution follows the delegation rather than stopping at the agent.
+    case 'agent': return actorIdOf(principal.onBehalfOf);
+    case 'system': return `system:${principal.reason}`;
+  }
+}

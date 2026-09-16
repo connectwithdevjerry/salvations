@@ -79,7 +79,9 @@ export interface GatewayDeps {
 
 export type ToolOutcome =
   | { readonly kind: 'result'; readonly result: NormalisedResult; readonly durationMs: number;
-      readonly mrtrRounds: number }
+      readonly mrtrRounds: number;
+      /** The decision that permitted this call, as it was made. */
+      readonly permission?: PermissionOutcome }
   | { readonly kind: 'needs_approval'; readonly approvalId: string; readonly reason: string }
   | { readonly kind: 'needs_input'; readonly approvalId: string;
       readonly requestState: string | undefined };
@@ -192,7 +194,9 @@ export class ToolGateway {
     }
 
     // 5. Invoke, bounded and circuit-guarded.
-    return this.#call(canonicalName, capability, definition, scope, args, ctx, resolved, started);
+    return this.#call(
+      canonicalName, capability, definition, scope, args, ctx, resolved, started, decision,
+    );
   }
 
   async #call(
@@ -204,6 +208,7 @@ export class ToolGateway {
     ctx: InvocationContext,
     resolved: { mrtrPolicy?: MrtrPolicy; timeoutMs?: number },
     started: number,
+    permission: PermissionOutcome,
   ): Promise<ToolOutcome> {
     const timeoutMs = resolved.timeoutMs ?? DEFAULT_TOOL_TIMEOUT_MS;
     const policy = resolved.mrtrPolicy ?? DEFAULT_MRTR_POLICY;
@@ -251,7 +256,9 @@ export class ToolGateway {
           isError: result.isError, bytes: result.bytes, mrtrRounds: rounds,
           ...(result.spilledTo !== undefined ? { spilledTo: result.spilledTo } : {}),
         });
-        return { kind: 'result', result, durationMs: Date.now() - started, mrtrRounds: rounds };
+        return {
+          kind: 'result', result, durationMs: Date.now() - started, mrtrRounds: rounds, permission,
+        };
       }
 
       // The server wants more input.

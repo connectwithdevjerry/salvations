@@ -68,6 +68,10 @@ export function newId<T extends string>(prefix: T, now?: number): `${T}_${string
 }
 
 export const IdPrefix = {
+  user: 'usr',
+  session: 'ses',
+  identity: 'idt',
+  authChallenge: 'chg',
   workspace: 'wks',
   agent: 'agt',
   agentVersion: 'agv',

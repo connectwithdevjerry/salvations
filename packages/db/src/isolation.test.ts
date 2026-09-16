@@ -167,7 +167,7 @@ describe.skipIf(URI === undefined || URI === '')('tenant isolation (AC-10)', () 
 
   it('refuses to hand out a non-tenant collection through ScopedDb', () => {
     const a = new ScopedDb(db, WS_A);
-    expect(() => a.collection('session')).toThrow(/not a tenant-scoped collection/);
+    expect(() => a.collection('authSessions')).toThrow(/not a tenant-scoped collection/);
   });
 
   it('covers every declared tenant collection', () => {

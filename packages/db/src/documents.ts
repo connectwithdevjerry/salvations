@@ -314,3 +314,88 @@ export interface AuditLogDoc extends TenantDoc {
   userAgent?: string | null;
   createdAt: Date;
 }
+
+/**
+ * A person.
+ *
+ * Global, not workspace-scoped: one human belongs to many workspaces, and a
+ * per-workspace user row would mean the same person with several passwords.
+ */
+export interface UserDoc extends BaseDoc {
+  /** Lowercased and trimmed. The unique index is on this, not on the display form. */
+  email: string;
+  /** As typed, for display. `Sam@Example.com` should still greet them that way. */
+  emailDisplay: string;
+  emailVerifiedAt?: Date | null;
+  name?: string | null;
+  imageUrl?: string | null;
+  /**
+   * Absent for someone who only ever signs in with Google.
+   *
+   * Nullable rather than a placeholder: a dummy hash would be indistinguishable
+   * from a real one, and "this account has no password" is a fact worth being
+   * able to state.
+   */
+  passwordHash?: string | null;
+  /** Bumped to revoke every session at once — a password change, a compromise. */
+  sessionEpoch: number;
+  disabledAt?: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+  lastSignedInAt?: Date | null;
+}
+
+/**
+ * A live session.
+ *
+ * The row IS the session: deleting it revokes the refresh token immediately,
+ * and the short-lived access token lapses on its own within minutes.
+ */
+export interface AuthSessionDoc extends BaseDoc {
+  userId: string;
+  /** SHA-256 of the refresh token. The token itself is never stored. */
+  refreshTokenHash: string;
+  /** Matched against the user's epoch, so one write can revoke every session. */
+  sessionEpoch: number;
+  /** Rotated on every refresh; a reused old token means a stolen one. */
+  rotatedAt: Date;
+  createdAt: Date;
+  /** Hard stop. A session cannot be refreshed forever. */
+  expiresAt: Date;
+  /** Sliding window: an active session stays alive, an idle one lapses. */
+  idleExpiresAt: Date;
+  /** For a sessions list a person can review — never used for authorization. */
+  userAgent?: string | null;
+  ipHash?: string | null;
+  revokedAt?: Date | null;
+  revokedReason?: string | null;
+}
+
+/** A link between a person here and an account at an identity provider. */
+export interface IdentityDoc extends BaseDoc {
+  userId: string;
+  provider: 'google';
+  /**
+   * The provider's stable subject, never the email.
+   *
+   * An email can be reassigned inside a hosted domain; the subject is stable
+   * for the life of the account. Joining on email would eventually hand one
+   * person another's account.
+   */
+  subject: string;
+  email: string;
+  emailVerified: boolean;
+  hostedDomain?: string | null;
+  createdAt: Date;
+  lastUsedAt: Date;
+}
+
+export interface AuthChallengeDoc extends BaseDoc {
+  userId: string;
+  kind: 'email_verification' | 'password_reset';
+  /** Hashed, like every other bearer value. */
+  tokenHash: string;
+  expiresAt: Date;
+  consumedAt?: Date | null;
+  createdAt: Date;
+}

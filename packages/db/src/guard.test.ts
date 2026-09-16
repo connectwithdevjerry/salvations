@@ -88,9 +88,19 @@ describe('pipelineConstrainsWorkspace', () => {
 });
 
 describe('analyzeCommand', () => {
-  it('ignores collections owned by the auth library', () => {
-    expect(analyzeCommand('find', { find: 'session', filter: {} })).toBeUndefined();
-    expect(analyzeCommand('find', { find: 'user', filter: { email: 'a@b.c' } })).toBeUndefined();
+  it('ignores the global authentication collections', () => {
+    // One human belongs to many workspaces, so a user or a session genuinely
+    // has no workspaceId — an unscoped read of one is normal, not a bug.
+    expect(analyzeCommand('find', { find: 'authSessions', filter: {} })).toBeUndefined();
+    expect(analyzeCommand('find', { find: 'users', filter: { email: 'a@b.c' } })).toBeUndefined();
+    expect(analyzeCommand('find', { find: 'identities', filter: { subject: '1' } })).toBeUndefined();
+  });
+
+  it('flags a collection left behind by a rename', () => {
+    // The old auth-library name. Unclassified means unguarded, and staying
+    // silent about it would be the guard failing open.
+    const v = analyzeCommand('find', { find: 'session', filter: {} });
+    expect(v?.reason).toBe('unknown_collection');
   });
 
   it('flags an unscoped find on a tenant collection', () => {

@@ -6,12 +6,22 @@
  * Adding a collection without classifying it is a type error.
  */
 
-/** Owned by the auth library. Global by design: one human, many workspaces. */
+/**
+ * Authentication. Global by design: one human belongs to many workspaces, so a
+ * user record cannot be scoped to any one of them.
+ *
+ * Owned by us, not by an auth vendor — every fact about a person lives here and
+ * nowhere else.
+ */
 export const GLOBAL_COLLECTIONS = [
-  'user',
-  'session',
-  'account',
-  'verification',
+  /** People. Email, password hash, profile. */
+  'users',
+  /** Live sessions. Deleting a row revokes a session. */
+  'authSessions',
+  /** Links to an external identity provider — a Google account. */
+  'identities',
+  /** Email verification and password reset challenges. */
+  'authChallenges',
 ] as const;
 
 /** Every document belongs to exactly one workspace. */

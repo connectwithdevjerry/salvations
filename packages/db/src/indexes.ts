@@ -18,6 +18,49 @@ export interface IndexDef {
 }
 
 export const INDEXES: Readonly<Partial<Record<CollectionName, readonly IndexDef[]>>> = {
+  users: [
+    {
+      name: 'email_unique', key: { email: 1 }, options: { unique: true },
+      // Load-bearing, not an optimisation: user creation relies on this instead
+      // of a read-then-write, because two concurrent sign-ups for the same
+      // address would both see "not taken" and one would overwrite the other.
+      rationale: 'sign-in lookup, and the uniqueness guarantee sign-up depends on',
+    },
+  ],
+
+  authSessions: [
+    {
+      name: 'refresh_hash_unique', key: { refreshTokenHash: 1 }, options: { unique: true },
+      rationale: 'refresh lookup by token hash; unique so rotation cannot fork a session',
+    },
+    { name: 'user_live', key: { userId: 1, revokedAt: 1 }, rationale: 'list a person’s sessions' },
+    {
+      name: 'expiry_ttl', key: { expiresAt: 1 }, options: { expireAfterSeconds: 0 },
+      // Swept by the server rather than by us. An expired session row is not
+      // dangerous — it fails every check — but keeping them forever turns the
+      // collection into a slow-growing liability.
+      rationale: 'reap expired sessions without a job',
+    },
+  ],
+
+  identities: [
+    {
+      name: 'provider_subject_unique', key: { provider: 1, subject: 1 }, options: { unique: true },
+      // The subject, never the email: an email can be reassigned inside a
+      // hosted domain, and joining on it would eventually link one person to
+      // another's account.
+      rationale: 'the join key for an external identity',
+    },
+    { name: 'user', key: { userId: 1 }, rationale: 'list linked accounts' },
+  ],
+
+  authChallenges: [
+    { name: 'token_hash_unique', key: { tokenHash: 1 }, options: { unique: true },
+      rationale: 'redeem a verification or reset link' },
+    { name: 'expiry_ttl', key: { expiresAt: 1 }, options: { expireAfterSeconds: 0 },
+      rationale: 'an unused challenge should not outlive its window' },
+  ],
+
   workspaces: [
     { name: 'slug_unique', key: { slug: 1 }, options: { unique: true },
       rationale: 'workspace lookup by URL slug' },

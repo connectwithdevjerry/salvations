@@ -146,9 +146,12 @@ describe('ScopedDb', () => {
     expect(sdb.workspaceId).toBe(WS);
   });
 
-  it('refuses collections owned by the auth library', () => {
+  it('refuses the global authentication collections', () => {
+    // One human belongs to many workspaces, so a user or a session cannot be
+    // scoped to one of them — and reaching for it through ScopedDb is a bug.
     const sdb = new ScopedDb(db, WS);
-    expect(() => sdb.collection('session')).toThrow(/not a tenant-scoped collection/);
+    expect(() => sdb.collection('authSessions')).toThrow(/not a tenant-scoped collection/);
+    expect(() => sdb.collection('users')).toThrow(/not a tenant-scoped collection/);
   });
 
   it('refuses the mixed platform catalog', () => {

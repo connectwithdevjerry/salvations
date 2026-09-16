@@ -16,6 +16,7 @@ export * from './event-bus';
 export * from './repositories/capabilities';
 export * from './repositories/capability-mapper';
 export * from './repositories/workspaces';
+export * from './repositories/users';
 export * from './repositories/api-keys';
 export * from './repositories/policies';
 export * from './services/permission-broker';

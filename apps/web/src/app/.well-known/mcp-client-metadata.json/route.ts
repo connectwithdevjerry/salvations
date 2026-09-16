@@ -13,9 +13,15 @@ import { clientMetadataDocument } from '@salvations/mcp';
 import { oauthClientConfig } from '@/lib/oauth-config';
 
 export const runtime = 'nodejs';
-// Static for the life of a deployment: the values come from configuration, not
-// from a request.
-export const dynamic = 'force-static';
+/**
+ * Rendered per request, cached at the edge by the header below.
+ *
+ * Not prerendered: the document's own URL is its client_id and comes from
+ * PUBLIC_BASE_URL, which differs between a preview deployment and production. A
+ * copy baked at build time would eventually serve the wrong identity, and the
+ * symptom would be an opaque `invalid_client` from a third-party server.
+ */
+export const dynamic = 'force-dynamic';
 
 export function GET(): Response {
   const config = oauthClientConfig();

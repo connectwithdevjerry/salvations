@@ -1,0 +1,36 @@
+{
+  /*
+   * Path resolution for the boundary check ONLY.
+   *
+   * dependency-cruiser reads one tsconfig for the whole cruise, and the app's
+   * `@/*` alias lives in apps/web/tsconfig.json where a root-level cruise never
+   * sees it. Without the mapping every `@/`-prefixed import resolved to nothing
+   * — so the boundary rules silently did not apply to them, and an aliased
+   * import of something forbidden would have passed unnoticed.
+   *
+   * It is NOT used to compile anything: adding `@/*` to tsconfig.base.json
+   * would leak an app-specific alias into every package.
+   */
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["./apps/web/src/*"],
+      "@salvations/core": ["./packages/core/src/index.ts"],
+      "@salvations/core/*": ["./packages/core/src/*"],
+      "@salvations/contracts": ["./packages/contracts/src/index.ts"],
+      "@salvations/crypto": ["./packages/crypto/src/index.ts"],
+      "@salvations/db": ["./packages/db/src/index.ts"],
+      "@salvations/db/*": ["./packages/db/src/*"],
+      "@salvations/mcp": ["./packages/mcp/src/index.ts"],
+      "@salvations/mcp/*": ["./packages/mcp/src/*"],
+      "@salvations/runtime": ["./packages/runtime/src/index.ts"],
+      "@salvations/runtime/*": ["./packages/runtime/src/*"],
+      "@salvations/observability": ["./packages/observability/src/index.ts"],
+      "@salvations/provider-testkit": ["./packages/providers/testkit/src/index.ts"],
+      "@salvations/provider-anthropic": ["./packages/providers/anthropic/src/index.ts"],
+      "@salvations/provider-openai": ["./packages/providers/openai/src/index.ts"],
+      "@salvations/provider-google": ["./packages/providers/google/src/index.ts"],
+      "@salvations/provider-registry": ["./packages/providers/registry/src/index.ts"]
+    }
+  }
+}

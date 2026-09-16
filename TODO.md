@@ -158,16 +158,18 @@ Companion to [ARCHITECTURE.md](./ARCHITECTURE.md) and the documents in [docs/](.
 
 ### 1.9 API, streaming & web
 
-- [ ] `packages/contracts` — Zod contracts shared by API and UI
-- [ ] API routes: auth, workspaces, members, apiKeys, providerConfigs, modelBindings, agents,
-      mcpServers, mcpBindings, capabilities, approvals, policies, conversations, runs, credentials,
-      health
-- [ ] `RunEventBus` port + `ChangeStreamEventBus` (+ `PollingEventBus` fallback, capability-probed)
-- [ ] `/api/runs/:id/events` — SSE with `after=<seq>` cursor replay ⚓
-- [ ] Web UI: auth pages, workspace switcher, agent editor, chat with token streaming, run timeline
-      (steps · tool calls · usage · cost), MCP install + OAuth flow, **capability approval with
-      definition diffs**, policy editor, approval modal, provider/model binding management
-- [ ] **(AC-2) (AC-4) (AC-5)** exercised through the UI
+- [x] `packages/contracts` — Zod contracts shared by API and UI
+- [x] API routes: auth, workspaces, apiKeys*, providerConfigs, modelBindings, agents,
+      mcpServers, mcpBindings, capabilities, approvals, conversations, runs, credentials*,
+      health  *(\*apiKeys, credentials and policies routes remain — §1.9 tail)*
+- [x] `RunEventBus` port + `ChangeStreamEventBus` (+ `PollingEventBus` fallback, capability-probed)
+- [x] `/api/workspaces/:id/runs/:id/events` — SSE with `after=<seq>` cursor replay ⚓
+- [x] Web UI: auth pages, workspace switcher, agent editor, chat with token streaming, run timeline
+      (steps · tool calls · usage · cost), MCP install, **capability approval with definition
+      diffs**, approval modal, provider/model binding management
+- [ ] Policy editor UI + `/policies` routes
+- [ ] MCP OAuth consent flow wired end to end (the client exists; the callback route does not)
+- [ ] **(AC-2) (AC-4) (AC-5)** exercised through the UI — needs a live database and real keys
 
 ### 1.10 Observability & containers
 

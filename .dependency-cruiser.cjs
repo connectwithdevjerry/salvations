@@ -79,7 +79,11 @@ module.exports = {
     doNotFollow: { path: 'node_modules' },
     // Build output is generated, not authored — cruising it reports noise.
     exclude: { path: '(^|/)(\\.next|\\.turbo|dist|coverage)/' },
-    tsConfig: { fileName: 'tsconfig.base.json' },
+    // A cruise-only config. It adds the app's `@/*` alias, which lives in
+    // apps/web/tsconfig.json where a root-level cruise never sees it — without
+    // it every `@/`-prefixed import resolved to nothing and the boundary rules
+    // silently did not apply to them.
+    tsConfig: { fileName: 'tsconfig.depcruise.json' },
     tsPreCompilationDeps: true,
     enhancedResolveOptions: { exportsFields: ['exports'], conditionNames: ['import', 'require', 'default'] },
   },

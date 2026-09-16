@@ -161,6 +161,27 @@ export class ConversationRepository {
     );
   }
 
+  /**
+   * Marks messages as replaced by a summary.
+   *
+   * Individually, by id, rather than by a sequence range: compaction chooses a
+   * boundary that never splits a tool call from its result, so the set is not
+   * always a clean prefix and a range would either orphan a pair or keep a
+   * message the summary already covers.
+   */
+  async supersedeMessages(
+    conversationId: string,
+    messageIds: readonly string[],
+    summaryMessageId: string,
+  ): Promise<number> {
+    if (messageIds.length === 0) return 0;
+    const result = await this.#messages.updateMany(
+      { conversationId, _id: { $in: [...messageIds] }, supersededBy: null } as never,
+      { $set: { supersededBy: summaryMessageId } } as never,
+    );
+    return result.modifiedCount;
+  }
+
   async recordCompaction(
     conversationId: string,
     upToSeq: number,

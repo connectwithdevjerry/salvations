@@ -61,6 +61,17 @@ export class CapabilityRepository {
     return this.#collection.find({ bindingId, scopeKey, removedAt: null });
   }
 
+  /**
+   * Every live capability for a scope, across bindings.
+   *
+   * What a run actually needs: an agent's tool surface spans several servers,
+   * and asking binding by binding is one round trip per installed server on
+   * every single step.
+   */
+  async listForScope(scopeKeys: readonly string[]): Promise<McpCapabilityDoc[]> {
+    return this.#collection.find({ scopeKey: { $in: [...scopeKeys] }, removedAt: null });
+  }
+
   async findByCanonicalName(
     bindingId: string,
     scopeKey: string,

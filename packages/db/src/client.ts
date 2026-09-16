@@ -19,6 +19,16 @@ export interface DbConfig {
   onGuardViolation?(violation: GuardViolation): void;
 }
 
+/**
+ * Our name for a database handle.
+ *
+ * Re-exported so nothing above this package has to name the driver's own type.
+ * Invariant I4 keeps the driver import in one place; this keeps the TYPE in one
+ * place too, so replacing the driver is a change to this alias rather than to
+ * every signature that passes a handle along.
+ */
+export type Database = Db;
+
 export interface DbHandle {
   readonly client: MongoClient;
   readonly db: Db;

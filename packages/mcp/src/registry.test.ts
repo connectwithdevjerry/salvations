@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
-  BindingUnavailableError, MAX_TOOL_TIMEOUT_MS, McpServerRegistry, effectiveMrtrPolicy,
+  BindingUnavailableError, McpServerRegistry, effectiveMrtrPolicy,
   type BindingRecord, type BindingSource, type ServerRecord,
 } from './registry';
-import { DEFAULT_TOOL_TIMEOUT_MS } from './resilience';
+import {
+  DEFAULT_RESERVE_MS, DEFAULT_TOOL_TIMEOUT_MS, MAX_TOOL_TIMEOUT_MS, assertTimeoutBudget,
+} from '@salvations/core';
 
 /** Overrides may clear a field — that is how "no URL configured" is expressed. */
 type Over<T> = { [K in keyof T]?: T[K] | undefined };
@@ -168,10 +170,21 @@ describe('timeouts', () => {
   });
 
   it('caps a per-binding timeout so one server cannot hold a run slice', async () => {
+    // Clamped rather than refused: a slow server is a reason to wait longer
+    // than default, never a reason to risk the slice.
     const resolved = await registry([
       { binding: binding({ timeoutMs: 60 * 60 * 1000 }), server: server() },
     ]).resolve('ws_1', 'bnd_1');
     expect(resolved.timeoutMs).toBe(MAX_TOOL_TIMEOUT_MS);
+  });
+
+  it('keeps the tool ceiling strictly below the slice reserve', () => {
+    // Otherwise the environment kills the invocation before our own timeout
+    // fires, and an error message the model could read becomes a lease reclaim
+    // and possibly a repeated side effect.
+    expect(MAX_TOOL_TIMEOUT_MS).toBeLessThan(DEFAULT_RESERVE_MS);
+    expect(() => assertTimeoutBudget(300_000)).not.toThrow();
+    expect(() => assertTimeoutBudget(300_000, MAX_TOOL_TIMEOUT_MS)).toThrow(/before the/);
   });
 });
 

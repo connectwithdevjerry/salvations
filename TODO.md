@@ -119,8 +119,7 @@ Companion to [ARCHITECTURE.md](./ARCHITECTURE.md) and the documents in [docs/](.
 - [x] 🔒 **(AC-15)** MRTR — human path suspends; **inference path denied by default**;
       `requestState` echoed verbatim, never parsed or logged in full
 - [x] Result size capping + blob spill
-- [ ] Per-tool-call timeout **shorter than `RESERVE_MS`** — the gateway's timeout is in place
-      (30s default, 120s ceiling); the comparison itself lands with `RESERVE_MS` in §1.8
+- [x] Per-tool-call timeout **shorter than `RESERVE_MS`** — 30s default against a 45s reserve
 - [x] 🔒 Test: two users on a `perUserAuth` binding never share a discovery cache entry
 - [ ] **(AC-3)** real third-party server installed end-to-end — needs a live server and real
       OAuth consent, so it is a **manual verification**, not something CI can assert
@@ -144,15 +143,18 @@ Companion to [ARCHITECTURE.md](./ARCHITECTURE.md) and the documents in [docs/](.
 
 - [x] `RunQueue` port + `MongoRunQueue` — atomic lease claim, heartbeat, release
 - [x] 🔒 **Every run write guarded by `lease.token`** (prevents stolen-lease double writes)
-- [ ] `Deadline` + `RunExecutor` ports
-- [ ] `SlicedExecutor` — loop to deadline − `RESERVE_MS`, persist, release, re-queue, continue
-- [ ] `BackgroundTrigger` port + Vercel implementation (`waitUntil` + HMAC self-call) — **the only
+- [x] `Deadline` + `RunExecutor` ports
+- [x] `SlicedExecutor` — loop to deadline − `RESERVE_MS`, persist, release, re-queue, continue
+- [x] `BackgroundTrigger` port + Vercel implementation (`waitUntil` + HMAC self-call) — **the only
       Vercel-aware adapter**
-- [x] `/api/internal/execute` (maxDuration 800) and `/api/internal/sweep` (stalled-lease reclaim)
-- [ ] `attempts` cap → clean failure with partial result
-- [ ] 🔒 **(AC-9)** kill executor mid-run **and** force a lease steal → completes once, no duplicate
+- [x] `/api/internal/execute` (maxDuration 300) and `/api/internal/sweep` (stalled-lease reclaim
+      + re-trigger of orphaned `queued` runs)
+- [x] `attempts` cap → clean failure with partial result
+- [x] 🔒 **(AC-9)** kill executor mid-run **and** force a lease steal → completes once, no duplicate
       side effects
-- [ ] Metrics: slice-yield rate, sweeper reclaims, cold starts, Mongo connection churn
+- [x] Metrics: slice-yield rate, sweeper reclaims, lease losses, step durations
+- [ ] Bind the executor in `/api/internal/execute` — needs the composition root, which lands
+      with §1.9
 
 ### 1.9 API, streaming & web
 

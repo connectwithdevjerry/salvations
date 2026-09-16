@@ -12,6 +12,15 @@ export {
 } from './agent-runtime';
 
 export {
+  DEFAULT_RESERVE_MS, UNBOUNDED_DEADLINE, WallClockDeadline, assertReserveFits,
+} from './deadline';
+
+export {
+  SlicedExecutor, isLeaseLost,
+  type ExecutionMetrics, type ExecutionSession, type SlicedExecutorDeps,
+} from './sliced-executor';
+
+export {
   Resolver, ModelUnavailableError, PrincipalRevokedError, keyOf,
   type ModelBinding, type ResolverDeps,
 } from './resolver';

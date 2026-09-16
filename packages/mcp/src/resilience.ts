@@ -161,7 +161,7 @@ export class CircuitOpenError extends Error {
  * slice mid-step and the run is reclaimed with work half-done. Anything
  * genuinely long-running belongs in the Tasks extension, which suspends.
  */
-export const DEFAULT_TOOL_TIMEOUT_MS = 30_000;
+export { DEFAULT_TOOL_TIMEOUT_MS } from '@salvations/core';
 
 export class ToolTimeoutError extends Error {
   constructor(capabilityName: string, timeoutMs: number) {

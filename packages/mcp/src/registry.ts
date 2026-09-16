@@ -10,10 +10,10 @@
  * the protocol layer stays free of the database and this stays testable without
  * one.
  */
-import type { McpAuthMode, TrustTier } from '@salvations/core';
+import { MAX_TOOL_TIMEOUT_MS, type McpAuthMode, type TrustTier } from '@salvations/core';
 import type { McpServerDefinition, McpTransportKind } from './client';
 import { DEFAULT_MRTR_POLICY, type MrtrPolicy } from './mrtr';
-import { DEFAULT_TOOL_TIMEOUT_MS } from './resilience';
+import { DEFAULT_TOOL_TIMEOUT_MS } from '@salvations/core';
 import { scopeFor, type ConnectionScopeKey } from './scope';
 
 export type BindingStatus = 'pending_auth' | 'connected' | 'error' | 'disabled';
@@ -97,9 +97,6 @@ const MAY_REQUEST_INFERENCE: Readonly<Record<TrustTier, boolean>> = Object.freez
   community: false,
   untrusted: false,
 });
-
-/** Upper bound on a per-binding timeout, so one binding cannot hold a run slice. */
-export const MAX_TOOL_TIMEOUT_MS = 120_000;
 
 export function effectiveMrtrPolicy(
   binding: BindingRecord,

@@ -19,7 +19,22 @@ export type ExecOutcome =
   | { readonly kind: 'finished'; readonly status: Extract<RunStatus, 'succeeded' | 'failed' | 'cancelled'> }
   | { readonly kind: 'suspended'; readonly reason: 'approval' | 'input' | 'tool' }
   /** Slice exhausted. The run is back in `queued`, ready for continuation. */
-  | { readonly kind: 'yielded'; readonly resumeAt: Date };
+  | { readonly kind: 'yielded'; readonly resumeAt: Date }
+  /**
+   * Nothing was runnable.
+   *
+   * A distinct outcome rather than a `yielded` with no run: reporting an empty
+   * wake-up as a yield would schedule a continuation for work that does not
+   * exist, and the two look identical in metrics exactly where they must not.
+   */
+  | { readonly kind: 'idle' }
+  /**
+   * The lease was lost mid-run.
+   *
+   * Another executor owns the run now. This one stops writing immediately and
+   * does NOT release: releasing would hand back a run it no longer holds.
+   */
+  | { readonly kind: 'lease_lost' };
 
 export interface RunExecutor {
   execute(runId: RunId, deadline: Deadline): Promise<ExecOutcome>;

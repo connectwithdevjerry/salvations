@@ -31,7 +31,7 @@ export {
 } from './discovery';
 
 export {
-  BindingUnavailableError, MAX_TOOL_TIMEOUT_MS, McpServerRegistry, effectiveMrtrPolicy,
+  BindingUnavailableError, McpServerRegistry, effectiveMrtrPolicy,
   type BindingRecord, type BindingSource, type BindingStatus, type ConnectionAuthSource,
   type ResolvedBinding, type ServerRecord,
 } from './registry';

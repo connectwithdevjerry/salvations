@@ -19,6 +19,7 @@ import { db } from './db';
 import { errorResponse } from './http';
 import { repositories } from './container';
 import { requirePermission, resolvePrincipal } from './principal';
+import { readCaller } from './session';
 
 export interface WorkspaceContext {
   readonly principal: Principal;
@@ -66,14 +67,11 @@ export function userRoute(
 ) {
   return async (request: Request): Promise<Response> => {
     try {
-      const { auth } = await import('./auth');
-      const instance = await auth();
-      const session = await instance.api.getSession({ headers: request.headers });
-      const userId = session?.user?.id;
-      if (userId === undefined) {
+      const caller = readCaller(request);
+      if (caller === undefined) {
         return errorResponse(401, 'unauthenticated', 'Not signed in.');
       }
-      return await handler(request, userId);
+      return await handler(request, caller.userId);
     } catch (error) {
       return errorResponse.fromUnknown(error);
     }

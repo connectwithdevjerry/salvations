@@ -129,9 +129,20 @@ export function sessionCookie(
   return parts.join('; ');
 }
 
-/** Expires a cookie. Max-Age=0 rather than a past date: unambiguous everywhere. */
-export const clearCookie = (name: string, secure: boolean): string =>
-  sessionCookie(name, '', { maxAgeSeconds: 0, secure });
+/**
+ * Expires a cookie.
+ *
+ * `Max-Age=0` rather than a past date: unambiguous everywhere.
+ *
+ * The PATH matters and is why this takes one. A cookie is identified by name
+ * AND path, so clearing a cookie set at `/api/auth/refresh` with a directive
+ * scoped to `/` does not remove it. Appending a second `Path` to the string
+ * instead is worse than useless — browsers disagree about which of two wins,
+ * so the same code either clears the cookie or silently leaves it behind
+ * depending on who is looking.
+ */
+export const clearCookie = (name: string, secure: boolean, path = '/'): string =>
+  sessionCookie(name, '', { maxAgeSeconds: 0, secure, path });
 
 export const ACCESS_COOKIE = 'salv_at';
 export const REFRESH_COOKIE = 'salv_rt';

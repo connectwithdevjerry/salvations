@@ -9,7 +9,7 @@ const SECRET = 'a'.repeat(48);
 
 beforeEach(() => {
   process.env['MONGODB_URI'] = 'mongodb://localhost:27017';
-  process.env['BETTER_AUTH_SECRET'] = 'b'.repeat(48);
+  process.env['AUTH_JWT_SECRET'] = 'j'.repeat(48);
   process.env['CREDENTIAL_KEK'] = 'c'.repeat(48);
   process.env['INTERNAL_HMAC_SECRET'] = SECRET;
   process.env['PUBLIC_BASE_URL'] = 'https://app.test';

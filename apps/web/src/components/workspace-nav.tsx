@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/client/api';
-import { authClient } from '@/lib/client/auth-client';
+import { auth } from '@/lib/client/auth';
 
 interface Workspace { id: string; name: string; role: string }
 
@@ -86,7 +86,7 @@ export function WorkspaceNav({ workspaceId }: { workspaceId: string }) {
         <button
           style={{ width: '100%' }}
           onClick={async () => {
-            await authClient.signOut();
+            await auth.signOut();
             router.push('/signin');
           }}
         >

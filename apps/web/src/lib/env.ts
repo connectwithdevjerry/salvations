@@ -11,8 +11,18 @@ const schema = z.object({
   MONGODB_URI: z.string().min(1, 'MONGODB_URI is required'),
   MONGODB_DB_NAME: z.string().default('salvations'),
 
-  BETTER_AUTH_SECRET: z.string().min(32, 'BETTER_AUTH_SECRET must be at least 32 characters'),
-  BETTER_AUTH_URL: z.string().url().default('http://localhost:3000'),
+  /** Signs session access tokens. Rotating it signs everyone out. */
+  AUTH_JWT_SECRET: z.string().min(32, 'AUTH_JWT_SECRET must be at least 32 characters'),
+
+  /**
+   * Sign in with Google.
+   *
+   * Optional: without it the app still works with email and password, and the
+   * Google button simply is not offered. Half-configured is the dangerous
+   * state, so the refinement below rejects one without the other.
+   */
+  GOOGLE_CLIENT_ID: z.string().min(1).optional(),
+  GOOGLE_CLIENT_SECRET: z.string().min(1).optional(),
 
   CREDENTIAL_KEK: z.string().min(1, 'CREDENTIAL_KEK is required'),
   CREDENTIAL_KEK_VERSION: z.coerce.number().int().positive().default(1),
@@ -21,7 +31,16 @@ const schema = z.object({
   PUBLIC_BASE_URL: z.string().url().default('http://localhost:3000'),
 
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
-});
+}).refine(
+  (value) =>
+    (value.GOOGLE_CLIENT_ID === undefined) === (value.GOOGLE_CLIENT_SECRET === undefined),
+  {
+    message:
+      'Set both GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET, or neither. One without the other ' +
+      'offers a sign-in button that cannot complete.',
+    path: ['GOOGLE_CLIENT_ID'],
+  },
+);
 
 export type Env = z.infer<typeof schema>;
 
@@ -47,7 +66,7 @@ export function env(): Env {
  */
 export function assertSecretsAreDistinct(e: Env): void {
   const secrets = {
-    BETTER_AUTH_SECRET: e.BETTER_AUTH_SECRET,
+    AUTH_JWT_SECRET: e.AUTH_JWT_SECRET,
     CREDENTIAL_KEK: e.CREDENTIAL_KEK,
     INTERNAL_HMAC_SECRET: e.INTERNAL_HMAC_SECRET,
   };

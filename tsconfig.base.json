@@ -25,6 +25,7 @@
     "paths": {
       "@salvations/core": ["./packages/core/src/index.ts"],
       "@salvations/core/*": ["./packages/core/src/*"],
+      "@salvations/auth": ["./packages/auth/src/index.ts"],
       "@salvations/contracts": ["./packages/contracts/src/index.ts"],
       "@salvations/crypto": ["./packages/crypto/src/index.ts"],
       "@salvations/db": ["./packages/db/src/index.ts"],

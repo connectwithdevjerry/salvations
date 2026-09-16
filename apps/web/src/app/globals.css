@@ -187,3 +187,26 @@ th { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spa
 
 .centered { min-height: 100vh; display: grid; place-items: center; padding: 24px; }
 .centered .card { width: 100%; max-width: 380px; }
+
+/* Sign-in */
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 14px 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+.divider::before, .divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+button.google {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+}

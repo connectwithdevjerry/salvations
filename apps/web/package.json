@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
+    "@salvations/auth": "workspace:*",
     "@salvations/contracts": "workspace:*",
     "@salvations/core": "workspace:*",
     "@salvations/crypto": "workspace:*",
@@ -19,12 +20,10 @@
     "@salvations/provider-registry": "workspace:*",
     "@salvations/runtime": "workspace:*",
     "@vercel/functions": "^3.9.7",
+    "mongodb": "^7.6.0",
     "next": "^16.3.5",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
-    "better-auth": "^1.7.5",
-    "@better-auth/mongo-adapter": "^1.7.5",
-    "mongodb": "^7.6.0",
     "zod": "^4.6.5"
   },
   "devDependencies": {

@@ -106,6 +106,20 @@ describe('cookies', () => {
     expect(clearCookie('salv_at', true)).toContain('Max-Age=0');
   });
 
+  it('clears at the path the cookie was set on, and names it exactly once', () => {
+    // A cookie is identified by name AND path, so clearing one set at
+    // /api/auth/refresh with a directive scoped to / leaves it in the browser.
+    // Appending a second Path is worse than useless: browsers disagree about
+    // which of two wins, so the same code either works or silently does not.
+    const cleared = clearCookie('salv_rt', true, '/api/auth/refresh');
+    expect(cleared).toContain('Path=/api/auth/refresh');
+    expect(cleared.match(/Path=/g)).toHaveLength(1);
+  });
+
+  it('defaults to the root path when none is given', () => {
+    expect(clearCookie('salv_at', true)).toContain('Path=/;');
+  });
+
   it('reads a cookie out of a header', () => {
     const header = 'other=1; salv_at=the-token; salv_rt=another';
     expect(readCookie(header, 'salv_at')).toBe('the-token');

@@ -1,38 +1,46 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { authClient } from '@/lib/client/auth-client';
+import { SIGN_IN_ERRORS, auth } from '@/lib/client/auth';
+import { ApiError } from '@/lib/client/api';
+import { GoogleButton } from '@/components/google-button';
 
-export default function SignInPage() {
+function SignInForm() {
   const router = useRouter();
+  const params = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState<string>();
+  const [error, setError] = useState<string | undefined>(
+    SIGN_IN_ERRORS[params.get('error') ?? ''],
+  );
   const [busy, setBusy] = useState(false);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     setBusy(true);
     setError(undefined);
-
-    const result = await authClient.signIn.email({ email, password });
-    setBusy(false);
-
-    if (result.error !== null && result.error !== undefined) {
-      // One message for every failure. Saying whether the address exists turns
-      // the sign-in form into an account-enumeration oracle.
-      setError('That email and password do not match an account.');
-      return;
+    try {
+      await auth.signIn({ email, password });
+      router.push('/');
+    } catch (caught) {
+      // The server already refuses to say whether the address exists; repeating
+      // its message keeps the client from inventing a more helpful one.
+      setError(caught instanceof ApiError ? caught.message : 'Could not sign in.');
+      setBusy(false);
     }
-    router.push('/');
   }
 
   return (
     <div className="centered">
       <div className="card">
         <h2 style={{ marginTop: 0 }}>Sign in</h2>
+
+        <GoogleButton returnTo="/" />
+
+        <div className="divider"><span>or</span></div>
+
         <form className="stack" onSubmit={submit}>
           <div>
             <label htmlFor="email">Email</label>
@@ -53,10 +61,21 @@ export default function SignInPage() {
             {busy ? 'Signing in…' : 'Sign in'}
           </button>
         </form>
+
         <p className="muted" style={{ marginBottom: 0 }}>
           No account? <Link href="/signup">Create one</Link>
         </p>
       </div>
     </div>
+  );
+}
+
+export default function SignInPage() {
+  // useSearchParams needs a boundary, and without one the whole page opts into
+  // client rendering at the root.
+  return (
+    <Suspense fallback={<div className="centered"><p className="muted">Loading…</p></div>}>
+      <SignInForm />
+    </Suspense>
   );
 }

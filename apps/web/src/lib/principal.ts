@@ -10,8 +10,8 @@ import {
   type ApiKeyId, type Permission, type Principal, type UserId, type WorkspaceId,
 } from '@salvations/core';
 import { ApiKeyRepository, WorkspaceRepository, AUTH_FAILURE_RESPONSE } from '@salvations/db';
-import { auth } from './auth';
 import { db } from './db';
+import { readCaller } from './session';
 
 export { AUTH_FAILURE_RESPONSE };
 
@@ -60,10 +60,9 @@ export async function resolvePrincipal(
     };
   }
 
-  const instance = await auth();
-  const session = await instance.api.getSession({ headers: request.headers });
-  const userId = session?.user?.id;
-  if (userId === undefined) throw Errors.unauthenticated('Not signed in.');
+  const caller = readCaller(request);
+  if (caller === undefined) throw Errors.unauthenticated('Not signed in.');
+  const userId = caller.userId;
 
   const membership = await new WorkspaceRepository(handle.db).membershipOf(workspaceId, userId);
   if (membership === null) {

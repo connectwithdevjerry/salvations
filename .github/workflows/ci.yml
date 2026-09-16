@@ -61,28 +61,71 @@ jobs:
           MONGODB_URI: mongodb://localhost:27017/salvations_test?replicaSet=rs0&directConnection=true
           MONGODB_DB_NAME: salvations_test
 
-  # AC-16: the container must BUILD AND BOOT. A Dockerfile that is never built
-  # is a Dockerfile that does not work, and deployment-agnosticism rests on it.
+  # AC-16: the container must BUILD AND BOOT AGAINST A REAL DATABASE.
+  #
+  # An image that boots with no configuration and answers a static page proves
+  # only that Node started. This supplies real environment variables and probes
+  # /api/health/ready, which parses the configuration and pings the database
+  # from INSIDE the container — the two things that actually break a deployment.
   containers:
     name: Container build and boot
     runs-on: ubuntu-latest
+    services:
+      mongo:
+        image: mongo:8.3
+        ports: ['27017:27017']
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.runCommand({ping:1}).ok'"
+          --health-interval 10s --health-timeout 5s --health-retries 10
     steps:
       - uses: actions/checkout@v5
+
       - name: Build web image
         run: docker build -f apps/web/Dockerfile -t salvations-web:ci .
-      - name: Boot web image
+
+      - name: Boot web image against the test database
         run: |
-          docker run -d --name web -p 3000:3000 \
-            -e MONGODB_URI=mongodb://unused/salvations \
+          # Generated per run: a secret committed to a workflow file is a
+          # secret, and these only have to satisfy the schema and be distinct.
+          docker run -d --name web --network host \
+            -e PORT=3000 \
+            -e MONGODB_URI='mongodb://127.0.0.1:27017/salvations_ci?directConnection=true' \
+            -e MONGODB_DB_NAME=salvations_ci \
+            -e AUTH_JWT_SECRET="$(openssl rand -base64 48 | tr -d '\n')" \
+            -e CREDENTIAL_KEK="$(openssl rand -base64 32 | tr -d '\n')" \
+            -e INTERNAL_HMAC_SECRET="$(openssl rand -base64 48 | tr -d '\n')" \
+            -e PUBLIC_BASE_URL='http://localhost:3000' \
             salvations-web:ci
-          for i in $(seq 1 30); do
-            if curl -fsS http://localhost:3000/ >/dev/null 2>&1; then
-              echo "web container booted"; exit 0
+
+          for i in $(seq 1 45); do
+            body=$(curl -fsS http://localhost:3000/api/health/ready 2>/dev/null || true)
+            if [ -n "$body" ] && printf '%s' "$body" | grep -q '"ready":true'; then
+              echo "container is ready: $body"
+              exit 0
             fi
             sleep 2
           done
-          echo "web container failed to boot"; docker logs web; exit 1
+
+          echo "container never became ready. Last response:"
+          curl -sS http://localhost:3000/api/health/ready || true
+          echo
+          docker logs web
+          exit 1
+
+      - name: Container serves a page, not just an API
+        run: curl -fsS http://localhost:3000/signin | grep -q 'Sign in'
+
+      - name: Container logs contain no secret material
+        run: |
+          # The redaction middleware is only worth having if it holds in the
+          # image people actually deploy.
+          if docker logs web 2>&1 | grep -aiE 'CREDENTIAL_KEK|AUTH_JWT_SECRET|INTERNAL_HMAC_SECRET'; then
+            echo "a secret name appeared in container logs alongside its value"
+            exit 1
+          fi
+
       - name: Build worker image
         run: docker build -f apps/worker/Dockerfile -t salvations-worker:ci .
+
       - name: Smoke the worker image
         run: docker run --rm salvations-worker:ci pnpm --filter @salvations/worker start --smoke

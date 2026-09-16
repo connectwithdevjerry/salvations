@@ -115,22 +115,31 @@ export class RunRepository {
    * $inc rather than read-modify-write: a slice that reads, computes and writes
    * back would lose the spend of any concurrent step.
    */
+  /**
+   * Adds spend to a run.
+   *
+   * BOTH arguments are DELTAS, and both parameter names say so. Every field
+   * here is applied with `$inc`, while the runtime reports its figures
+   * cumulatively — so handing this a running total charges the run the sum of
+   * every step's total instead of the total. The mistake is easy to make and
+   * hard to see afterwards, because the numbers still look plausible.
+   */
   async recordConsumption(
     runId: string,
     leaseToken: string,
-    delta: { steps?: number; toolCalls?: number; tokens?: number; costUsd?: number },
-    usage?: { inputTokens: number; outputTokens: number; cacheReadTokens: number; cacheWriteTokens: number },
+    consumedDelta: { steps?: number; toolCalls?: number; tokens?: number; costUsd?: number },
+    usageDelta?: { inputTokens: number; outputTokens: number; cacheReadTokens: number; cacheWriteTokens: number },
   ): Promise<void> {
     const inc: Record<string, number> = {};
-    if (delta.steps !== undefined) inc['consumed.steps'] = delta.steps;
-    if (delta.toolCalls !== undefined) inc['consumed.toolCalls'] = delta.toolCalls;
-    if (delta.tokens !== undefined) inc['consumed.tokens'] = delta.tokens;
-    if (delta.costUsd !== undefined) inc['consumed.costUsd'] = delta.costUsd;
-    if (usage !== undefined) {
-      inc['usage.inputTokens'] = usage.inputTokens;
-      inc['usage.outputTokens'] = usage.outputTokens;
-      inc['usage.cacheReadTokens'] = usage.cacheReadTokens;
-      inc['usage.cacheWriteTokens'] = usage.cacheWriteTokens;
+    if (consumedDelta.steps !== undefined) inc['consumed.steps'] = consumedDelta.steps;
+    if (consumedDelta.toolCalls !== undefined) inc['consumed.toolCalls'] = consumedDelta.toolCalls;
+    if (consumedDelta.tokens !== undefined) inc['consumed.tokens'] = consumedDelta.tokens;
+    if (consumedDelta.costUsd !== undefined) inc['consumed.costUsd'] = consumedDelta.costUsd;
+    if (usageDelta !== undefined) {
+      inc['usage.inputTokens'] = usageDelta.inputTokens;
+      inc['usage.outputTokens'] = usageDelta.outputTokens;
+      inc['usage.cacheReadTokens'] = usageDelta.cacheReadTokens;
+      inc['usage.cacheWriteTokens'] = usageDelta.cacheWriteTokens;
     }
     // Lease-guarded like every other run write: an executor whose lease was
     // stolen must not keep charging the run it no longer owns.

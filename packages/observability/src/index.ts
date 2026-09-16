@@ -8,3 +8,16 @@ export {
 } from './metrics';
 
 export { ExecutionMetricsRecorder } from './execution-metrics';
+
+export {
+  NO_LOGGER, consoleSink, createLogger,
+  type LogRecord, type LogSink, type LoggerOptions,
+} from './logging';
+
+export {
+  NO_EXPORTER, SPAN, Span, Tracer,
+  type AttributeValue, type SpanData, type SpanExporter, type SpanKind, type SpanOptions,
+  type SpanStatus, type TracerOptions,
+} from './tracing';
+
+export { InMemorySpanExporter, OtlpSpanExporter, type OtlpOptions } from './otlp';

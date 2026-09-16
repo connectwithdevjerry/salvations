@@ -1,9 +1,13 @@
 /**
- * Liveness and readiness.
+ * Liveness.
  *
  * Reports what it actually checked, rather than answering 200 because the
- * process is running. A health check that cannot fail is a health check that
- * tells you nothing.
+ * process is running: a health check that cannot fail tells you nothing.
+ *
+ * Readiness is a DIFFERENT question and lives at /api/health/ready — "is this
+ * alive" and "should traffic be sent here yet" diverge during a rollout, and
+ * answering 200 to both is how a broken deployment takes over from a working
+ * one.
  */
 import { db } from '@/lib/db';
 import { eventBus } from '@/lib/container';

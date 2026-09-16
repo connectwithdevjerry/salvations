@@ -19,7 +19,7 @@ import type {
   AppendMessage, RecordedStep, RunStateStore, ToolInvocationResult,
 } from '@salvations/runtime';
 import {
-  ConversationRepository, MongoRunQueue, RunRepository, toMessage,
+  ConversationRepository, MongoRunQueue, RunRepository, UsageRepository, toMessage,
 } from '@salvations/db';
 
 export interface RunStoreDeps {
@@ -31,14 +31,18 @@ export interface RunStoreDeps {
   readonly leaseMs: number;
   /** What the run had already spent when this slice claimed it. */
   readonly consumedSoFar: RunConsumption;
+  /** Which binding to bill the spend to. */
+  readonly modelBindingId: string;
 }
 
 export class MongoRunStateStore implements RunStateStore {
   readonly #conversations: ConversationRepository;
   readonly #runs: RunRepository;
   readonly #queue: MongoRunQueue;
+  readonly #usage: UsageRepository;
   readonly #deps: RunStoreDeps;
   #lastSaved: RunConsumption;
+  #lastUsage: Usage = { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 };
   #eventSeq = 0;
 
   constructor(deps: RunStoreDeps) {
@@ -46,6 +50,7 @@ export class MongoRunStateStore implements RunStateStore {
     this.#conversations = new ConversationRepository(deps.db, deps.workspaceId);
     this.#runs = new RunRepository(deps.db, deps.workspaceId);
     this.#queue = new MongoRunQueue(deps.db);
+    this.#usage = new UsageRepository(deps.db, deps.workspaceId);
     this.#lastSaved = deps.consumedSoFar;
   }
 
@@ -108,11 +113,21 @@ export class MongoRunStateStore implements RunStateStore {
       tokens: consumed.tokens - this.#lastSaved.tokens,
       costUsd: consumed.costUsd - this.#lastSaved.costUsd,
     };
+    const usageDelta = subtractUsage(usage, this.#lastUsage);
+
     this.#lastSaved = consumed;
+    this.#lastUsage = usage;
 
     await this.#runs.recordConsumption(
-      this.#deps.runId, this.#deps.leaseToken, delta, usage,
+      this.#deps.runId, this.#deps.leaseToken, delta, usageDelta,
     );
+
+    // Rolled up INCREMENTALLY rather than when a run finishes. A run killed
+    // mid-way still cost money, and a rollup that only counts completed runs
+    // understates the bill by exactly the runs that went wrong.
+    if (delta.costUsd !== 0 || usageDelta.inputTokens !== 0 || usageDelta.outputTokens !== 0) {
+      await this.#usage.record(this.#deps.modelBindingId, usageDelta, delta.costUsd);
+    }
   }
 
   /**
@@ -179,3 +194,19 @@ export class MongoRunStateStore implements RunStateStore {
     this.#eventSeq = seq;
   }
 }
+
+/**
+ * The change since the last save.
+ *
+ * The runtime reports usage CUMULATIVELY, and both the run document and the
+ * daily rollup apply increments. Passing the cumulative figure to either would
+ * double-count every step after the first — the same trap the consumption delta
+ * above exists to avoid, and easier to miss here because the numbers still look
+ * plausible.
+ */
+const subtractUsage = (current: Usage, previous: Usage): Usage => ({
+  inputTokens: current.inputTokens - previous.inputTokens,
+  outputTokens: current.outputTokens - previous.outputTokens,
+  cacheReadTokens: current.cacheReadTokens - previous.cacheReadTokens,
+  cacheWriteTokens: current.cacheWriteTokens - previous.cacheWriteTokens,
+});

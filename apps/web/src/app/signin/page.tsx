@@ -7,14 +7,25 @@ import { SIGN_IN_ERRORS, auth } from '@/lib/client/auth';
 import { ApiError } from '@/lib/client/api';
 import { GoogleButton } from '@/components/google-button';
 
-function SignInForm() {
+/**
+ * The reason a Google sign-in bounced back, if there was one.
+ *
+ * Isolated in its own Suspense boundary because `useSearchParams` opts whatever
+ * contains it out of server rendering. Wrapping the whole page meant the served
+ * HTML was the word "Loading" — every visitor saw a blank card first, and a
+ * crawler or a smoke test saw nothing at all.
+ */
+function CallbackError() {
+  const reason = useSearchParams().get('error');
+  const message = SIGN_IN_ERRORS[reason ?? ''];
+  return message === undefined ? null : <p className="error">{message}</p>;
+}
+
+export default function SignInPage() {
   const router = useRouter();
-  const params = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | undefined>(
-    SIGN_IN_ERRORS[params.get('error') ?? ''],
-  );
+  const [error, setError] = useState<string>();
   const [busy, setBusy] = useState(false);
 
   async function submit(event: React.FormEvent) {
@@ -36,6 +47,10 @@ function SignInForm() {
     <div className="centered">
       <div className="card">
         <h2 style={{ marginTop: 0 }}>Sign in</h2>
+
+        <Suspense fallback={null}>
+          <CallbackError />
+        </Suspense>
 
         <GoogleButton returnTo="/" />
 
@@ -67,15 +82,5 @@ function SignInForm() {
         </p>
       </div>
     </div>
-  );
-}
-
-export default function SignInPage() {
-  // useSearchParams needs a boundary, and without one the whole page opts into
-  // client rendering at the root.
-  return (
-    <Suspense fallback={<div className="centered"><p className="muted">Loading…</p></div>}>
-      <SignInForm />
-    </Suspense>
   );
 }

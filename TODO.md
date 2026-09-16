@@ -173,15 +173,19 @@ Companion to [ARCHITECTURE.md](./ARCHITECTURE.md) and the documents in [docs/](.
 
 ### 1.10 Observability & containers
 
-- [ ] OTel traces `run → step → model_call | tool_call`; OTLP export
-- [ ] Structured logging + 🔒 redaction middleware
-- [ ] `auditLog` writer wired to broker, gateway, credential resolution, admin actions
-- [ ] `usageDaily` rollups; cache-hit-rate alert
-- [ ] `/api/health` + `/api/health/ready`
-- [ ] ⚓ **(AC-16)** `apps/web` Dockerfile built **and booted** in CI against a test database
+- [x] OTel traces `run → step → model_call | tool_call`; OTLP export
+      *(OTLP/HTTP JSON written directly — the wire format, not the SDK; see
+      `packages/observability/src/tracing.ts` for the trade and the seam)*
+- [x] Structured logging + 🔒 redaction middleware
+- [x] `auditLog` writer wired to the gateway (tool calls, refusals, approvals)
+- [ ] `auditLog` for credential resolution and admin actions — routes still unwired
+- [x] `usageDaily` rollups; cache-hit-rate alert
+- [x] `/api/health` + `/api/health/ready`
+- [x] ⚓ **(AC-16)** `apps/web` Dockerfile built **and booted** in CI against a test database
 - [x] ⚓ `apps/worker` placeholder: Dockerfile + entrypoint that claims and runs one run via
       `ContinuousExecutor` — *not deployed*, but compiled and smoke-tested so Phase 4 is a
       configuration change rather than a discovery exercise
+- [ ] Tracer wired into the executor — the tracer exists and is tested; nothing emits spans yet
 
 ### 1.11 Phase 1 exit
 

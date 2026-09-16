@@ -203,6 +203,7 @@ export async function openSession(
     leaseToken,
     leaseMs,
     consumedSoFar: run.consumed,
+    modelBindingId: String(run.modelBindingId),
   });
 
   // Continue the event sequence where the previous slice stopped, so a

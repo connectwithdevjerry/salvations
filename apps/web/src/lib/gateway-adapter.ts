@@ -18,8 +18,8 @@ import {
   type PermissionOutcome,
 } from '@salvations/mcp';
 import {
-  CapabilityRepository, MongoPermissionBroker, RunRepository, ScopedDb, capabilityToDomain,
-  type McpCapabilityDoc,
+  AuditRepository, CapabilityRepository, MongoPermissionBroker, RunRepository, ScopedDb,
+  capabilityToDomain, type McpCapabilityDoc,
 } from '@salvations/db';
 
 export interface GatewayAdapterDeps {
@@ -43,6 +43,7 @@ export function createToolGateway(deps: GatewayAdapterDeps): ToolGateway {
   );
   const broker = new MongoPermissionBroker(deps.db, deps.workspaceId);
   const runs = new RunRepository(deps.db, deps.workspaceId);
+  const audit = new AuditRepository(deps.db, deps.workspaceId);
 
   /**
    * Which discovery scopes this caller may see.
@@ -114,11 +115,10 @@ export function createToolGateway(deps: GatewayAdapterDeps): ToolGateway {
       return approval._id;
     },
 
-    audit: {
-      // Wired to the real writer in §1.10. The gateway already swallows
-      // failures here: losing an audit record must never lose a run.
-      write: async () => undefined,
-    },
+    // Every tool call, refusal and approval request lands in auditLog. The
+    // repository redacts metadata on the way in, so a call site cannot leak a
+    // secret into the one collection that is never deleted.
+    audit,
   };
 
   const gateway = new McpToolGateway(gatewayDeps);

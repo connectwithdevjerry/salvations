@@ -117,4 +117,81 @@ export class UsageRepository {
   listDays(limit = 30): Promise<UsageDailyDoc[]> {
     return this.#collection.find({} as never, { sort: { day: -1 }, limit });
   }
+
+  /**
+   * Prompt cache effectiveness for a day.
+   *
+   * The single most useful cost number on an agent platform. A loop re-sends
+   * the whole conversation on every step, so at any real length most input
+   * tokens SHOULD be cache reads. When this falls, something is perturbing the
+   * cacheable prefix — a reordered tool, a timestamp in the system prompt — and
+   * the bill roughly triples with nothing else looking wrong.
+   */
+  async cacheHitRate(day = today()): Promise<CacheHitRate> {
+    const rows = await this.#collection.find({ day } as never);
+
+    let cacheRead = 0;
+    let fresh = 0;
+    for (const row of rows) {
+      cacheRead += row.cacheReadTokens ?? 0;
+      fresh += row.inputTokens ?? 0;
+    }
+
+    const total = cacheRead + fresh;
+    return {
+      day,
+      cacheReadTokens: cacheRead,
+      freshInputTokens: fresh,
+      // Undefined rather than zero when nothing ran: a rate of 0% and "no data"
+      // mean opposite things to whoever is paged by it.
+      rate: total === 0 ? undefined : cacheRead / total,
+    };
+  }
 }
+
+export interface CacheHitRate {
+  readonly day: string;
+  readonly cacheReadTokens: number;
+  readonly freshInputTokens: number;
+  readonly rate: number | undefined;
+}
+
+/**
+ * Below this, something is breaking the cacheable prefix.
+ *
+ * Deliberately not a tight bound: the first turns of any conversation are
+ * genuinely uncached, so a low-traffic day sits legitimately below a high one.
+ * This is set where a sustained drop is worth investigating rather than where
+ * every quiet morning pages someone.
+ */
+export const CACHE_HIT_RATE_FLOOR = 0.4;
+
+/** Enough tokens for the rate to mean anything. */
+export const CACHE_ALERT_MIN_TOKENS = 100_000;
+
+export interface CacheAlert {
+  readonly firing: boolean;
+  readonly reason?: string;
+}
+
+/**
+ * Whether a low rate is worth alerting on.
+ *
+ * Gated on volume, because a rate computed from three thousand tokens is noise
+ * and an alert that fires on noise is an alert people learn to close.
+ */
+export function cacheAlert(measurement: CacheHitRate): CacheAlert {
+  const total = measurement.cacheReadTokens + measurement.freshInputTokens;
+  if (measurement.rate === undefined || total < CACHE_ALERT_MIN_TOKENS) return { firing: false };
+  if (measurement.rate >= CACHE_HIT_RATE_FLOOR) return { firing: false };
+
+  return {
+    firing: true,
+    reason:
+      `Prompt cache hit rate is ${(measurement.rate * 100).toFixed(1)}% on ${measurement.day}, ` +
+      `below the ${CACHE_HIT_RATE_FLOOR * 100}% floor. Something is changing the cacheable ` +
+      'prefix between steps — check for a reordered tool list or a varying system prompt.',
+  };
+}
+
+const today = (): string => new Date().toISOString().slice(0, 10);

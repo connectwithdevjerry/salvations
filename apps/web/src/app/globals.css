@@ -101,36 +101,78 @@ h1, h2, h3 { letter-spacing: -0.018em; }
 
 .shell { display: flex; min-height: 100vh; position: relative; z-index: 1; }
 
-.sidebar {
-  width: 248px;
-  flex: 0 0 248px;
+/*
+ * The rail.
+ *
+ * Fixed-width and full-height, with the workspace at the top and sections
+ * below. On a narrow screen it becomes a horizontal strip so a phone is not
+ * asked to give up a quarter of its width to navigation.
+ */
+.rail {
+  width: 82px;
+  flex: 0 0 82px;
   border-right: 1px solid var(--border);
   background: var(--bg-elevated);
-  padding: 18px 12px;
+  padding: 14px 8px;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  align-items: center;
+  gap: 16px;
 }
 
-.nav-link {
+.rail-avatar {
+  width: 38px;
+  height: 38px;
+  flex: none;
+  border-radius: 11px;
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 16px;
+  font-weight: 700;
+  padding: 0;
+  display: grid;
+  place-items: center;
+}
+
+.rail-items { display: flex; flex-direction: column; gap: 3px; width: 100%; }
+
+.rail-link {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 8px 10px;
+  gap: 4px;
+  padding: 9px 4px 7px;
   border-radius: var(--radius-sm);
-  color: var(--muted);
+  color: var(--faint);
   text-decoration: none;
-  font-size: 14px;
-  font-weight: 500;
   transition: background 120ms ease, color 120ms ease;
 }
-.nav-link:hover { background: var(--surface); color: var(--text); }
-.nav-link[aria-current='page'] {
-  background: var(--accent-soft);
-  color: var(--text);
-  font-weight: 600;
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent);
+.rail-link:hover { background: var(--surface); color: var(--text); }
+.rail-link[aria-current='page'] { background: var(--accent-soft); color: var(--accent); }
+
+.rail-icon { position: relative; display: grid; place-items: center; }
+/* Unread, as a dot. A number here is unreadable at this size. */
+.rail-dot {
+  position: absolute;
+  top: -2px;
+  right: -3px;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--warn);
+  box-shadow: 0 0 0 2px var(--bg-elevated);
+}
+.rail-label { font-size: 10.5px; font-weight: 600; letter-spacing: -0.01em; }
+
+/* Present for a screen reader, absent for everyone else. */
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  margin: -1px; padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
@@ -490,8 +532,119 @@ button.google {
 
 @media (max-width: 720px) {
   .shell { flex-direction: column; }
-  .sidebar { width: 100%; flex: none; border-right: none; border-bottom: 1px solid var(--border); }
+  .rail {
+    width: 100%;
+    flex: none;
+    flex-direction: row;
+    align-items: center;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    padding: 8px 10px;
+    gap: 10px;
+    overflow-x: auto;
+  }
+  .rail-items { flex-direction: row; width: auto; }
+  .rail-link { padding: 6px 10px; }
   .page { padding: 20px 16px; }
   .chat-log, .chat-form { padding-left: 16px; padding-right: 16px; }
   .diff { grid-template-columns: 1fr; }
+}
+
+/* ------------------------------------------------------------- setup ----- */
+
+.steps { list-style: none; counter-reset: step; margin: 4px 0 0; padding: 0; display: grid; gap: 16px; }
+.steps li { display: flex; gap: 12px; align-items: flex-start; }
+.steps-num {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  margin-top: 1px;
+}
+.steps strong { font-size: 14px; }
+.steps p { margin: 3px 0 0; font-size: 13.5px; color: var(--muted); line-height: 1.55; }
+.steps-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 13px;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.copyable {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 7px 7px 7px 11px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+}
+.copyable code {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+.copyable-label { font-size: 11px; color: var(--faint); text-transform: uppercase; letter-spacing: 0.06em; }
+.copyable button { padding: 4px 10px; font-size: 12px; }
+
+.scopes { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 9px; }
+.scopes li { display: flex; gap: 9px; align-items: flex-start; font-size: 13.5px; }
+.scopes svg { flex: none; margin-top: 2px; color: var(--muted); }
+
+/* A brand-tinted tile. The colour is data, so it arrives as a custom property. */
+.tile[data-accent] {
+  background: color-mix(in srgb, var(--accent-brand) 16%, transparent);
+  color: var(--accent-brand);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent-brand) 30%, transparent);
+}
+
+.section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-top: 30px; }
+.section-head p { margin: 0 0 10px; color: var(--muted); font-size: 13.5px; }
+
+.code-large {
+  font-family: var(--mono);
+  font-size: 22px;
+  letter-spacing: 0.18em;
+  font-weight: 700;
+  padding: 12px 16px;
+  border-radius: var(--radius);
+  border: 1px dashed color-mix(in srgb, var(--accent) 45%, transparent);
+  background: var(--accent-soft);
+  display: inline-block;
+  user-select: all;
+}
+
+.facts { margin: 0; display: grid; gap: 8px; }
+.facts > div { display: flex; gap: 10px; align-items: baseline; }
+.facts dt { flex: 0 0 96px; font-size: 12px; color: var(--faint); text-transform: uppercase; letter-spacing: 0.05em; }
+.facts dd { margin: 0; font-size: 13.5px; }
+
+.waiting { display: flex; align-items: center; gap: 9px; }
+.spinner {
+  width: 13px;
+  height: 13px;
+  flex: none;
+  border-radius: 999px;
+  border: 2px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  border-top-color: var(--accent);
+  animation: spin 800ms linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Honoured, not ignored: a permanent spinner is a problem for some people. */
+@media (prefers-reduced-motion: reduce) {
+  .spinner { animation-duration: 3s; }
 }

@@ -4,17 +4,27 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/client/api';
-import { auth } from '@/lib/client/auth';
-import { BrandMark, Icon, type IconName } from '@/components/ui';
+import { Icon, type IconName } from '@/components/ui';
 
 interface Workspace { id: string; name: string; role: string }
 
+/**
+ * The rail.
+ *
+ * Icons with their labels under them rather than icons alone: an icon-only rail
+ * saves forty pixels and costs everyone who has not memorised which glyph means
+ * "approvals". The label is small, and it is always there.
+ *
+ * Only sections that exist appear. A rail advertising Documents and Memories
+ * before either is built teaches people that half the product is broken.
+ */
 const SECTIONS: readonly { href: string; label: string; icon: IconName }[] = [
   { href: 'chat', label: 'Chat', icon: 'chat' },
   { href: 'agents', label: 'Agents', icon: 'agent' },
-  { href: 'mcp', label: 'Integrations', icon: 'server' },
   { href: 'approvals', label: 'Approvals', icon: 'shield' },
+  { href: 'mcp', label: 'Integrations', icon: 'plug' },
   { href: 'models', label: 'Models', icon: 'spark' },
+  { href: 'settings', label: 'Settings', icon: 'gear' },
 ];
 
 export function WorkspaceNav({ workspaceId }: { workspaceId: string }) {
@@ -44,58 +54,44 @@ export function WorkspaceNav({ workspaceId }: { workspaceId: string }) {
   }, [workspaceId]);
 
   const current = workspaces.find((w) => w.id === workspaceId);
+  const initial = (current?.name ?? '?').trim().charAt(0).toUpperCase();
 
   return (
-    <nav className="sidebar">
-      <div style={{ padding: '2px 6px 14px' }}><BrandMark /></div>
-
-      <select
-        aria-label="Workspace"
-        value={workspaceId}
-        onChange={(e) => router.push(`/w/${e.target.value}/chat`)}
-        style={{ marginBottom: 12 }}
+    <nav className="rail" aria-label="Workspace">
+      <button
+        type="button"
+        className="rail-avatar"
+        title={current?.name ?? 'Workspace'}
+        aria-label={`Workspace: ${current?.name ?? 'loading'}`}
+        onClick={() => router.push(`/w/${workspaceId}/settings`)}
       >
-        {workspaces.length === 0 && <option value={workspaceId}>Loading…</option>}
-        {workspaces.map((w) => (
-          <option key={w.id} value={w.id}>{w.name}</option>
-        ))}
-      </select>
+        {initial}
+      </button>
 
-      {SECTIONS.map((section) => {
-        const href = `/w/${workspaceId}/${section.href}`;
-        return (
-          <Link
-            key={section.href}
-            href={href}
-            className="nav-link"
-            aria-current={pathname.startsWith(href) ? 'page' : undefined}
-          >
-            <span style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-              <Icon name={section.icon} size={16} />
-              {section.label}
-            </span>
-            {section.href === 'approvals' && pending > 0 && (
-              <span className="badge warn">{pending}</span>
-            )}
-          </Link>
-        );
-      })}
-
-      <div style={{ marginTop: 'auto', paddingTop: 16 }}>
-        {current !== undefined && (
-          <p className="muted" style={{ margin: '0 0 8px 4px' }}>
-            Signed in as {current.role}
-          </p>
-        )}
-        <button
-          style={{ width: '100%' }}
-          onClick={async () => {
-            await auth.signOut();
-            router.push('/signin');
-          }}
-        >
-          Sign out
-        </button>
+      <div className="rail-items">
+        {SECTIONS.map((section) => {
+          const href = `/w/${workspaceId}/${section.href}`;
+          const active = pathname === href || pathname.startsWith(`${href}/`);
+          return (
+            <Link
+              key={section.href}
+              href={href}
+              className="rail-link"
+              aria-current={active ? 'page' : undefined}
+            >
+              <span className="rail-icon">
+                <Icon name={section.icon} size={19} />
+                {section.href === 'approvals' && pending > 0 && (
+                  <span className="rail-dot" aria-hidden />
+                )}
+              </span>
+              <span className="rail-label">{section.label}</span>
+              {section.href === 'approvals' && pending > 0 && (
+                <span className="sr-only">{pending} waiting</span>
+              )}
+            </Link>
+          );
+        })}
       </div>
     </nav>
   );

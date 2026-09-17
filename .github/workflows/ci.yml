@@ -115,6 +115,24 @@ jobs:
       - name: Container serves a page, not just an API
         run: curl -fsS http://localhost:3000/signin | grep -q 'Sign in'
 
+      - name: Webhook endpoint refuses an unsigned delivery
+        run: |
+          # The one endpoint with no session and no API key in front of it. Its
+          # only defence is each adapter's own signature check, so "does it say
+          # no to an unsigned body" is worth asserting against the real image
+          # rather than a unit test with a hand-built Headers object.
+          #
+          # An unknown connection is a 404 and an unsigned one a 401 — never a
+          # 200, which would mean the body reached the code that starts runs.
+          status=$(curl -s -o /dev/null -w '%{http_code}' -X POST \
+            -H 'content-type: application/json' -d '{"message":{"text":"hi"}}' \
+            http://localhost:3000/api/channels/telegram/chn_does_not_exist)
+          echo "unsigned delivery → $status"
+          if [ "$status" = "200" ]; then
+            echo "the webhook accepted an unsigned delivery"
+            exit 1
+          fi
+
       - name: Container logs contain no secret material
         run: |
           # The redaction middleware is only worth having if it holds in the

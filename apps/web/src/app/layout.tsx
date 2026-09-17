@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import './globals.css';
 
 export const metadata = {
-  title: 'Salvations — agents that actually do the work',
+  title: 'HIVE — agents that actually do the work',
   description:
     'An MCP-native agent host: any model, any MCP server, with a budget, an audit ' +
     'trail and your approval before anything consequential happens.',

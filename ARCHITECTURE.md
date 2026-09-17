@@ -1,4 +1,4 @@
-# Salvations — MCP-Native Agent Host Platform
+# HIVE — MCP-Native Agent Host Platform
 
 **Status:** Proposed architecture, revision 2 — **awaiting final approval. No application code
 has been written.**
@@ -40,7 +40,7 @@ Inspected before any design work:
 
 ## 1. Product thesis and the non-negotiable principle
 
-Salvations is an **MCP-native agent host / orchestration platform**. It is explicitly *not* a
+HIVE is an **MCP-native agent host / orchestration platform**. It is explicitly *not* a
 chatbot with integrations bolted on.
 
 The layering is the product:

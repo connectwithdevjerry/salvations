@@ -35,7 +35,7 @@ export default async function Home() {
         </span>
         <h1>Agents that actually do the work.</h1>
         <p>
-          Salvations hosts agents that reach real systems through the Model Context Protocol —
+          HIVE hosts agents that reach real systems through the Model Context Protocol —
           with a budget, an audit trail, and your approval before anything consequential happens.
         </p>
         <div className="cta">

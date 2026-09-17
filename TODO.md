@@ -1,4 +1,4 @@
-# Salvations — Implementation Roadmap
+# HIVE — Implementation Roadmap
 
 Companion to [ARCHITECTURE.md](./ARCHITECTURE.md) and the documents in [docs/](./docs).
 

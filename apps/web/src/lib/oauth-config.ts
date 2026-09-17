@@ -26,7 +26,7 @@ export function oauthClientConfig(): OAuthClientConfig {
       ? { clientMetadataUrl: `${base}${CLIENT_METADATA_PATH}` }
       : {}),
     redirectUri: `${base}${OAUTH_CALLBACK_PATH}`,
-    clientName: 'Salvations',
+    clientName: 'HIVE',
     clientUri: base,
   };
 }

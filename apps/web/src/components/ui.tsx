@@ -67,13 +67,15 @@ export function BrandMark({ wordmark = true }: { wordmark?: boolean }) {
   return (
     <span className="brand">
       <span className="tile" aria-hidden>
-        <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden focusable="false">
-          <path d="M12 2.5l8.5 15a1.6 1.6 0 0 1-1.4 2.4H4.9a1.6 1.6 0 0 1-1.4-2.4l8.5-15z"
-            fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
-          <path d="M8.6 15.4h6.8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        {/* A honeycomb cell: one hexagon inside another. */}
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden focusable="false">
+          <path d="M12 2.5l8.2 4.75v9.5L12 21.5l-8.2-4.75v-9.5L12 2.5z"
+            stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+          <path d="M12 8l3.9 2.25v4.5L12 17l-3.9-2.25v-4.5L12 8z"
+            stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" opacity="0.55" />
         </svg>
       </span>
-      {wordmark && <span className="wordmark">Salvations</span>}
+      {wordmark && <span className="wordmark">HIVE</span>}
     </span>
   );
 }

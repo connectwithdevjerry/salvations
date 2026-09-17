@@ -423,6 +423,41 @@ export interface SubscriptionDoc extends TenantDoc {
   updatedAt: Date;
 }
 
+/**
+ * A recurring instruction.
+ *
+ * `lastFiredFor` is the wall-clock instant of the last occurrence acted on, not
+ * the time the tick ran. That distinction is what makes catching up safe: a
+ * scheduler that has been down walks the minutes it missed and compares each
+ * against this, so a missed 09:00 fires once and a fall-back DST hour's
+ * repeated 01:30 does not fire twice.
+ */
+export interface ScheduleDoc extends TenantDoc {
+  name: string;
+  /** Five-field cron. Validated at the boundary, never trusted from the row. */
+  expression: string;
+  /** IANA zone. "09:00" means nothing without it. */
+  timeZone: string;
+  agentId: string;
+  modelBindingId: string;
+  /** What to say to the agent when it fires. */
+  prompt: string;
+  enabled: boolean;
+  lastFiredFor?: Date | null;
+  lastRunId?: string | null;
+  /**
+   * Consecutive failures to START a run — not runs that failed.
+   *
+   * A schedule pointed at a deleted agent would otherwise fail silently every
+   * minute for ever.
+   */
+  consecutiveFailures: number;
+  lastError?: string | null;
+  createdBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface AuditLogDoc extends TenantDoc {
   actor: { type: string; id?: string | null };
   action: string;

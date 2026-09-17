@@ -74,6 +74,9 @@ importers:
       '@salvations/runtime':
         specifier: workspace:*
         version: link:../../packages/runtime
+      '@salvations/schedule':
+        specifier: workspace:*
+        version: link:../../packages/schedule
       '@vercel/functions':
         specifier: ^3.9.7
         version: 3.9.7(ws@8.21.3)
@@ -275,6 +278,8 @@ importers:
       '@salvations/core':
         specifier: workspace:*
         version: link:../core
+
+  packages/schedule: {}
 
 packages:
 

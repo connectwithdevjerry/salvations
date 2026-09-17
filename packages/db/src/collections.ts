@@ -49,6 +49,7 @@ export const TENANT_COLLECTIONS = [
   'auditLog',
   'usageDaily',
   'subscriptions',
+  'schedules',
 ] as const;
 
 /**

@@ -229,6 +229,12 @@ export const INDEXES: Readonly<Partial<Record<CollectionName, readonly IndexDef[
       rationale: 'a webhook names the processor id, not the workspace' },
   ],
 
+  schedules: [
+    { name: 'ws_enabled', key: { workspaceId: 1, enabled: 1 }, rationale: 'the schedule list' },
+    { name: 'due', key: { enabled: 1, updatedAt: 1 },
+      rationale: 'the tick scans enabled schedules across every workspace' },
+  ],
+
   auditLog: [
     { name: 'ws_recent', key: { workspaceId: 1, createdAt: -1 }, rationale: 'audit browsing' },
     { name: 'ws_action', key: { workspaceId: 1, action: 1, createdAt: -1 },

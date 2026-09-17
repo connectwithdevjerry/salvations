@@ -102,6 +102,22 @@ export const channelSchema = z.object({
   lastError: z.string().optional(),
 });
 
+/**
+ * A recurring instruction.
+ *
+ * The expression and the zone are validated for SHAPE here and for MEANING at
+ * the boundary, which owns the cron parser. A schema that accepted any string
+ * would store a schedule that fails silently every minute for ever.
+ */
+export const createScheduleSchema = z.object({
+  name: nameSchema,
+  expression: z.string().trim().min(1).max(120),
+  timeZone: z.string().trim().min(1).max(64).default('UTC'),
+  agentId: idSchema,
+  modelBindingId: idSchema,
+  prompt: boundedText(4_000),
+});
+
 export const createProviderConfigSchema = z.object({
   providerType: z.string().trim().min(1).max(40),
   name: nameSchema,

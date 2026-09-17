@@ -1,10 +1,14 @@
 /**
- * Stalled-lease sweeper.
+ * Stalled-lease sweeper, and the schedule tick.
  *
- * The safety net behind the push path: reclaims runs whose lease lapsed because
- * an executor died, a deploy interrupted it, or a continuation never fired.
- * Internal plumbing, not the user-facing scheduling feature — Phase 1 ships no
- * schedules collection and no cron UI.
+ * Two jobs on one invocation, because both need to happen often, both are
+ * signed the same way, and a second endpoint would be a second thing to
+ * schedule, secure and watch for no gain.
+ *
+ * The sweeper reclaims runs whose lease lapsed — a dead executor, an
+ * interrupted deploy, a continuation that never fired. The tick fires whatever
+ * schedules are due. Neither can fail the other: the tick is awaited inside its
+ * own try, because a broken schedule must never stop leases being reclaimed.
  */
 import { SIGNATURE_HEADER, TIMESTAMP_HEADER, verify } from '@salvations/crypto';
 import { MongoRunQueue } from '@salvations/db';
@@ -12,6 +16,7 @@ import { asId, type RunId } from '@salvations/core';
 import { db } from '@/lib/db';
 import { env } from '@/lib/env';
 import { VercelBackgroundTrigger } from '@/lib/trigger';
+import { tickSchedules } from '@/lib/schedule-tick';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -56,5 +61,17 @@ export async function POST(request: Request): Promise<Response> {
     await trigger.trigger(asId<RunId>(runId));
   }
 
-  return Response.json({ ...swept, retriggered: orphaned.length }, { status: 200 });
+  // 3. Fire whatever schedules are due. Isolated, because a schedule pointed
+  //    at a deleted agent must not stop leases being reclaimed.
+  const schedules = await tickSchedules().catch((caught: unknown) => ({
+    considered: 0,
+    fired: 0,
+    failed: 0,
+    error: caught instanceof Error ? caught.message : String(caught),
+  }));
+
+  return Response.json(
+    { ...swept, retriggered: orphaned.length, schedules },
+    { status: 200 },
+  );
 }

@@ -28,6 +28,7 @@ export * from './repositories/catalog';
 export * from './repositories/telemetry';
 export * from './repositories/channels';
 export * from './repositories/subscriptions';
+export * from './repositories/schedules';
 export * from './validators';
 export * from './atlas-roles';
 export { seed, runSeed, SEED_WORKSPACE_ID, SEED_USER_ID } from './seed';

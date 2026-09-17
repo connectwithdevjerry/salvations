@@ -22,6 +22,7 @@ const SECTIONS: readonly { href: string; label: string; icon: IconName }[] = [
   { href: 'chat', label: 'Chat', icon: 'chat' },
   { href: 'agents', label: 'Agents', icon: 'agent' },
   { href: 'approvals', label: 'Approvals', icon: 'shield' },
+  { href: 'schedule', label: 'Schedule', icon: 'clock' },
   { href: 'activity', label: 'Activity', icon: 'pulse' },
   { href: 'mcp', label: 'Integrations', icon: 'plug' },
   { href: 'models', label: 'Models', icon: 'spark' },

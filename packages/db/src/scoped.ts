@@ -221,6 +221,13 @@ export type PlatformReason =
    * scopes everything after it to the workspace the row names.
    */
   | 'channel-delivery'
+  /**
+   * Finding schedules that are due.
+   *
+   * The tick belongs to no workspace until it has read a row — there is no
+   * workspace id to scope by before the scan, only after it.
+   */
+  | 'schedule-tick'
   /** Resolving an API key by its prefix, before any workspace is known. */
   | 'api-key-lookup';
 

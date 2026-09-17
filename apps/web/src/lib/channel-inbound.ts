@@ -115,22 +115,40 @@ export async function handleDelivery(
 
   await channels.recordDelivery(row._id);
 
-  if (row.status !== 'connected') {
-    return await completeHandshake(channels, adapter.channelId, row, message, repos);
-  }
+  /*
+   * From here on the delivery is claimed, and the claim is what makes a
+   * redelivery a no-op. So anything that fails below has to GIVE THE CLAIM
+   * BACK before the error escapes: a claim held over failed work turns the
+   * platform's retry — the one mechanism that could still save this message —
+   * into a silent drop, and the person is left watching a chat that never
+   * answers.
+   */
+  try {
+    if (row.status !== 'connected') {
+      return await completeHandshake(channels, row, message, repos);
+    }
 
-  // The connection is bound to ONE chat. A bot token that has leaked is a bot
-  // anybody can message; without this, the leak becomes free use of this
-  // workspace's model budget and every credential its agent can reach.
-  if (row.verifiedChatRef !== null && row.verifiedChatRef !== message.chatRef) {
-    await reply(row, message.chatRef, 'This bot is already connected to another chat.', repos);
+    // The connection is bound to ONE chat. A bot token that has leaked is a bot
+    // anybody can message; without this, the leak becomes free use of this
+    // workspace's model budget and every credential its agent can reach.
+    if (row.verifiedChatRef !== null && row.verifiedChatRef !== message.chatRef) {
+      await reply(row, message.chatRef, 'This bot is already connected to another chat.', repos);
+      return plain(200, 'ok');
+    }
+
+    const runId = await startRun(handle.db, row, message, repos, channels);
+    if (runId !== undefined) await channels.attachRun(row._id, message.messageRef, runId);
+
     return plain(200, 'ok');
+  } catch (caught) {
+    await channels.releaseDelivery(row._id, message.messageRef).catch(() => undefined);
+    await channels.recordFailure(
+      row._id, caught instanceof Error ? caught.message : String(caught),
+    ).catch(() => undefined);
+    // Rethrown so the response is a 500 and the platform retries. Answering 200
+    // here would tell it the message was handled.
+    throw caught;
   }
-
-  const runId = await startRun(handle.db, row, message, repos, channels);
-  if (runId !== undefined) await channels.attachRun(row._id, message.messageRef, runId);
-
-  return plain(200, 'ok');
 }
 
 type Repos = ReturnType<typeof repositories>;
@@ -144,7 +162,6 @@ type Repos = ReturnType<typeof repositories>;
  */
 async function completeHandshake(
   channels: ChannelRepository,
-  type: string,
   row: ChannelDoc,
   message: InboundMessage,
   repos: Repos,
@@ -166,7 +183,6 @@ async function completeHandshake(
     'Connected. This chat is yours now — say anything and your agent will answer.',
     repos,
   );
-  void type;
   return plain(200, 'ok');
 }
 

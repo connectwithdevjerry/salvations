@@ -187,6 +187,18 @@ export class ChannelRepository {
     }
   }
 
+  /**
+   * Gives a claimed delivery back.
+   *
+   * Called when the work after the claim fails. The claim is what makes a
+   * redelivery a no-op, so a claim held over failed work converts the
+   * platform's retry — the one mechanism that could still save the message —
+   * into a silent drop.
+   */
+  async releaseDelivery(channelId: string, externalEventId: string): Promise<void> {
+    await this.#events.deleteOne({ channelId, externalEventId } as never);
+  }
+
   async attachRun(channelId: string, externalEventId: string, runId: string): Promise<void> {
     await this.#events.updateOne(
       { channelId, externalEventId } as never,
@@ -206,9 +218,16 @@ export class ChannelRepository {
   /**
    * Remembers where a conversation came from.
    *
-   * Upserted on the unique routing key so two messages arriving together cannot
-   * create two threads for one person — the loser of the race reads back the
-   * winner's row rather than failing.
+   * Upserted on the unique routing key, so one person gets one thread rather
+   * than a new conversation per message.
+   *
+   * The retry is not defensive padding. Two upserts racing on the same unique
+   * key do NOT merge: MongoDB raises E11000 at one of them and expects the
+   * application to try again. Without this, two messages sent a moment apart
+   * would throw — and because the delivery has already been claimed by then,
+   * the platform's retry would be treated as a duplicate and the message would
+   * be silently lost. On the second attempt the winner's row exists, so it is
+   * an ordinary update with no race left to lose.
    */
   async linkIdentity(input: {
     channelId: string;
@@ -218,19 +237,27 @@ export class ChannelRepository {
     label: string;
   }): Promise<ChannelIdentityDoc> {
     const now = new Date();
-    await this.#identities.updateOne(
-      { channelId: input.channelId, externalUserId: input.externalUserId } as never,
-      {
-        $set: { chatRef: input.chatRef, label: input.label, lastSeenAt: now },
-        $setOnInsert: {
-          _id: newId(IdPrefix.channelIdentity),
-          conversationId: input.conversationId,
-          userId: null,
-          createdAt: now,
-        },
-      } as never,
-      { upsert: true },
-    );
+    const filter = {
+      channelId: input.channelId, externalUserId: input.externalUserId,
+    } as never;
+    const update = {
+      $set: { chatRef: input.chatRef, label: input.label, lastSeenAt: now },
+      $setOnInsert: {
+        _id: newId(IdPrefix.channelIdentity),
+        conversationId: input.conversationId,
+        userId: null,
+        createdAt: now,
+      },
+    } as never;
+
+    try {
+      await this.#identities.updateOne(filter, update, { upsert: true });
+    } catch (caught) {
+      if (!isDuplicate(caught)) throw caught;
+      // The row exists now. $setOnInsert is a no-op against it, so this keeps
+      // the winner's conversation and still records that we saw them.
+      await this.#identities.updateOne(filter, update, { upsert: true });
+    }
 
     const stored = await this.findIdentity(input.channelId, input.externalUserId);
     if (stored === null) {

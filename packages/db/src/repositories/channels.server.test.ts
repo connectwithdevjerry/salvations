@@ -137,6 +137,49 @@ describe.skipIf(URI === undefined || URI === '')('channels against a real databa
     expect(await db.collection('channelIdentities').countDocuments({})).toBe(1);
   });
 
+  it('lets a released delivery be claimed again', async () => {
+    /*
+     * The claim is what makes a redelivery a no-op, so work that fails after
+     * claiming has to give it back. Otherwise the platform's retry — the one
+     * thing that could still save the message — is answered as a duplicate and
+     * the message is silently dropped.
+     */
+    const row = await connect('ABCD1234');
+
+    expect(await repo.claimDelivery(row._id, 'msg_1')).toBe(true);
+    expect(await repo.claimDelivery(row._id, 'msg_1')).toBe(false);
+
+    await repo.releaseDelivery(row._id, 'msg_1');
+
+    expect(await repo.claimDelivery(row._id, 'msg_1')).toBe(true);
+  });
+
+  it('keeps one thread when many messages arrive at once', async () => {
+    /*
+     * Five, not two. Two upserts racing on a unique key is already enough to
+     * make MongoDB raise E11000 at the loser rather than merging — which is
+     * what this test found the first time it ran — and more contenders make
+     * the collision reliable rather than occasional.
+     */
+    const row = await connect('ABCD1234');
+
+    const results = await Promise.all(
+      Array.from({ length: 5 }, (_, index) => repo.linkIdentity({
+        channelId: row._id, externalUserId: 'tg_race', chatRef: 'chat_race',
+        conversationId: `cnv_${index}`, label: '@ada',
+      })),
+    );
+
+    const ids = new Set(results.map((r) => r._id));
+    const conversations = new Set(results.map((r) => r.conversationId));
+    expect(ids.size).toBe(1);
+    // Every caller has to be told the SAME conversation, or five messages
+    // become five threads.
+    expect(conversations.size).toBe(1);
+    expect(await db.collection('channelIdentities')
+      .countDocuments({ externalUserId: 'tg_race' })).toBe(1);
+  });
+
   it('replaces rather than colliding when the same platform reconnects', async () => {
     const first = await connect('AAAA1111');
     const second = await connect('BBBB2222');

@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { auth } from '@/lib/client/auth';
 import { ApiError } from '@/lib/client/api';
 import { GoogleButton } from '@/components/google-button';
+import { BrandMark } from '@/components/ui';
 
 /** Matches the server's floor, stated here so the form can say so up front. */
 const MIN_PASSWORD_LENGTH = 12;
@@ -31,7 +32,7 @@ export default function SignUpPage() {
       await auth.signUp({
         email, password, ...(name.trim() !== '' ? { name: name.trim() } : {}),
       });
-      router.push('/');
+      router.push('/go');
     } catch (caught) {
       setError(caught instanceof ApiError ? caught.message : 'Could not create that account.');
       setBusy(false);
@@ -40,10 +41,14 @@ export default function SignUpPage() {
 
   return (
     <div className="centered">
-      <div className="card">
-        <h2 style={{ marginTop: 0 }}>Create an account</h2>
+      <div className="panel">
+        <div style={{ marginBottom: 18 }}><BrandMark /></div>
+        <h2 style={{ margin: '0 0 4px', fontSize: 20 }}>Create your account</h2>
+        <p className="muted" style={{ margin: '0 0 18px' }}>
+          Your first agent is four short steps away.
+        </p>
 
-        <GoogleButton returnTo="/" />
+        <GoogleButton returnTo="/go" />
 
         <div className="divider"><span>or</span></div>
 
@@ -76,7 +81,7 @@ export default function SignUpPage() {
           </button>
         </form>
 
-        <p className="muted" style={{ marginBottom: 0 }}>
+        <p className="muted" style={{ margin: '16px 0 0', textAlign: 'center' }}>
           Already have one? <Link href="/signin">Sign in</Link>
         </p>
       </div>

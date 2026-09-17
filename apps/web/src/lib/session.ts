@@ -50,7 +50,17 @@ export interface Caller {
  * is why the token is short-lived: this path cannot see a revocation.
  */
 export function readCaller(request: Request): Caller | undefined {
-  const token = readCookie(request.headers.get('cookie'), ACCESS_COOKIE);
+  return callerFromCookieHeader(request.headers.get('cookie'));
+}
+
+/**
+ * The same check, from a cookie header rather than a Request.
+ *
+ * A server component has `cookies()` and no Request, and duplicating the
+ * verification there is how the two copies drift.
+ */
+export function callerFromCookieHeader(cookieHeader: string | null): Caller | undefined {
+  const token = readCookie(cookieHeader, ACCESS_COOKIE);
   if (token === undefined) return undefined;
 
   let claims: SessionClaims;

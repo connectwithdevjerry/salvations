@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { api, ws } from '@/lib/client/api';
 import { useRunStream } from '@/lib/client/use-run-stream';
 import { ApprovalPrompt } from '@/components/approval-prompt';
+import { Tile } from '@/components/ui';
 
 interface Block { type: string; text?: string; name?: string; isError?: boolean }
 interface Message {
@@ -60,7 +61,18 @@ export default function ConversationPage({
 
   async function send(event: React.FormEvent) {
     event.preventDefault();
-    const content = draft.trim();
+    await submit(draft);
+  }
+
+  /**
+   * Sends one turn.
+   *
+   * Takes the text rather than reading the draft, because a starter prompt is
+   * sent without ever being typed and a version that only knew about the
+   * textarea would have to fake a keystroke to do it.
+   */
+  async function submit(text: string) {
+    const content = text.trim();
     if (content === '' || runId !== undefined) return;
 
     setDraft('');
@@ -102,6 +114,10 @@ export default function ConversationPage({
             </select>
           </label>
         </div>
+
+        {messages.length === 0 && runId === undefined && (
+          <EmptyState onPick={(text) => void submit(text)} />
+        )}
 
         {messages.map((message) => (
           <MessageView key={message.id} message={message} workspaceId={workspaceId} />
@@ -201,6 +217,41 @@ function MessageView({ message, workspaceId }: { message: Message; workspaceId: 
         </div>
       )}
       {text !== '' && <div className="body">{text}</div>}
+    </div>
+  );
+}
+
+/**
+ * What an empty conversation says.
+ *
+ * The prompts are deliberately about what this agent can be asked rather than
+ * what it can do: a new conversation cannot know which tools are bound, and a
+ * suggestion that turns out to be impossible is worse than no suggestion.
+ */
+const STARTERS = [
+  'What can you do?',
+  'What tools do you have?',
+  'Help me get started',
+] as const;
+
+function EmptyState({ onPick }: { onPick: (text: string) => void }) {
+  return (
+    <div style={{ maxWidth: 620, margin: '56px auto 0', textAlign: 'center' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14 }}>
+        <Tile name="chat" large />
+      </div>
+      <h3 style={{ margin: '0 0 6px', fontSize: 18 }}>Nothing here yet</h3>
+      <p className="muted" style={{ margin: '0 0 20px' }}>
+        Give it something small first. Anything it does that writes, sends or spends stops for
+        your approval.
+      </p>
+      <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
+        {STARTERS.map((starter) => (
+          <button key={starter} type="button" onClick={() => onPick(starter)}>
+            {starter}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

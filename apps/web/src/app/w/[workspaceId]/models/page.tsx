@@ -14,12 +14,18 @@ const ROLES = ['chat', 'reasoning', 'summarizer', 'cheap'] as const;
 export default function ModelsPage({ params }: { params: Promise<{ workspaceId: string }> }) {
   const { workspaceId } = use(params);
   const [providers, setProviders] = useState<Provider[]>([]);
+  // Which vendors this deployment has adapters for. Served by the registry so
+  // the form cannot offer a type the boundary will then reject.
+  const [knownTypes, setKnownTypes] = useState<string[]>([]);
   const [bindings, setBindings] = useState<Binding[]>([]);
   const [error, setError] = useState<string>();
 
   const reload = useCallback(() => {
-    void api.get<{ items: Provider[] }>(`${ws(workspaceId)}/providers`)
-      .then((r) => setProviders(r.items)).catch(() => undefined);
+    void api.get<{ items: Provider[]; knownTypes: string[] }>(`${ws(workspaceId)}/providers`)
+      .then((r) => {
+        setProviders(r.items);
+        setKnownTypes(r.knownTypes);
+      }).catch(() => undefined);
     void api.get<{ items: Binding[] }>(`${ws(workspaceId)}/models`)
       .then((r) => setBindings(r.items)).catch(() => undefined);
   }, [workspaceId]);
@@ -38,7 +44,12 @@ export default function ModelsPage({ params }: { params: Promise<{ workspaceId: 
 
       {error !== undefined && <p className="error">{error}</p>}
 
-      <ProviderForm workspaceId={workspaceId} onDone={reload} onError={setError} />
+      <ProviderForm
+        workspaceId={workspaceId}
+        knownTypes={knownTypes}
+        onDone={reload}
+        onError={setError}
+      />
 
       {providers.length > 0 && (
         <table style={{ marginBottom: 24 }}>
@@ -92,11 +103,14 @@ export default function ModelsPage({ params }: { params: Promise<{ workspaceId: 
 }
 
 function ProviderForm({
-  workspaceId, onDone, onError,
+  workspaceId, knownTypes, onDone, onError,
 }: {
-  workspaceId: string; onDone: () => void; onError: (message: string) => void;
+  workspaceId: string;
+  knownTypes: readonly string[];
+  onDone: () => void;
+  onError: (message: string) => void;
 }) {
-  const [providerType, setProviderType] = useState('anthropic');
+  const [providerType, setProviderType] = useState<string>();
   const [name, setName] = useState('');
   const [apiKey, setApiKey] = useState('');
   const [busy, setBusy] = useState(false);
@@ -111,7 +125,9 @@ function ProviderForm({
           event.preventDefault();
           setBusy(true);
           try {
-            await api.post(`${ws(workspaceId)}/providers`, { providerType, name, apiKey });
+            await api.post(`${ws(workspaceId)}/providers`, {
+              providerType: providerType ?? knownTypes[0], name, apiKey,
+            });
             setApiKey('');
             setName('');
             onDone();
@@ -125,12 +141,11 @@ function ProviderForm({
         <div>
           <label htmlFor="providerType">Type</label>
           <select
-            id="providerType" value={providerType}
+            id="providerType" value={providerType ?? knownTypes[0] ?? ''}
             onChange={(e) => setProviderType(e.target.value)}
           >
-            <option value="anthropic">anthropic</option>
-            <option value="openai">openai</option>
-            <option value="google">google</option>
+            {knownTypes.length === 0 && <option value="">Loading…</option>}
+            {knownTypes.map((type) => <option key={type} value={type}>{type}</option>)}
           </select>
         </div>
         <div>

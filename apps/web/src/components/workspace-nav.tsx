@@ -5,16 +5,17 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/client/api';
 import { auth } from '@/lib/client/auth';
+import { BrandMark, Icon, type IconName } from '@/components/ui';
 
 interface Workspace { id: string; name: string; role: string }
 
-const SECTIONS = [
-  { href: 'chat', label: 'Chat' },
-  { href: 'agents', label: 'Agents' },
-  { href: 'mcp', label: 'MCP servers' },
-  { href: 'approvals', label: 'Approvals' },
-  { href: 'models', label: 'Models' },
-] as const;
+const SECTIONS: readonly { href: string; label: string; icon: IconName }[] = [
+  { href: 'chat', label: 'Chat', icon: 'chat' },
+  { href: 'agents', label: 'Agents', icon: 'agent' },
+  { href: 'mcp', label: 'Integrations', icon: 'server' },
+  { href: 'approvals', label: 'Approvals', icon: 'shield' },
+  { href: 'models', label: 'Models', icon: 'spark' },
+];
 
 export function WorkspaceNav({ workspaceId }: { workspaceId: string }) {
   const pathname = usePathname();
@@ -46,7 +47,7 @@ export function WorkspaceNav({ workspaceId }: { workspaceId: string }) {
 
   return (
     <nav className="sidebar">
-      <h1>Salvations</h1>
+      <div style={{ padding: '2px 6px 14px' }}><BrandMark /></div>
 
       <select
         aria-label="Workspace"
@@ -69,15 +70,18 @@ export function WorkspaceNav({ workspaceId }: { workspaceId: string }) {
             className="nav-link"
             aria-current={pathname.startsWith(href) ? 'page' : undefined}
           >
-            {section.label}
+            <span style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+              <Icon name={section.icon} size={16} />
+              {section.label}
+            </span>
             {section.href === 'approvals' && pending > 0 && (
-              <span className="badge warn" style={{ marginLeft: 8 }}>{pending}</span>
+              <span className="badge warn">{pending}</span>
             )}
           </Link>
         );
       })}
 
-      <div style={{ marginTop: 'auto' }}>
+      <div style={{ marginTop: 'auto', paddingTop: 16 }}>
         {current !== undefined && (
           <p className="muted" style={{ margin: '0 0 8px 4px' }}>
             Signed in as {current.role}

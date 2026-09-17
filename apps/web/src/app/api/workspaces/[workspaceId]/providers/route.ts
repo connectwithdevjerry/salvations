@@ -6,7 +6,7 @@
  * enough to be one.
  */
 import { createProviderConfigSchema } from '@salvations/contracts';
-import { isKnownProviderType } from '@salvations/provider-registry';
+import { KNOWN_PROVIDER_TYPES, isKnownProviderType } from '@salvations/provider-registry';
 import { errorResponse, jsonBody, ok } from '@/lib/http';
 import { workspaceRoute } from '@/lib/route';
 import { actorIdOf } from '@/lib/principal';
@@ -22,6 +22,10 @@ export const GET = workspaceRoute('providers:read', async (ctx) => {
   const hintById = new Map(credentials.map((c) => [c._id, c.hint]));
 
   return ok({
+    // The vendors this deployment can actually talk to, so the UI offers a list
+    // it did not invent. A name typed into a form is a configuration error
+    // hours later; a name absent from this list cannot be chosen at all.
+    knownTypes: KNOWN_PROVIDER_TYPES.map(String),
     items: items.map((p) => ({
       id: p._id,
       providerType: p.providerType,

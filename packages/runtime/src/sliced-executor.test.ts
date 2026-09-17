@@ -189,9 +189,32 @@ describe('driving a run to completion', () => {
     const h = harness([CONTINUE, CONTINUE, FINISHED]);
     const outcome = await h.executor.execute(RUN_ID, h.deadline(300_000));
 
-    expect(outcome).toEqual({ kind: 'finished', status: 'succeeded' });
+    // The run id is part of the outcome because the caller has to know WHICH
+    // run finished: the queue hands out what most deserves to run, not the
+    // hint, and a channel reply sent on the hint goes to the wrong person.
+    expect(outcome).toEqual({ kind: 'finished', runId: RUN_ID, status: 'succeeded' });
     expect(h.effects).toHaveLength(3);
     expect(h.queue.state.status).toBe('succeeded');
+  });
+
+  it('names the run it actually drove, not the one it was asked about', async () => {
+    /*
+     * The hint is a wake-up, not an instruction: the queue hands out whatever
+     * most deserves to run, which is frequently some other run that arrived
+     * first. Everything downstream that acts on a finished run — carrying the
+     * answer back to the chat it came from, above all — has to be told which
+     * run that was.
+     *
+     * The other tests here cannot catch this, because in them the hinted run
+     * and the claimed run are the same row, so an executor echoing the hint
+     * passes every one of them.
+     */
+    const claimed = run({ id: 'run_claimed' as RunId });
+    const h = harness([FINISHED], { initial: claimed });
+
+    const outcome = await h.executor.execute('run_hinted' as RunId, h.deadline(300_000));
+
+    expect(outcome).toEqual({ kind: 'finished', runId: 'run_claimed', status: 'succeeded' });
   });
 
   it('releases the lease exactly once', async () => {
@@ -276,7 +299,7 @@ describe('suspension', () => {
     const h = harness([{ kind: 'suspended', reason: 'approval', approvalId: 'apr_1' }]);
     const outcome = await h.executor.execute(RUN_ID, h.deadline(300_000));
 
-    expect(outcome).toEqual({ kind: 'suspended', reason: 'approval' });
+    expect(outcome).toEqual({ kind: 'suspended', runId: RUN_ID, reason: 'approval' });
     expect(h.queue.state.status).toBe('waiting_approval');
     expect(h.queue.leaseToken).toBeUndefined();
   });
@@ -300,7 +323,7 @@ describe('a curtailed run', () => {
     }]);
     const outcome = await h.executor.execute(RUN_ID, h.deadline(300_000));
 
-    expect(outcome).toEqual({ kind: 'finished', status: 'failed' });
+    expect(outcome).toEqual({ kind: 'finished', runId: RUN_ID, status: 'failed' });
     expect(h.queue.releases[0]?.intent).toMatchObject({
       kind: 'finish', status: 'failed', error: { code: 'budget' },
     });
@@ -319,7 +342,7 @@ describe('a curtailed run', () => {
     });
 
     expect(await executor.execute(RUN_ID, new WallClockDeadline(300_000, { now: () => 1_000_000 })))
-      .toEqual({ kind: 'finished', status: 'failed' });
+      .toEqual({ kind: 'finished', runId: RUN_ID, status: 'failed' });
     expect(h.queue.leaseToken).toBeUndefined();
     expect(h.queue.releases[0]?.intent).toMatchObject({ error: { code: 'executor_error' } });
   });

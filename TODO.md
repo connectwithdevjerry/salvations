@@ -2,8 +2,9 @@
 
 Companion to [ARCHITECTURE.md](./ARCHITECTURE.md) and the documents in [docs/](./docs).
 
-**Current state:** Phase 0 — architecture revised for MongoDB Atlas + Vercel.
-**No application code has been written.** Implementation begins only after final approval.
+**Current state:** Phase 1 complete through §1.10, plus the Phase 2 product scope below.
+The catalogue direction — named, hard-coded integrations rather than a generic MCP URL box —
+was set after Phase 1 and supersedes the "no integrations in Phase 1" line that was here.
 
 **Legend:** `[ ]` todo · `[x]` done · **(AC-n)** = acceptance criterion from ARCHITECTURE.md §10.3
 · 🔒 = security-critical · ⚓ = load-bearing for a later migration
@@ -196,6 +197,60 @@ Companion to [ARCHITECTURE.md](./ARCHITECTURE.md) and the documents in [docs/](.
 
 ---
 
+## Phase 1.5 — The product (catalogue direction)
+
+Integrations are a **named, hard-coded catalogue**, not a generic "paste an MCP URL" box. The
+vendor code lives in `packages/catalog`, `packages/channels` and the adapters; the agent's step
+loop still knows nothing about any of it, which is what keeps I1–I3 true and lets a fourth
+platform exist beside the first three.
+
+### 1.5.1 Channels — done
+
+- [x] `packages/catalog` — CHANNELS and INTEGRATIONS with setup steps, granted scopes, brand colour
+- [x] `packages/channels` — `ChannelAdapter` port + Telegram, Discord, Slack
+- [x] 🔒 Per-platform delivery authentication: echoed secret, HMAC-SHA256, Ed25519
+- [x] 🔒 Replay windows — a valid signature over a stale body is rejected
+- [x] 🔒 Ownership handshake — a bot token proves nothing about who pasted it
+- [x] 🔒 Delivery de-duplication on a unique index; the claim is released if the work fails
+- [x] `channels` / `channelIdentities` / `channelEvents` + `ChannelRepository`
+- [x] Inbound webhook → conversation → run; outbound delivery on run completion
+- [x] Integrations page rendered from the catalogue
+
+### 1.5.2 Schedule — done
+
+- [x] `packages/schedule` — five-field cron, DST-correct via Intl, dom/dow OR rule
+- [x] `schedules` collection + conditional-update occurrence claiming
+- [x] Tick on the existing sweeper; capped catch-up; self-disabling after repeated failures
+- [x] Schedule page with presets and a visible expression
+
+### 1.5.3 Billing — done, unconfigured by default
+
+- [x] `packages/catalog/plans` — the plan, hard-coded
+- [x] `packages/billing` — `PaymentProcessor` port + Stripe over its REST API
+- [x] 🔒 Webhook signature + replay window; all-or-none env configuration
+- [x] Entitlements that fail OPEN when no processor is configured
+- [x] Checkout page; card details never reach this codebase
+- [ ] Decide what a limit actually does when reached — currently nothing enforces `limits`
+- [ ] Customer portal link for changing the card on file
+
+### 1.5.4 Still to decide or build
+
+- [ ] **Documents** and **Memories** — already scoped as Phase 2 below (vector search, ingestion,
+      bitemporal memory). Named here only because the screenshots put them in the navigation;
+      the plan for them has not changed and neither has their cost.
+- [ ] **Browser** — covered today by connecting a browser MCP server. A first-class page is a
+      product decision, not a missing capability.
+- [ ] **Per-user isolated machines** — a different execution model from the sliced executor.
+      The current model isolates by workspace, not by process.
+- [ ] ❌ **"Sign in with ChatGPT"** — not buildable. It requires embedding the Codex CLI's own
+      public client id (impersonating another application) and routing a personal ChatGPT
+      subscription through a third party. OpenAI's terms make subscriptions personal and
+      single-user, and Anthropic's February 2026 terms explicitly prohibit subscription OAuth
+      tokens in third-party tools, with billing enforcement since April 2026. The API-key path
+      already works for every vendor in the registry and is the honest version of this.
+
+---
+
 ## Phase 2 — Documents, memory & RAG (Atlas Vector Search)
 
 - [ ] `VectorStore` / `MemoryStore` / `DocumentStore` ports
@@ -238,12 +293,19 @@ Companion to [ARCHITECTURE.md](./ARCHITECTURE.md) and the documents in [docs/](.
 - [ ] Then: user-facing **scheduling** (`schedules` collection, cron UI, overlap policy) and
       sub-agent orchestration, both of which want a long-lived executor
 
-## Phase 5 — Channels & first-party MCP servers
+## Phase 5 — Channel depth & first-party MCP servers
 
-- [ ] Telegram `ChannelAdapter`: webhook + secret verification 🔒, throttled edits, inline-keyboard
-      approvals
-- [ ] 🔒 `channelIdentities` linking flow; unlinked identities are minimal-privilege
-- [ ] Channel capability degradation matrix + tests
+*The channels themselves shipped in Phase 1.5. What is left here is depth.*
+
+- [x] Telegram `ChannelAdapter`: webhook + secret verification 🔒
+- [x] 🔒 Unlinked identities are minimal-privilege (`trust: 'unlinked'` on the run's principal)
+- [ ] Throttled edits and inline-keyboard approvals — deciding an approval from the chat itself,
+      rather than being sent to the web app for it
+- [ ] 🔒 `channelIdentities` LINKING flow — tying a platform account to a HIVE account, which is
+      what would let an unlinked identity become a trusted one
+- [ ] Channel capability degradation matrix + tests (no buttons on Slack, no threads on Telegram)
+- [ ] Discord over the Gateway once there is a worker that can hold a socket, so it is a
+      conversation rather than a slash command
 - [ ] First-party MCP servers (`@modelcontextprotocol/server`): memory, documents, workspace-admin,
       orchestration
 - [ ] In-process transport — same client interface, same `ToolGateway`
@@ -276,7 +338,6 @@ Companion to [ARCHITECTURE.md](./ARCHITECTURE.md) and the documents in [docs/](.
 | I5 | `packages/core` imports nothing but `zod` |
 | I6 | `packages/runtime` never imports providers, MCP concretes, or `db` |
 | I7 | Every provider adapter runs the shared conformance suite (AC-14) |
-| I7 | Every provider adapter passes the conformance suite |
 | I8 | No unscoped tenant query (command-monitoring guard throws) |
 | I9 | Prompt prefix is byte-stable across identical state |
 | I10 | No secret reachable from run / step / event / audit / log |

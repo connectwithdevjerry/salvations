@@ -21,6 +21,7 @@ import {
   CapabilityRepository, ConversationRepository, CredentialRepository, ModelBindingRepository,
   MongoRunQueue, RunRepository, ScopedDb, createEventBus,
   type McpCapabilityDoc, type McpServerBindingDoc, type ModelBindingDoc, type RunEventReader,
+  UsageRepository, ChannelRepository,
 } from '@salvations/db';
 import { envKeyProvider } from '@salvations/crypto';
 import {
@@ -318,6 +319,8 @@ export function repositories(database: Database, workspaceId: WorkspaceId | stri
     capabilities: new CapabilityRepository(
       new ScopedDb(database, id).collection<McpCapabilityDoc>('mcpCapabilities'),
     ),
+    usage: new UsageRepository(database, id),
+    channels: new ChannelRepository(database, id),
     budget: DEFAULT_BUDGET,
   };
 }

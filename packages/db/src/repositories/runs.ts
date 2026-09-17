@@ -120,6 +120,20 @@ export class RunRepository {
   }
 
   /**
+   * Recent runs across the whole workspace.
+   *
+   * Sorted by `queuedAt` and not by finish time, so a run still working appears
+   * where you would look for it rather than at the bottom under everything that
+   * has already finished.
+   */
+  async listRecent(limit = 50, status?: string): Promise<RunDoc[]> {
+    return this.#runs.find(
+      (status === undefined ? {} : { status }) as never,
+      { sort: { queuedAt: -1 }, limit },
+    );
+  }
+
+  /**
    * Records budget spend.
    *
    * $inc rather than read-modify-write: a slice that reads, computes and writes

@@ -10,7 +10,7 @@ import type { ReactNode } from 'react';
 
 export type IconName =
   | 'spark' | 'plug' | 'key' | 'agent' | 'server' | 'shield'
-  | 'chat' | 'check' | 'chevron' | 'arrow' | 'exit' | 'gear';
+  | 'chat' | 'check' | 'chevron' | 'arrow' | 'exit' | 'gear' | 'pulse';
 
 const PATHS: Readonly<Record<IconName, ReactNode>> = {
   spark: <path d="M12 3l1.9 5.3L19 10l-5.1 1.7L12 17l-1.9-5.3L5 10l5.1-1.7L12 3z" />,
@@ -40,6 +40,7 @@ const PATHS: Readonly<Record<IconName, ReactNode>> = {
   chevron: <path d="M6 15l6-6 6 6" />,
   arrow: <path d="M4 12h15M13 6l6 6-6 6" />,
   exit: <path d="M14 4h5v16h-5M10 8l-4 4 4 4M6 12h10" />,
+  pulse: <path d="M3 12h4l3-7 4 14 3-7h4" />,
   gear: (
     <>
       <circle cx="12" cy="12" r="3" />

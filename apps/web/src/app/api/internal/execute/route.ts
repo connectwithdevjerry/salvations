@@ -14,6 +14,7 @@ import { WallClockDeadline, assertReserveFits, DEFAULT_RESERVE_MS } from '@salva
 import { asId, type RunId } from '@salvations/core';
 import { env } from '@/lib/env';
 import { executor } from '@/lib/container';
+import { deliverFinishedRun } from '@/lib/channel-delivery';
 
 export const runtime = 'nodejs';
 
@@ -68,6 +69,19 @@ export async function POST(request: Request): Promise<Response> {
   const outcome = await (await executor()).execute(
     hint, new WallClockDeadline(SLICE_MS),
   );
+
+  // A run that came from a chat platform has to have its answer carried back.
+  // Here, because this is the only moment anything knows the answer is
+  // complete — and awaited rather than backgrounded, because `waitUntil` does
+  // not outlive this function's wall and a backgrounded send would be killed
+  // in transit.
+  //
+  // `outcome.runId` and not the hint: the queue hands out whatever most
+  // deserves to run, which is usually but not always the run we were told
+  // about. Using the hint would deliver one person's answer to another.
+  if (outcome.kind === 'finished') {
+    await deliverFinishedRun(String(outcome.runId));
+  }
 
   // 202 throughout: this endpoint reports what the slice did, not whether the
   // run succeeded. A caller that treated `finished: failed` as an HTTP error

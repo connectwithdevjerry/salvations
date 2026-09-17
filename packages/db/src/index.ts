@@ -26,6 +26,7 @@ export * from './repositories/runs';
 export * from './repositories/credentials';
 export * from './repositories/catalog';
 export * from './repositories/telemetry';
+export * from './repositories/channels';
 export * from './validators';
 export * from './atlas-roles';
 export { seed, runSeed, SEED_WORKSPACE_ID, SEED_USER_ID } from './seed';

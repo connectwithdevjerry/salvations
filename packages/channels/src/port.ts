@@ -1,0 +1,121 @@
+/**
+ * What every chat platform has to provide.
+ *
+ * Three platforms sit behind this, and they disagree about almost everything:
+ * Telegram polls or pushes to a URL, Slack demands a signed handshake before it
+ * will believe a URL exists, Discord wants a gateway socket or an interaction
+ * endpoint. The port is the small set of things they do agree on — prove a
+ * token works, turn a delivery into a message, send a reply — and every
+ * disagreement is absorbed by an adapter rather than leaking upward.
+ *
+ * Nothing here knows what an agent is. An adapter's whole job is to turn a
+ * platform's payload into `InboundMessage` and an answer back into an API call.
+ */
+
+/** A message that arrived from a person, normalised. */
+export interface InboundMessage {
+  /** The platform's own id for the chat, opaque to us. Routes the reply. */
+  readonly chatRef: string;
+  /** The platform's own id for the person. Identifies, never authorises. */
+  readonly senderRef: string;
+  /** How the sender is known on that platform, for display only. */
+  readonly senderLabel: string;
+  readonly text: string;
+  /** The platform's message id, used to drop a redelivery. */
+  readonly messageRef: string;
+}
+
+/** The result of looking at an inbound HTTP request. */
+export type InboundResult =
+  | { readonly kind: 'message'; readonly message: InboundMessage }
+  /**
+   * Understood, but nothing to do — an edit, a reaction, a bot's own echo, or a
+   * platform's liveness ping. Distinct from `rejected` because a platform that
+   * gets an error for its own ping will disable the webhook.
+   */
+  | { readonly kind: 'ignored'; readonly reason: string }
+  /** A challenge the platform expects answered verbatim before it trusts us. */
+  | { readonly kind: 'challenge'; readonly body: string; readonly contentType: string }
+  /** Not from the platform, or not provably so. */
+  | { readonly kind: 'rejected'; readonly reason: string };
+
+export interface ChannelIdentity {
+  /** The bot's own handle, shown to the person setting it up. */
+  readonly handle: string;
+  /** The bot's display name on that platform. */
+  readonly displayName: string;
+  /** The platform's id for the bot itself, used to ignore its own messages. */
+  readonly botRef: string;
+}
+
+export interface VerifyContext {
+  /** Where this deployment receives deliveries for this connection. */
+  readonly webhookUrl: string;
+  /** A secret the platform echoes back, proving a delivery is ours. */
+  readonly webhookSecret: string;
+}
+
+export interface ChannelAdapter {
+  /** Matches an id in the catalogue. */
+  readonly channelId: string;
+
+  /**
+   * A second secret the platform issues, when it has one.
+   *
+   * Telegram lets us choose the secret it echoes; Slack and Discord issue their
+   * own and sign with it, so those two need a field on the form. Declaring it
+   * here means the form is derived from the adapter rather than from a list
+   * somebody has to remember to update.
+   */
+  readonly secondarySecret?: {
+    readonly label: string;
+    readonly help: string;
+  };
+
+  /**
+   * Proves a token works and says whose it is.
+   *
+   * Called before anything is stored, so a typo fails at the form rather than
+   * silently producing a connection that never delivers.
+   */
+  identify(token: string, fetchImpl?: typeof fetch): Promise<ChannelIdentity>;
+
+  /**
+   * Tells the platform where to deliver.
+   *
+   * Not every platform has one — Slack is configured in its own dashboard —
+   * so an adapter may legitimately do nothing here.
+   */
+  register(token: string, context: VerifyContext, fetchImpl?: typeof fetch): Promise<void>;
+
+  /** Undoes `register`. Best-effort: a revoked token cannot be unregistered. */
+  unregister(token: string, fetchImpl?: typeof fetch): Promise<void>;
+
+  /**
+   * Decides what an inbound request is.
+   *
+   * Takes the raw body rather than parsed JSON because signature schemes sign
+   * bytes, and re-serialising a parsed object does not reproduce them.
+   *
+   * Synchronous, deliberately. Every scheme here — an echoed secret, an HMAC,
+   * an Ed25519 signature — is local arithmetic, and a signature check that can
+   * await is a signature check that can hang the request it is protecting.
+   */
+  receive(raw: string, headers: Headers, context: VerifyContext): InboundResult;
+
+  /** Sends a reply. Throws on refusal — a silent failure is a lost answer. */
+  send(token: string, chatRef: string, text: string, fetchImpl?: typeof fetch): Promise<void>;
+}
+
+/** A platform refused. Carries its own words, which are usually the diagnosis. */
+export class ChannelError extends Error {
+  readonly channelId: string;
+  readonly status: number | undefined;
+
+  constructor(channelId: string, message: string, status?: number) {
+    super(message);
+    this.name = 'ChannelError';
+    this.channelId = channelId;
+    this.status = status;
+  }
+}

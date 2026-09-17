@@ -89,6 +89,8 @@ export const IdPrefix = {
   mcpCapability: 'cap',
   policy: 'pol',
   channel: 'chn',
+  channelIdentity: 'cid',
+  channelEvent: 'cev',
   apiKey: 'key',
   lease: 'lse',
   auditEntry: 'aud',

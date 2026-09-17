@@ -281,6 +281,99 @@ export interface McpCapabilityDoc extends TenantDoc {
   removedAt?: Date | null;
 }
 
+/**
+ * A connected chat platform.
+ *
+ * Two secrets, both encrypted, because they do different jobs and rotate
+ * independently: the token authorises calls we make, and the webhook secret
+ * proves a delivery came from the platform. Storing them as one field would
+ * mean rotating a leaked signing secret revokes the bot as well.
+ *
+ * `verifiedChatRef` is the whole of the ownership proof. Anyone can paste a bot
+ * token; only the person who can message that bot can complete the handshake,
+ * and until they do the connection answers nobody.
+ */
+export interface ChannelDoc extends TenantDoc {
+  /** A catalogue id — 'telegram', 'discord', 'slack'. */
+  type: string;
+  /** Which agent answers here. A channel with no agent has nothing to say. */
+  agentId: string;
+  /** The model binding conversations opened from this channel start on. */
+  modelBindingId: string;
+  tokenCredentialId: string;
+  /** Absent for a platform whose deliveries carry no secret at all. */
+  secretCredentialId?: string | null;
+  status: 'pending_verification' | 'connected' | 'error' | 'disabled';
+  /** Who the bot is on that platform. Display only — never an authorisation. */
+  identity: {
+    handle: string;
+    displayName: string;
+    botRef: string;
+  };
+  /**
+   * The one-time code that proves the chat is theirs, and when it stops being
+   * accepted. Cleared the moment it is used, so a code cannot be replayed.
+   */
+  connect: {
+    code: string;
+    expiresAt: Date;
+  } | null;
+  /** Set once the handshake completes. Until then nothing is answered. */
+  verifiedChatRef?: string | null;
+  health: {
+    lastOkAt?: Date | null;
+    lastDeliveryAt?: Date | null;
+    consecutiveFailures: number;
+    lastError?: string | null;
+  };
+  createdBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/**
+ * A person on a chat platform, and the conversation their messages belong to.
+ *
+ * Keyed by the platform's own sender id, which identifies and never authorises:
+ * it says which thread to continue, not what the thread is allowed to do. The
+ * authority for anything a run does still comes from the channel's own
+ * principal, not from whoever sent the message.
+ */
+export interface ChannelIdentityDoc extends TenantDoc {
+  channelId: string;
+  /** The platform's id for the person. */
+  externalUserId: string;
+  /** The platform's id for the chat, which is where a reply goes. */
+  chatRef: string;
+  conversationId: string;
+  label: string;
+  /** Set only when a platform account has been linked to a HIVE account. */
+  userId?: string | null;
+  createdAt: Date;
+  lastSeenAt: Date;
+}
+
+/**
+ * One inbound delivery.
+ *
+ * A unique index on (channelId, externalEventId) is what makes a redelivery a
+ * no-op: the second insert collides instead of starting a second run. Every one
+ * of these platforms retries on a slow response, so without it a timeout would
+ * silently double every answer.
+ *
+ * Rows expire after a week. The dedupe window only has to outlive a platform's
+ * retry schedule, and keeping them forever would turn a safety mechanism into
+ * the largest collection in the database.
+ */
+export interface ChannelEventDoc extends TenantDoc {
+  channelId: string;
+  externalEventId: string;
+  outcome: string;
+  runId?: string | null;
+  /** Also the TTL anchor: this is a dedupe window, not an archive. */
+  receivedAt: Date;
+}
+
 export interface PolicyDoc extends TenantDoc {
   scopeType: string;
   scopeId?: string | null;

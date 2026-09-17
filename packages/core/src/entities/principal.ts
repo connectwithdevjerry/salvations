@@ -20,11 +20,13 @@ export type Permission =
   | 'conversations:read' | 'conversations:write'
   | 'runs:read' | 'runs:create' | 'runs:cancel'
   | 'approvals:decide'
+  | 'channels:read' | 'channels:write'
   | 'audit:read';
 
 const VIEWER: readonly Permission[] = [
   'workspace:read', 'members:read', 'agents:read', 'mcp:read',
   'policies:read', 'providers:read', 'conversations:read', 'runs:read',
+  'channels:read',
 ];
 
 const MEMBER: readonly Permission[] = [
@@ -35,6 +37,9 @@ const ADMIN: readonly Permission[] = [
   ...MEMBER, 'workspace:manage', 'members:manage', 'agents:write',
   'mcp:install', 'mcp:approve', 'policies:write',
   'credentials:read', 'credentials:write', 'providers:write', 'audit:read',
+  // Connecting a chat platform stores a bot token and points an agent at a
+  // public endpoint. That is administrative, not something a member does.
+  'channels:write',
 ];
 
 const OWNER: readonly Permission[] = [...ADMIN, 'workspace:delete'];

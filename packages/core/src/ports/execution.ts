@@ -16,8 +16,19 @@ export interface Deadline {
 }
 
 export type ExecOutcome =
-  | { readonly kind: 'finished'; readonly status: Extract<RunStatus, 'succeeded' | 'failed' | 'cancelled'> }
-  | { readonly kind: 'suspended'; readonly reason: 'approval' | 'input' | 'tool' }
+  /**
+   * `runId` is the run this slice actually drove, which is not necessarily the
+   * one the caller hinted at: the queue hands out what most deserves to run.
+   * A caller that needs to act on a finished run — delivering its answer to the
+   * chat it came from, say — has to be told which one, and inferring it from
+   * the hint would deliver the wrong answer to the wrong person.
+   */
+  | {
+      readonly kind: 'finished';
+      readonly runId: RunId;
+      readonly status: Extract<RunStatus, 'succeeded' | 'failed' | 'cancelled'>;
+    }
+  | { readonly kind: 'suspended'; readonly runId: RunId; readonly reason: 'approval' | 'input' | 'tool' }
   /** Slice exhausted. The run is back in `queued`, ready for continuation. */
   | { readonly kind: 'yielded'; readonly resumeAt: Date }
   /**

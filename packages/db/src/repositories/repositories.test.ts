@@ -5,7 +5,7 @@ import { RunRepository } from './runs';
 import { CredentialRepository } from './credentials';
 import { UsageRepository, AuditRepository } from './telemetry';
 import { ephemeralKeyProvider, EphemeralSecret } from '@salvations/crypto';
-import { DEFAULT_BUDGET } from '@salvations/core';
+import { DEFAULT_BUDGET, asId, type UserId, type WorkspaceId } from '@salvations/core';
 
 interface Call { op: string; filter?: unknown; update?: unknown; options?: unknown; doc?: unknown }
 
@@ -103,7 +103,16 @@ describe('run creation is idempotent', () => {
   const input = {
     conversationId: 'cnv_1', agentId: 'agt_1', agentVersionId: 'agv_1',
     agentSnapshot: {} as never, modelBindingId: 'mbd_1',
-    trigger: { type: 'user' }, principal: {}, budget: DEFAULT_BUDGET,
+    trigger: { type: 'user' as const },
+    // A real principal, because a run's principal is its whole authority and
+    // `{}` type-checked here right up until the field stopped being `unknown`.
+    principal: {
+      type: 'user' as const,
+      userId: asId<UserId>('usr_1'),
+      workspaceId: asId<WorkspaceId>(WS),
+      role: 'owner' as const,
+    },
+    budget: DEFAULT_BUDGET,
   };
 
   it('returns the existing run for a repeated idempotency key', async () => {

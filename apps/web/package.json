@@ -11,6 +11,8 @@
   },
   "dependencies": {
     "@salvations/auth": "workspace:*",
+    "@salvations/catalog": "workspace:*",
+    "@salvations/channels": "workspace:*",
     "@salvations/contracts": "workspace:*",
     "@salvations/core": "workspace:*",
     "@salvations/crypto": "workspace:*",

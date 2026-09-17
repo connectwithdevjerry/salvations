@@ -5,6 +5,7 @@
  * reads, step persistence and the event log.
  */
 import type { Db } from 'mongodb';
+import type { Principal } from '@salvations/core';
 import { IdPrefix, newId, type RunBudget } from '@salvations/core';
 import type { ApprovalDoc, RunDoc, RunEventDoc, RunStepDoc } from '../documents';
 import { ScopedDb, type ScopedCollection } from '../scoped';
@@ -16,7 +17,16 @@ export interface CreateRunInput {
   readonly agentSnapshot: RunDoc['agentSnapshot'];
   readonly modelBindingId: string;
   readonly trigger: RunDoc['trigger'];
-  readonly principal: unknown;
+  /**
+   * Typed, not `unknown`.
+   *
+   * It was `unknown` because the document only stores it, and the cost of that
+   * showed up immediately: a caller invented a principal shape of its own and
+   * nothing objected until it reached the code that reads one back. A run's
+   * principal is the whole of its authority — the one field that must not be
+   * whatever the caller felt like passing.
+   */
+  readonly principal: Principal;
   readonly budget: RunBudget;
   readonly idempotencyKey?: string;
   readonly parentRunId?: string;

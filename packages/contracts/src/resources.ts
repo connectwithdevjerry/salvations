@@ -72,6 +72,36 @@ export const createApiKeySchema = z.object({
  * enumerate vendors, and an enum here would put the list back — in the one
  * place every client would copy it from.
  */
+/**
+ * Connecting a chat platform.
+ *
+ * `token` and `signingSecret` are both secrets and both go straight into
+ * encrypted storage; the schema bounds them only so a paste of an entire
+ * document cannot become a 40MB credential row.
+ */
+export const connectChannelSchema = z.object({
+  /** A catalogue id: telegram, discord, slack. */
+  channel: z.string().trim().min(1).max(40),
+  token: z.string().trim().min(1).max(500),
+  /** Slack's signing secret, Discord's public key. Absent for Telegram. */
+  signingSecret: z.string().trim().min(1).max(500).optional(),
+  agentId: idSchema,
+  modelBindingId: idSchema,
+});
+
+export const channelSchema = z.object({
+  id: idSchema,
+  channel: z.string(),
+  status: z.enum(['pending_verification', 'connected', 'error', 'disabled']),
+  handle: z.string(),
+  displayName: z.string(),
+  agentId: idSchema,
+  webhookUrl: z.string(),
+  /** Only while the handshake is outstanding. Never for a live connection. */
+  connectCode: z.string().optional(),
+  lastError: z.string().optional(),
+});
+
 export const createProviderConfigSchema = z.object({
   providerType: z.string().trim().min(1).max(40),
   name: nameSchema,

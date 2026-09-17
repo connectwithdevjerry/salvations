@@ -212,6 +212,15 @@ export type PlatformReason =
    * legitimate — and it has to say so rather than slip past the guard.
    */
   | 'user-workspaces'
+  /**
+   * Resolving a chat connection from an inbound delivery.
+   *
+   * A webhook URL carries a connection id and nothing else — the platform has
+   * no idea what a workspace is, and putting one in the URL would leak the
+   * tenant boundary to anyone who saw it. So this read finds the row first and
+   * scopes everything after it to the workspace the row names.
+   */
+  | 'channel-delivery'
   /** Resolving an API key by its prefix, before any workspace is known. */
   | 'api-key-lookup';
 

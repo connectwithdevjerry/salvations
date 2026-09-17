@@ -167,7 +167,7 @@ export class SlicedExecutor implements RunExecutor {
           // wait hours for a person and must cost nothing while it does.
           await this.#release(token, id, { kind: 'suspend', status: statusFor(step.reason) });
           this.#deps.metrics?.runSuspended(String(id), step.reason);
-          return { kind: 'suspended', reason: step.reason };
+          return { kind: 'suspended', runId: id, reason: step.reason };
 
         case 'stopped':
           // Curtailed, not crashed. The partial answer is already persisted in
@@ -214,7 +214,7 @@ export class SlicedExecutor implements RunExecutor {
       return { kind: 'lease_lost' };
     }
     this.#deps.metrics?.runFinished(String(runId), status, steps);
-    return { kind: 'finished', status };
+    return { kind: 'finished', runId, status };
   }
 
   async #fail(runId: RunId, token: LeaseToken, error: unknown): Promise<ExecOutcome> {

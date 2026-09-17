@@ -201,7 +201,10 @@ export const INDEXES: Readonly<Partial<Record<CollectionName, readonly IndexDef[
   ],
 
   channels: [
-    { name: 'ws_type', key: { workspaceId: 1, type: 1 }, rationale: 'channel list' },
+    { name: 'ws_type', key: { workspaceId: 1, type: 1 }, options: { unique: true },
+      rationale: 'one connection per platform per workspace; two would race for deliveries' },
+    { name: 'bot_ref', key: { 'identity.botRef': 1 },
+      rationale: 'an inbound delivery names the bot, never the workspace' },
   ],
 
   channelIdentities: [

@@ -41,6 +41,12 @@ importers:
       '@salvations/auth':
         specifier: workspace:*
         version: link:../../packages/auth
+      '@salvations/catalog':
+        specifier: workspace:*
+        version: link:../../packages/catalog
+      '@salvations/channels':
+        specifier: workspace:*
+        version: link:../../packages/channels
       '@salvations/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
@@ -117,6 +123,17 @@ importers:
       '@salvations/crypto':
         specifier: workspace:*
         version: link:../crypto
+
+  packages/catalog: {}
+
+  packages/channels:
+    dependencies:
+      '@salvations/catalog':
+        specifier: workspace:*
+        version: link:../catalog
+      '@salvations/core':
+        specifier: workspace:*
+        version: link:../core
 
   packages/contracts:
     dependencies:

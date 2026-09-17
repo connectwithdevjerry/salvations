@@ -41,6 +41,9 @@ importers:
       '@salvations/auth':
         specifier: workspace:*
         version: link:../../packages/auth
+      '@salvations/billing':
+        specifier: workspace:*
+        version: link:../../packages/billing
       '@salvations/catalog':
         specifier: workspace:*
         version: link:../../packages/catalog
@@ -123,6 +126,12 @@ importers:
       '@salvations/crypto':
         specifier: workspace:*
         version: link:../crypto
+
+  packages/billing:
+    dependencies:
+      '@salvations/catalog':
+        specifier: workspace:*
+        version: link:../catalog
 
   packages/catalog: {}
 

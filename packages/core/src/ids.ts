@@ -95,6 +95,7 @@ export const IdPrefix = {
   lease: 'lse',
   auditEntry: 'aud',
   usageDay: 'usg',
+  subscription: 'sub',
 } as const;
 
 /** Casts a raw string to a branded id. Use only at trust boundaries (db reads, validated input). */

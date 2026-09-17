@@ -29,6 +29,7 @@
       "@salvations/contracts": ["./packages/contracts/src/index.ts"],
       "@salvations/catalog": ["./packages/catalog/src/index.ts"],
       "@salvations/channels": ["./packages/channels/src/index.ts"],
+      "@salvations/billing": ["./packages/billing/src/index.ts"],
       "@salvations/crypto": ["./packages/crypto/src/index.ts"],
       "@salvations/db": ["./packages/db/src/index.ts"],
       "@salvations/db/*": ["./packages/db/src/*"],

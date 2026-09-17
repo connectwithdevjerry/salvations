@@ -398,6 +398,31 @@ export interface CredentialDoc extends TenantDoc {
   revokedAt?: Date | null;
 }
 
+/**
+ * What a workspace is paying for.
+ *
+ * One row per workspace, and the processor's own record is the source of truth:
+ * this is a cache of it, refreshed by webhook. That direction matters — a local
+ * row treated as authoritative diverges the first time a webhook is missed, and
+ * then the platform is billing on its own opinion rather than on what was
+ * actually charged.
+ *
+ * No card details, no last four, no expiry. Everything about the payment
+ * instrument stays with the processor; holding any of it here would put this
+ * system in PCI scope for no benefit at all.
+ */
+export interface SubscriptionDoc extends TenantDoc {
+  planId: string;
+  /** The processor's id. The only handle we have on their record. */
+  externalId: string;
+  processor: string;
+  status: string;
+  currentPeriodEnd?: Date | null;
+  cancelAtPeriodEnd: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface AuditLogDoc extends TenantDoc {
   actor: { type: string; id?: string | null };
   action: string;

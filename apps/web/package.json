@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@salvations/auth": "workspace:*",
+    "@salvations/billing": "workspace:*",
     "@salvations/catalog": "workspace:*",
     "@salvations/channels": "workspace:*",
     "@salvations/contracts": "workspace:*",

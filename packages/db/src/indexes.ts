@@ -222,6 +222,13 @@ export const INDEXES: Readonly<Partial<Record<CollectionName, readonly IndexDef[
       rationale: 'dedupe window, not an archive' },
   ],
 
+  subscriptions: [
+    { name: 'ws', key: { workspaceId: 1 }, options: { unique: true },
+      rationale: 'one subscription per workspace; a second is an accounting bug' },
+    { name: 'external', key: { externalId: 1 },
+      rationale: 'a webhook names the processor id, not the workspace' },
+  ],
+
   auditLog: [
     { name: 'ws_recent', key: { workspaceId: 1, createdAt: -1 }, rationale: 'audit browsing' },
     { name: 'ws_action', key: { workspaceId: 1, action: 1, createdAt: -1 },

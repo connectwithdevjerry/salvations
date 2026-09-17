@@ -30,6 +30,21 @@ const schema = z.object({
   INTERNAL_HMAC_SECRET: z.string().min(32, 'INTERNAL_HMAC_SECRET must be at least 32 characters'),
   PUBLIC_BASE_URL: z.string().url().default('http://localhost:3000'),
 
+  /**
+   * Billing.
+   *
+   * All three or none. A deployment with no processor configured charges
+   * nobody and refuses nobody — which is the right behaviour for a private
+   * install, and the wrong behaviour to arrive at by accident. Half-configured
+   * is the dangerous state: a secret key with no webhook secret takes payments
+   * and then never hears that they succeeded, leaving people charged and
+   * locked out.
+   */
+  STRIPE_SECRET_KEY: z.string().min(1).optional(),
+  STRIPE_WEBHOOK_SECRET: z.string().min(1).optional(),
+  /** The processor's id for the plan's price. Differs between test and live. */
+  STRIPE_PRICE_ID: z.string().min(1).optional(),
+
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
 }).refine(
   (value) =>
@@ -39,6 +54,19 @@ const schema = z.object({
       'Set both GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET, or neither. One without the other ' +
       'offers a sign-in button that cannot complete.',
     path: ['GOOGLE_CLIENT_ID'],
+  },
+).refine(
+  (value) => {
+    const set = [value.STRIPE_SECRET_KEY, value.STRIPE_WEBHOOK_SECRET, value.STRIPE_PRICE_ID]
+      .filter((v) => v !== undefined).length;
+    return set === 0 || set === 3;
+  },
+  {
+    message:
+      'Set STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET and STRIPE_PRICE_ID together, or none of ' +
+      'them. A secret key without a webhook secret takes payments and never hears that they ' +
+      'succeeded, which leaves people charged and locked out.',
+    path: ['STRIPE_SECRET_KEY'],
   },
 );
 

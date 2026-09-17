@@ -4,6 +4,7 @@ import { use, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/client/api';
 import { auth, type SignedInUser } from '@/lib/client/auth';
+import Link from 'next/link';
 import { Icon, Tile } from '@/components/ui';
 
 interface Workspace { id: string; name: string; role: string }
@@ -24,13 +25,17 @@ export default function SettingsPage({
   const router = useRouter();
   const [user, setUser] = useState<SignedInUser | null>();
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+  const [billing, setBilling] = useState<{ configured: boolean; active: boolean; planId?: string }>();
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     void auth.session().then((r) => setUser(r.user)).catch(() => setUser(null));
     void api.get<{ items: Workspace[] }>('/api/workspaces')
       .then((r) => setWorkspaces(r.items)).catch(() => undefined);
-  }, []);
+    void api.get<{ configured: boolean; active: boolean; planId?: string }>(
+      `/api/workspaces/${workspaceId}/billing`,
+    ).then(setBilling).catch(() => undefined);
+  }, [workspaceId]);
 
   const current = workspaces.find((w) => w.id === workspaceId);
 
@@ -94,6 +99,31 @@ export default function SettingsPage({
               {workspace.name} <span className="muted">· {workspace.role}</span>
             </button>
           ))}
+        </>
+      )}
+
+      {/* Only when this deployment can actually charge. A private install with
+          no processor should not be shown a plan it cannot buy. */}
+      {billing?.configured === true && (
+        <>
+          <p className="eyebrow" style={{ marginTop: 26 }}>Plan</p>
+          <div className="card">
+            <div className="row">
+              <div>
+                <strong>{billing.active ? (billing.planId ?? 'Active') : 'No active plan'}</strong>
+                <p className="muted" style={{ margin: '2px 0 0' }}>
+                  {billing.active
+                    ? 'Your agents stay online.'
+                    : 'Subscribe to keep agents running when this tab is closed.'}
+                </p>
+              </div>
+              <Link href={`/w/${workspaceId}/billing`}>
+                <button type="button" className={billing.active ? '' : 'primary'}>
+                  {billing.active ? 'Manage' : 'Subscribe'}
+                </button>
+              </Link>
+            </div>
+          </div>
         </>
       )}
 

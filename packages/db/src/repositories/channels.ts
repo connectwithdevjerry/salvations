@@ -29,7 +29,7 @@ const isDuplicate = (caught: unknown): boolean =>
 export interface CreateChannelInput {
   readonly type: string;
   readonly agentId: string;
-  readonly modelBindingId: string;
+  readonly modelBindingId?: string | undefined;
   readonly tokenCredentialId: string;
   readonly secretCredentialId?: string | undefined;
   readonly identity: ChannelDoc['identity'];
@@ -78,7 +78,7 @@ export class ChannelRepository {
       _id: newId(IdPrefix.channel),
       type: input.type,
       agentId: input.agentId,
-      modelBindingId: input.modelBindingId,
+      modelBindingId: input.modelBindingId ?? null,
       tokenCredentialId: input.tokenCredentialId,
       secretCredentialId: input.secretCredentialId ?? null,
       status: 'pending_verification',

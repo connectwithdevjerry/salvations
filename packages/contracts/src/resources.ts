@@ -20,7 +20,13 @@ export const workspaceSchema = z.object({
   role: roleSchema,
 });
 
-export const createWorkspaceSchema = z.object({ name: nameSchema });
+/**
+ * Optional, because onboarding does not ask.
+ *
+ * Somebody with one workspace who will only ever have one should not spend a
+ * step naming it. Absent, the server derives one from who they are.
+ */
+export const createWorkspaceSchema = z.object({ name: nameSchema.optional() });
 
 export const inviteMemberSchema = z.object({
   email: z.string().email().max(320),
@@ -86,7 +92,8 @@ export const connectChannelSchema = z.object({
   /** Slack's signing secret, Discord's public key. Absent for Telegram. */
   signingSecret: z.string().trim().min(1).max(500).optional(),
   agentId: idSchema,
-  modelBindingId: idSchema,
+  /** Omitted, the channel follows the agent's model role rather than pinning one. */
+  modelBindingId: idSchema.optional(),
 });
 
 export const channelSchema = z.object({

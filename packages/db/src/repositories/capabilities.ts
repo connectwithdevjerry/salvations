@@ -72,6 +72,21 @@ export class CapabilityRepository {
     return this.#collection.find({ scopeKey: { $in: [...scopeKeys] }, removedAt: null });
   }
 
+  /**
+   * How many capabilities are live AND approved, across every binding.
+   *
+   * Approved specifically, not merely discovered: an installed server whose
+   * tools nobody has read yet gives an agent nothing it may call, and counting
+   * those would tell somebody they have tools when every call would be
+   * refused.
+   */
+  async countApproved(): Promise<number> {
+    const rows = await this.#collection.find({
+      removedAt: null, 'approval.state': 'approved',
+    } as never);
+    return rows.length;
+  }
+
   async findByCanonicalName(
     bindingId: string,
     scopeKey: string,

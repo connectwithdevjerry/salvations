@@ -298,8 +298,19 @@ export interface ChannelDoc extends TenantDoc {
   type: string;
   /** Which agent answers here. A channel with no agent has nothing to say. */
   agentId: string;
-  /** The model binding conversations opened from this channel start on. */
-  modelBindingId: string;
+  /**
+   * A binding to pin conversations to, or null to follow the agent's role.
+   *
+   * Null is the normal case and the better one. An agent names a model ROLE and
+   * the workspace maps roles to bindings; a channel pinning a concrete binding
+   * duplicates that mapping, so swapping vendor would mean editing every
+   * channel as well as the binding it was supposed to be the single point of.
+   *
+   * It also means a channel can be connected before any model exists, which is
+   * what lets somebody set up Telegram in the first minute rather than being
+   * told to go and find an API key first.
+   */
+  modelBindingId?: string | null;
   tokenCredentialId: string;
   /** Absent for a platform whose deliveries carry no secret at all. */
   secretCredentialId?: string | null;

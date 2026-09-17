@@ -205,6 +205,32 @@ async function startRun(
     return undefined;
   }
 
+  /*
+   * Which model answers.
+   *
+   * The channel may pin one, but normally does not: the agent names a ROLE and
+   * the workspace maps roles to bindings, so following the role means changing
+   * vendor is one edit rather than one per channel.
+   *
+   * Resolving here rather than at connect time is also what lets somebody set
+   * up Telegram before they have an API key — but it means the role can come
+   * back unmapped, and that has to be said out loud rather than becoming a run
+   * that fails somewhere the person cannot see it.
+   */
+  const binding = row.modelBindingId !== null && row.modelBindingId !== undefined
+    ? await repos.models.findById(row.modelBindingId)
+    : await repos.models.forRole(agent.currentVersion.modelRole);
+
+  if (binding === null) {
+    await reply(
+      row, message.chatRef,
+      'I am connected, but no model is set up for me to think with yet. '
+      + 'Add one on the Models page and try again.',
+      repos,
+    );
+    return undefined;
+  }
+
   const conversations = new ConversationRepository(database, row.workspaceId);
   const existing = await channels.findIdentity(row._id, message.senderRef);
 
@@ -212,7 +238,7 @@ async function startRun(
   if (conversationId === undefined) {
     const created = await conversations.create({
       agentId: row.agentId,
-      modelBindingId: row.modelBindingId,
+      modelBindingId: binding._id,
       title: `${message.senderLabel} on ${row.type}`,
       channelId: row._id,
       externalRef: message.chatRef,
@@ -242,7 +268,7 @@ async function startRun(
     agentId: row.agentId,
     agentVersionId: agent.currentVersion.versionId,
     agentSnapshot: agent.currentVersion,
-    modelBindingId: row.modelBindingId,
+    modelBindingId: binding._id,
     trigger: { type: 'channel', ref: `${row.type}:${message.senderRef}` },
     /*
      * A platform id identifies somebody; it does not entitle them to anything.

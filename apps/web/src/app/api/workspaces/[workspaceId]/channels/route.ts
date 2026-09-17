@@ -64,8 +64,14 @@ export const POST = workspaceRoute('channels:write', async (ctx) => {
   const agent = await new AgentRepository(ctx.database, ctx.workspaceId).findById(input.agentId);
   if (agent === null) return errorResponse(404, 'not_found', 'That agent does not exist.');
 
-  const binding = await ctx.repos.models.findById(input.modelBindingId);
-  if (binding === null) return errorResponse(404, 'not_found', 'That model binding does not exist.');
+  // Optional. Left out, the channel follows the agent's model role, which is
+  // what lets a channel be connected before any model exists.
+  if (input.modelBindingId !== undefined) {
+    const binding = await ctx.repos.models.findById(input.modelBindingId);
+    if (binding === null) {
+      return errorResponse(404, 'not_found', 'That model binding does not exist.');
+    }
+  }
 
   // Before storage. A token that does not work is a setup error to correct now,
   // not a connection that fails silently later.
@@ -115,7 +121,7 @@ export const POST = workspaceRoute('channels:write', async (ctx) => {
   const row = await channels.connect({
     type: input.channel,
     agentId: input.agentId,
-    modelBindingId: input.modelBindingId,
+    ...(input.modelBindingId !== undefined ? { modelBindingId: input.modelBindingId } : {}),
     tokenCredentialId: tokenCredential._id,
     secretCredentialId: secretCredential._id,
     identity,

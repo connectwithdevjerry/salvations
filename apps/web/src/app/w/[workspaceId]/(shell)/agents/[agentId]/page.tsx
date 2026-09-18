@@ -9,6 +9,7 @@ import { AgentEditor, type AgentDetail, type Binding } from '@/components/agent-
 import { ConversationView } from '@/components/conversation-view';
 import { KnowledgePanel } from '@/components/knowledge-panel';
 import { SchedulePanel } from '@/components/schedule-panel';
+import { SpeakTab } from '@/components/speak-tab';
 import { ago, type AgentRow } from '@/components/agent-sidebar';
 
 /**
@@ -19,9 +20,10 @@ import { ago, type AgentRow } from '@/components/agent-sidebar';
  * what the assistant is for.
  */
 
-type Tab = 'chat' | 'documents' | 'routine' | 'memories' | 'settings';
-const TABS: readonly { id: Tab; label: string; icon: 'chat' | 'book' | 'clock' | 'spark' | 'gear' }[] = [
+type Tab = 'chat' | 'speak' | 'documents' | 'routine' | 'memories' | 'settings';
+const TABS: readonly { id: Tab; label: string; icon: 'chat' | 'mic' | 'book' | 'clock' | 'spark' | 'gear' }[] = [
   { id: 'chat', label: 'Chat', icon: 'chat' },
+  { id: 'speak', label: 'Speak', icon: 'mic' },
   { id: 'documents', label: 'Documents', icon: 'book' },
   { id: 'routine', label: 'Routine', icon: 'clock' },
   { id: 'memories', label: 'Memories', icon: 'spark' },
@@ -121,6 +123,7 @@ export default function AgentPage({
           onPick={(c) => go('chat', c)}
         />
       )}
+      {tab === 'speak' && <SpeakTab workspaceId={workspaceId} agentId={agentId} />}
       {tab === 'documents' && (
         <div className="agent-scroll"><KnowledgePanel workspaceId={workspaceId} embedded /></div>
       )}

@@ -22,7 +22,7 @@ let repo: KnowledgeRepository;
 const upload = (over: Partial<Parameters<KnowledgeRepository['createDocument']>[0]> = {}) =>
   repo.createDocument({
     title: 'Refund policy', fileName: 'refunds.md', mimeType: 'text/markdown',
-    sizeBytes: 120, contentHash: 'hash-refunds', createdBy: 'usr_1', ...over,
+    sizeBytes: 120, contentHash: 'hash-refunds', text: 'Full refund within thirty days.', createdBy: 'usr_1', ...over,
   });
 
 describe.skipIf(URI === undefined || URI === '')('knowledge against a real database', () => {
@@ -55,7 +55,7 @@ describe.skipIf(URI === undefined || URI === '')('knowledge against a real datab
     const other = new KnowledgeRepository(db, 'wks_other');
     const theirs = await other.createDocument({
       title: 'Theirs', fileName: 't.md', mimeType: 'text/markdown', sizeBytes: 1,
-      contentHash: 'hash-theirs', createdBy: 'usr_2',
+      contentHash: 'hash-theirs', text: 'Full refund always.', createdBy: 'usr_2',
     });
     await other.appendChunks(theirs!._id, [{ index: 0, content: 'Full refund always.', embeddings: undefined }]);
     await other.markReady(theirs!._id, { chunkCount: 1, embeddingModelKey: undefined });

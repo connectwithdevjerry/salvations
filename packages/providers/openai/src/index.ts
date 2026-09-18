@@ -9,6 +9,7 @@ import {
   asProviderType,
   type AgentProvider, type GenerationRequest, type ModelCapabilities,
   type ProviderCredentials, type ProviderEvent, type ProviderType,
+  type EmbeddingRequest, type EmbeddingResult,
   type TranscriptionRequest, type TranscriptionResult,
 } from '@salvations/core';
 import { capabilitiesFor, knownModels } from './capabilities';
@@ -91,6 +92,39 @@ class OpenAIProvider implements AgentProvider {
       });
 
       return { text: result.text };
+    } catch (error) {
+      throw mapError(error);
+    }
+  }
+
+  /**
+   * Text to vectors, for memory and knowledge search by meaning.
+   *
+   * Inputs go up in one call and come back in the order sent — the vendor
+   * numbers each vector, and that index is honoured rather than assumed, so a
+   * reordered response could not attach one chunk's vector to another.
+   */
+  async embed(request: EmbeddingRequest): Promise<EmbeddingResult> {
+    try {
+      const result = await this.#client.embeddings.create({
+        model: request.modelId,
+        input: [...request.inputs],
+        encoding_format: 'float',
+      });
+
+      const vectors: number[][] = new Array<number[]>(request.inputs.length).fill([]);
+      for (const item of result.data) vectors[item.index] = [...item.embedding];
+
+      return {
+        vectors,
+        dimensions: vectors[0]?.length ?? 0,
+        usage: {
+          inputTokens: result.usage.prompt_tokens,
+          outputTokens: 0,
+          cacheReadTokens: 0,
+          cacheWriteTokens: 0,
+        },
+      };
     } catch (error) {
       throw mapError(error);
     }

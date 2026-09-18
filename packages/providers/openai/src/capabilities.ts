@@ -20,6 +20,18 @@ const PROFILES: Readonly<Record<string, ModelProfile>> = {
   'gpt-5': { maxInputTokens: 400_000, maxOutputTokens: 128_000, reasoning: true },
   'gpt-4.1': { maxInputTokens: 1_000_000, maxOutputTokens: 32_768, reasoning: false },
   'gpt-4o': { maxInputTokens: 128_000, maxOutputTokens: 16_384, reasoning: false },
+  /*
+   * Models that never see a chat turn. Listed so the catalogue can offer them
+   * for the transcription and embedding roles — the adapter knows them, which
+   * is what the catalogue test checks — with a profile that would only matter
+   * if somebody bound one to chat by mistake, in which case a tight window is
+   * the safer error.
+   */
+  'gpt-4o-transcribe': { maxInputTokens: 16_000, maxOutputTokens: 2_000, reasoning: false },
+  'gpt-4o-mini-transcribe': { maxInputTokens: 16_000, maxOutputTokens: 2_000, reasoning: false },
+  'whisper-1': { maxInputTokens: 16_000, maxOutputTokens: 2_000, reasoning: false },
+  'text-embedding-3-small': { maxInputTokens: 8_192, maxOutputTokens: 1, reasoning: false },
+  'text-embedding-3-large': { maxInputTokens: 8_192, maxOutputTokens: 1, reasoning: false },
 };
 
 const FALLBACK: ModelProfile = {

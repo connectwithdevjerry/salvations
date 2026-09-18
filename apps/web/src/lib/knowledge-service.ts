@@ -82,6 +82,7 @@ export async function ingestDocument(input: IngestInput): Promise<IngestOutcome>
     mimeType: input.mimeType ?? 'text/plain',
     sizeBytes: Buffer.byteLength(text, 'utf8'),
     contentHash,
+    text,
     createdBy: input.createdBy,
   });
 

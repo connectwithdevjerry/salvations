@@ -24,6 +24,7 @@ export interface CreateDocumentInput {
   readonly mimeType: string;
   readonly sizeBytes: number;
   readonly contentHash: string;
+  readonly text: string;
   readonly createdBy: string;
 }
 
@@ -82,6 +83,7 @@ export class KnowledgeRepository {
         mimeType: input.mimeType,
         sizeBytes: input.sizeBytes,
         contentHash: input.contentHash,
+        text: input.text,
         status: 'ingesting',
         error: null,
         chunkCount: 0,
@@ -154,9 +156,9 @@ export class KnowledgeRepository {
     );
   }
 
-  /** Every document, newest first. */
+  /** Every document, newest first. Without the text: the list is a list. */
   async list(): Promise<KnowledgeDocumentDoc[]> {
-    return this.#documents.find({} as never, { sort: { createdAt: -1 } });
+    return this.#documents.find({} as never, { sort: { createdAt: -1 }, projection: { text: 0 } });
   }
 
   async findById(documentId: string): Promise<KnowledgeDocumentDoc | null> {

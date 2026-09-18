@@ -150,6 +150,45 @@ const OPENAI: readonly CatalogModel[] = [
     summary: 'Older multimodal model.',
     roles: ['cheap'],
   },
+  // Hearing. Bound to the transcription role, these turn a Telegram voice note
+  // or a browser recording into words. No chat role: they cannot converse.
+  {
+    id: 'gpt-4o-transcribe',
+    providerType: 'openai',
+    displayName: 'GPT-4o Transcribe',
+    summary: 'Speech to text. Hears voice notes and the Speak tab.',
+    roles: ['transcription'],
+  },
+  {
+    id: 'gpt-4o-mini-transcribe',
+    providerType: 'openai',
+    displayName: 'GPT-4o mini Transcribe',
+    summary: 'Speech to text, cheaper.',
+    roles: ['transcription'],
+  },
+  {
+    id: 'whisper-1',
+    providerType: 'openai',
+    displayName: 'Whisper',
+    summary: 'The older speech-to-text model.',
+    roles: ['transcription'],
+  },
+  // Embedding. Bound to the embedding role, memory and knowledge search find
+  // passages that say the same thing in different words.
+  {
+    id: 'text-embedding-3-small',
+    providerType: 'openai',
+    displayName: 'Text Embedding 3 small',
+    summary: 'Lets memory and knowledge search by meaning, not just words.',
+    roles: ['embedding'],
+  },
+  {
+    id: 'text-embedding-3-large',
+    providerType: 'openai',
+    displayName: 'Text Embedding 3 large',
+    summary: 'Higher-fidelity embeddings, at a higher rate.',
+    roles: ['embedding'],
+  },
 ];
 
 export const CATALOG_MODELS: readonly CatalogModel[] = [...ANTHROPIC, ...OPENAI];
@@ -172,7 +211,10 @@ export function defaultBindings(providerType: string): readonly { role: ModelRol
   const available = modelsFor(providerType);
   const out: { role: ModelRole; model: CatalogModel }[] = [];
 
-  for (const role of ['chat', 'cheap', 'summarizer'] as const) {
+  // Hearing and meaning-search too, where the vendor offers them: connecting
+  // OpenAI should leave voice notes and semantic search working without a
+  // second visit to the Models page.
+  for (const role of ['chat', 'cheap', 'summarizer', 'transcription', 'embedding'] as const) {
     // First match wins, and the list is ordered best-first per vendor.
     const model = available.find((candidate) => candidate.roles.includes(role));
     if (model !== undefined) out.push({ role, model });

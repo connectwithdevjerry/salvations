@@ -248,6 +248,13 @@ platform exist beside the first three.
 - [x] Create-agent wizard from the Agents page: name → Telegram (QR to BotFather for people
       without a bot; QR + deep link for the handshake) → own Claude/OpenAI key → the agent's
       server coming together, every line a real check
+- [x] Speak tab: record in the browser, transcript shown before the answer, reply read aloud by the
+      browser's own voice; spoken turns live in a "Spoken" conversation per assistant
+- [x] Documents keep the original text and hand it back as a file — there is no separate Files
+      store, because a file the assistant should know IS knowledge; a Files tab returns when
+      assistants produce files of their own
+- [x] OpenAI transcription and embedding models in the catalogue, bound on connect; the adapter
+      embeds, so memory and knowledge search by meaning once OpenAI is connected
 - [ ] PDF and Word ingestion — needs a parser that is its own project; refused honestly for now
 - [ ] Atlas `$vectorSearch` once a workspace outgrows the in-process candidate caps
 

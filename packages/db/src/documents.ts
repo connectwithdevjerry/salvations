@@ -519,6 +519,12 @@ export interface KnowledgeDocumentDoc extends TenantDoc {
   sizeBytes: number;
   /** SHA-256 of the extracted text. Unique per workspace while the document lives. */
   contentHash: string;
+  /**
+   * The extracted text, whole. The chunks are what search reads; this is what
+   * a person gets back when they ask for the file — a document that could
+   * only be searched, never opened, is not quite a document.
+   */
+  text?: string | null;
   status: 'ingesting' | 'ready' | 'failed';
   error?: string | null;
   chunkCount: number;

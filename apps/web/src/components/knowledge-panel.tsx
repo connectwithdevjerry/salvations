@@ -151,6 +151,11 @@ function DocRow({
         </div>
         <div style={{ textAlign: 'right', flex: 'none' }}>
           <p className="faint" style={{ margin: 0 }}>{new Date(doc.createdAt).toLocaleDateString()}</p>
+          {doc.status === 'ready' && (
+            <a href={`${ws(workspaceId)}/knowledge/${doc.id}/download`} download={doc.fileName}>
+              <button type="button" style={{ marginTop: 8, marginRight: 6 }}>Download</button>
+            </a>
+          )}
           <button
             type="button" className="danger" disabled={busy} style={{ marginTop: 8 }}
             onClick={async () => {

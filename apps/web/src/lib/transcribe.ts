@@ -17,7 +17,7 @@
 import { ModelBindingRepository, CredentialRepository } from '@salvations/db';
 import type { Database } from '@salvations/db';
 import type { InboundAudio } from '@salvations/channels';
-import { providers, keyProvider } from './container';
+import { providers, keyProvider } from './singletons';
 
 /** The role a workspace binds to say which model hears its audio. */
 export const TRANSCRIPTION_ROLE = 'transcription';

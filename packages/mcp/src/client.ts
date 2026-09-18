@@ -16,7 +16,17 @@ import { scopeKeyString, type ConnectionScopeKey } from './scope';
 /** Advertised to every server we talk to. */
 export const CLIENT_INFO = { name: 'salvations', version: '0.1.0' } as const;
 
-export type McpTransportKind = 'streamable_http' | 'stdio';
+/**
+ * `in_process` is a first-party server running in this process.
+ *
+ * It is a TRANSPORT rather than a special case above this layer, and that is
+ * the whole point: our own servers reach an agent down the same client, through
+ * the same gateway, under the same approval and audit path as a stranger's.
+ * The moment they take a shortcut they stop obeying the policy everything else
+ * does, and the first thing anybody would build with that shortcut is the thing
+ * that most needs the policy.
+ */
+export type McpTransportKind = 'streamable_http' | 'stdio' | 'in_process';
 
 export interface McpServerDefinition {
   readonly bindingId: string;
@@ -29,10 +39,24 @@ export interface McpServerDefinition {
   readonly headers?: Readonly<Record<string, string>>;
 }
 
+/**
+ * Opens a first-party server and returns the client's end of the link.
+ *
+ * Supplied by the composition root, because the servers know about
+ * repositories and this package must not. It returns a transport rather than a
+ * server so nothing here needs the server SDK — packages/mcp stays the client
+ * side, packages/servers the server side.
+ */
+export type InProcessOpener = (
+  definition: McpServerDefinition,
+) => Promise<{ transport: unknown; close(): Promise<void> }>;
+
 export interface ConnectOptions {
   readonly authProvider?: OAuthClientProvider;
   readonly fetch?: typeof globalThis.fetch;
   readonly maxConcurrent?: number;
+  /** Required to connect an `in_process` binding, ignored otherwise. */
+  readonly openInProcess?: InProcessOpener;
 }
 
 export interface ConnectedClient {
@@ -44,8 +68,9 @@ export interface ConnectedClient {
 export class UnsupportedTransportError extends Error {
   constructor(kind: string) {
     super(
-      `Transport "${kind}" is not enabled. Streamable HTTP is the only transport in Phase 1; ` +
-        'stdio spawns a process with our filesystem and network and is gated behind sandboxing.',
+      `Transport "${kind}" is not enabled. Streamable HTTP reaches a remote server and ` +
+        'in-process reaches a first-party one; stdio spawns a process with our filesystem ' +
+        'and network, and is gated behind sandboxing.',
     );
     this.name = 'UnsupportedTransportError';
   }
@@ -56,6 +81,9 @@ export async function createClient(
   scope: ConnectionScopeKey,
   options: ConnectOptions = {},
 ): Promise<ConnectedClient> {
+  if (definition.transport === 'in_process') {
+    return connectInProcess(definition, scope, options);
+  }
   if (definition.transport !== 'streamable_http') {
     throw new UnsupportedTransportError(definition.transport);
   }
@@ -93,6 +121,44 @@ export async function createClient(
     client,
     negotiatedProtocolVersion: client.getNegotiatedProtocolVersion(),
     close: () => client.close(),
+  };
+}
+
+/**
+ * Connects to a server in this process.
+ *
+ * Still partitioned by the scope key, exactly as a remote connection is. A
+ * first-party server is per-agent or per-conversation, so its cached results
+ * must not be reachable from another principal's client — and "it's ours"
+ * would be precisely the wrong reason to skip that.
+ */
+async function connectInProcess(
+  definition: McpServerDefinition,
+  scope: ConnectionScopeKey,
+  options: ConnectOptions,
+): Promise<ConnectedClient> {
+  const opener = options.openInProcess;
+  if (opener === undefined) {
+    throw new Error(
+      `Binding ${definition.bindingId} is an in-process server, but this host was not ` +
+      'configured to open one.',
+    );
+  }
+
+  const client = new Client(CLIENT_INFO, { cachePartition: scopeKeyString(scope) });
+  const opened = await opener(definition);
+
+  await client.connect(opened.transport as never);
+
+  return {
+    client,
+    negotiatedProtocolVersion: client.getNegotiatedProtocolVersion(),
+    // Both ends. Closing only the client would leave the server holding
+    // whatever its tools closed over — for a per-run server, the run's state.
+    close: async () => {
+      await client.close().catch(() => undefined);
+      await opened.close().catch(() => undefined);
+    },
   };
 }
 

@@ -16,7 +16,7 @@ import { MemoryRepository, ModelBindingRepository, CredentialRepository } from '
 import type { Database, MemoryEntryDoc } from '@salvations/db';
 import { cosine, embeddingKey, rank, DEFAULT_IMPORTANCE } from '@salvations/memory';
 import type { MemorySource } from '@salvations/servers';
-import { providers, keyProvider } from './container';
+import { providers, keyProvider } from './singletons';
 
 /** The role a workspace binds to say which model turns text into vectors. */
 export const EMBEDDING_ROLE = 'embedding';

@@ -9,6 +9,7 @@ export {
   CLIENT_INFO, McpClientManager, UnsupportedTransportError, createClient,
   type BindingHealth, type ConnectOptions, type ConnectedClient, type McpServerDefinition,
   type McpTransportKind,
+  type InProcessOpener,
 } from './client';
 
 export {

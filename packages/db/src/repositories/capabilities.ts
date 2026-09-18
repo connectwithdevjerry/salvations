@@ -101,11 +101,25 @@ export class CapabilityRepository {
    * Returns a diff so the caller can emit change events and surface a
    * re-approval prompt with the specific capabilities that moved.
    */
+  /**
+   * `autoApprove` is for FIRST-PARTY servers only.
+   *
+   * Approval exists because a third-party server can silently rewrite a tool's
+   * description after you approved it, and that description reaches the model —
+   * it is an injection vector, not paperwork. A server we wrote and deployed
+   * has no such gap: anyone who can change `memory.recall` can already change
+   * the approval code itself, so asking an operator to approve it buys nothing
+   * and costs an agent that cannot remember anything until somebody clicks.
+   *
+   * The caller decides, from the binding's trust tier. It is never inferred
+   * from the server's own claims about itself.
+   */
   async reconcile(
     bindingId: string,
     scopeKey: string,
     discovered: readonly DiscoveredCapability[],
     now: Date,
+    options: { readonly autoApprove?: boolean } = {},
   ): Promise<DiscoveryDiff> {
     const existing = await this.#collection.find({ bindingId, scopeKey });
     const existingByName = new Map(existing.map((d) => [`${d.kind}:${d.name}`, d]));
@@ -124,7 +138,7 @@ export class CapabilityRepository {
       else if (prior.definitionHash !== hash) changed.push(cap.canonicalName);
       else unchanged.push(cap.canonicalName);
 
-      await this.#upsert(bindingId, scopeKey, cap, hash, now);
+      await this.#upsert(bindingId, scopeKey, cap, hash, now, options.autoApprove === true);
     }
 
     // Anything still in the map was not returned by the server this time.
@@ -148,6 +162,7 @@ export class CapabilityRepository {
     cap: DiscoveredCapability,
     hash: string,
     now: Date,
+    autoApprove: boolean,
   ): Promise<void> {
     // An aggregation-pipeline update, because approval must be decided FROM the
     // stored hash in the same write that replaces it. Expressions in a $set
@@ -171,23 +186,28 @@ export class CapabilityRepository {
             firstSeenAt: { $ifNull: ['$firstSeenAt', now] },
             lastSeenAt: now,
             removedAt: null,
-            approval: {
-              $cond: [
-                { $eq: [{ $ifNull: ['$definitionHash', null] }, hash] },
-                // Unchanged: keep the existing approval exactly as it stands.
-                { $ifNull: ['$approval', { state: 'pending', definitionHash: hash }] },
-                // Changed (or new): force pending, but PRESERVE the previously
-                // approved hash and approver so the UI can show a real diff and
-                // the audit trail survives.
-                {
-                  $mergeObjects: [
-                    { state: 'pending', definitionHash: hash },
-                    { $ifNull: ['$approval', {}] },
-                    { state: 'pending' },
-                  ],
-                },
-              ],
-            },
+            approval: autoApprove
+              // First-party. Approved at whatever hash it currently has, and
+              // re-approved when it changes — because a change here is a
+              // deploy, not a server rewriting itself under us.
+              ? { state: 'approved', definitionHash: hash, approvedBy: 'system', approvedAt: now }
+              : {
+                $cond: [
+                  { $eq: [{ $ifNull: ['$definitionHash', null] }, hash] },
+                  // Unchanged: keep the existing approval exactly as it stands.
+                  { $ifNull: ['$approval', { state: 'pending', definitionHash: hash }] },
+                  // Changed (or new): force pending, but PRESERVE the previously
+                  // approved hash and approver so the UI can show a real diff and
+                  // the audit trail survives.
+                  {
+                    $mergeObjects: [
+                      { state: 'pending', definitionHash: hash },
+                      { $ifNull: ['$approval', {}] },
+                      { state: 'pending' },
+                    ],
+                  },
+                ],
+              },
           },
         },
       ] as never,

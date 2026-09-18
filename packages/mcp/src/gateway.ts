@@ -14,7 +14,7 @@ import type {
 } from '@salvations/core';
 import { isCapabilityUsable, capabilityBlockReason, splitCanonicalName } from '@salvations/core';
 import { CircuitOpenError, DEFAULT_TOOL_TIMEOUT_MS, ToolTimeoutError, withTimeout } from './resilience';
-import type { McpClientManager, McpServerDefinition } from './client';
+import type { ConnectOptions, McpClientManager, McpServerDefinition } from './client';
 import { SchemaValidator } from './validation';
 import {
   DEFAULT_MRTR_POLICY, classifyInputRequests, decideMrtr, isInputRequired,
@@ -73,6 +73,14 @@ export interface GatewayDeps {
    */
   runInference?(request: ClassifiedInputRequest, ctx: InvocationContext): Promise<unknown>;
   readonly manager: McpClientManager;
+  /**
+   * Passed through to every connection this gateway opens.
+   *
+   * The composition root uses it to supply `openInProcess`, which is how a
+   * first-party server is reached. Threading it here rather than letting the
+   * manager hold it keeps the manager a cache and nothing more.
+   */
+  readonly connectOptions?: ConnectOptions;
   readonly blobs?: BlobStore;
   readonly audit: AuditWriter;
 }
@@ -238,6 +246,7 @@ export class ToolGateway {
                   // protocol error rather than handing it back to us.
                   { allowInputRequired: true, signal } as never,
                 ),
+              this.#deps.connectOptions ?? {},
             ),
           timeoutMs,
           () => new ToolTimeoutError(canonicalName, timeoutMs),

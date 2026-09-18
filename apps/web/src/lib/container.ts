@@ -19,62 +19,29 @@ import {
 } from '@salvations/core';
 import {
   CapabilityRepository, ConversationRepository, CredentialRepository, ModelBindingRepository,
-  MongoRunQueue, RunRepository, ScopedDb, createEventBus,
-  type McpCapabilityDoc, type McpServerBindingDoc, type ModelBindingDoc, type RunEventReader,
-  UsageRepository, ChannelRepository,
+  MongoRunQueue, RunRepository, ScopedDb,
+  type McpCapabilityDoc, type McpServerBindingDoc, type ModelBindingDoc, UsageRepository, ChannelRepository,
 } from '@salvations/db';
-import { envKeyProvider } from '@salvations/crypto';
-import {
-  McpClientManager, McpServerRegistry,
+import { McpServerRegistry,
   type BindingRecord, type BindingSource, type ServerRecord,
 } from '@salvations/mcp';
-import { createRegistry } from '@salvations/provider-registry';
 import {
   AgentRuntime, Resolver, SlicedExecutor,
   type ExecutionSession, type ModelBinding, type ResolverDeps,
 } from '@salvations/runtime';
-import { ExecutionMetricsRecorder, InMemoryMetrics } from '@salvations/observability';
+import { ExecutionMetricsRecorder } from '@salvations/observability';
 import { db } from './db';
-import { env } from './env';
 import { createToolGateway } from './gateway-adapter';
 import { MongoRunStateStore } from './run-store';
 import { VercelBackgroundTrigger } from './trigger';
-
-interface Singletons {
-  providers?: ReturnType<typeof createRegistry>;
-  mcpManager?: McpClientManager;
-  metrics?: InMemoryMetrics;
-  eventBus?: Promise<{ bus: RunEventReader; kind: string }>;
-}
-
-const store = globalThis as typeof globalThis & { __salvations__?: Singletons };
-const singletons = (): Singletons => (store.__salvations__ ??= {});
-
-/** Adapters for every provider type this build knows about. */
-export const providers = () => (singletons().providers ??= createRegistry());
-
-/**
- * Connections, concurrency limits and circuit state for MCP servers.
- *
- * Process-wide rather than per-request: a breaker that resets on every request
- * is not a breaker, and the whole point is to stop hammering a failing server.
- */
-export const mcpManager = () => (singletons().mcpManager ??= new McpClientManager());
-
-export const metrics = () => (singletons().metrics ??= new InMemoryMetrics());
-
-/** Probed once per process — see `createEventBus`. */
-export async function eventBus(): Promise<{ bus: RunEventReader; kind: string }> {
-  const handle = await db();
-  return (singletons().eventBus ??= createEventBus(handle.db));
-}
-
-export const keyProvider = () => {
-  // Validated first, so a missing KEK fails at startup rather than while
-  // decrypting a credential for a request that has already been accepted.
-  const e = env();
-  return envKeyProvider(process.env, e.CREDENTIAL_KEK_VERSION);
-};
+import { firstPartyBindings } from './first-party';
+import { firstPartyOpener } from './first-party-open';
+import { discoverAndRecord } from './discovery-service';
+// Re-exported so existing importers keep working; they live in their own module
+// because the services the container composes need them too, and importing the
+// container from those services was a cycle.
+export { providers, mcpManager, metrics, eventBus, keyProvider } from './singletons';
+import { keyProvider, mcpManager, metrics, providers } from './singletons';
 
 // ─── MCP bindings ───────────────────────────────────────────────────────────
 
@@ -120,12 +87,20 @@ export function bindingSource(database: Database, workspaceId: string): BindingS
 
   return {
     async load(_workspaceId, bindingId) {
+      // Checked FIRST, and never read from the database: a first-party server
+      // has no row, which is precisely what makes it impossible to delete or
+      // misconfigure into an agent that has quietly lost its memory.
+      const firstParty = firstPartyBindings(workspaceId).find((b) => b.binding.id === bindingId);
+      if (firstParty !== undefined) return firstParty;
+
       const doc = await bindings.findOne({ _id: bindingId } as never);
       return doc === null ? undefined : toRecords(doc);
     },
     async listEnabled() {
+      const out: { binding: BindingRecord; server: ServerRecord }[] =
+        [...firstPartyBindings(workspaceId)];
+
       const docs = await bindings.find({ enabled: true } as never);
-      const out: { binding: BindingRecord; server: ServerRecord }[] = [];
       for (const doc of docs) {
         const record = await toRecords(doc);
         if (record !== undefined) out.push(record);
@@ -212,15 +187,68 @@ export async function openSession(
   const priorEvents = await runs.eventsSince(String(run.id), -1, 1);
   runStore.resumeEventSeqFrom((priorEvents.at(-1)?.seq ?? -1) + 1);
 
-  const registry = new McpServerRegistry(bindingSource(database, workspaceId));
+  const source = bindingSource(database, workspaceId);
+  const registry = new McpServerRegistry(source);
   const principal = run.principal as Principal;
   const userId = principal.type === 'user' ? String(principal.userId) : undefined;
+
+  const capabilities = new CapabilityRepository(
+    new ScopedDb(database, workspaceId).collection<McpCapabilityDoc>('mcpCapabilities'),
+  );
+
+  /*
+   * Opens a first-party server for THIS run.
+   *
+   * Everything it builds closes over the run's own workspace, agent and
+   * conversation, which is where the containment comes from: no tool takes an
+   * id, so no prompt can reach another agent's memory.
+   */
+  const connectOptions = {
+    openInProcess: firstPartyOpener({
+      database,
+      context: {
+        workspaceId,
+        conversationId: String(run.conversationId),
+        agentId: String(run.agentId),
+        runId: String(run.id),
+      },
+      ...(userId !== undefined ? { createdBy: userId } : {}),
+      // Reported by the `capabilities` tool, so an agent asked what it can do
+      // looks rather than guesses.
+      availableTools: async () => {
+        const live = await capabilities.listForScope([`workspace`, ...(userId === undefined ? [] : [`user:${userId}`])]);
+        return live
+          .filter((cap) => cap.approval.state === 'approved')
+          .map((cap) => ({ name: cap.canonicalName, description: cap.description ?? '' }));
+      },
+    }),
+  };
+
+  // First-party capabilities are discovered at run start rather than install:
+  // there is no install, and their surface comes from code that may have been
+  // deployed since the last run. Auto-approved, because a change here is a
+  // deploy rather than a server rewriting itself under us.
+  for (const entry of firstPartyBindings(workspaceId)) {
+    await discoverAndRecord({
+      database,
+      workspaceId,
+      definition: {
+        bindingId: entry.binding.id,
+        serverId: entry.server.id,
+        alias: entry.binding.alias,
+        transport: 'in_process',
+      },
+      autoApprove: true,
+      connect: connectOptions,
+    });
+  }
 
   const gateway = createToolGateway({
     db: database,
     workspaceId,
     registry,
     manager: mcpManager(),
+    connectOptions,
     principal,
     agentId: String(run.agentId),
     ...(userId !== undefined ? { userId } : {}),

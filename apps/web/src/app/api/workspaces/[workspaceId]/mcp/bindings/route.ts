@@ -11,6 +11,7 @@ import { ScopedDb, type McpServerBindingDoc } from '@salvations/db';
 import { IdPrefix, newId } from '@salvations/core';
 import { errorResponse, jsonBody, ok } from '@/lib/http';
 import { workspaceRoute } from '@/lib/route';
+import { discoverAndRecord } from '@/lib/discovery-service';
 import { actorIdOf } from '@/lib/principal';
 
 export const runtime = 'nodejs';
@@ -101,5 +102,40 @@ export const POST = workspaceRoute('mcp:install', async (ctx) => {
     createdAt: new Date(),
   } as never);
 
-  return ok({ id: binding._id, alias: binding.alias, status: binding.status }, 201);
+  /*
+   * Discover immediately.
+   *
+   * This was the missing step. Installing a server used to write the row and
+   * stop, leaving `discovery: null` — so no capability row was ever created,
+   * the approval queue had nothing in it, and nothing the server offered could
+   * ever be called. A server whose tools never appear looks broken, and the
+   * person has no way to tell whether it is their URL, their credentials or us.
+   *
+   * It runs inline rather than in the background so its outcome is part of the
+   * answer: a server needing authorisation says so here, and a server that is
+   * simply unreachable says that instead of silently looking installed.
+   */
+  const discovered = await discoverAndRecord({
+    database: ctx.database,
+    workspaceId: ctx.workspaceId,
+    definition: {
+      bindingId: binding._id,
+      serverId: mcpServerId,
+      alias: binding.alias,
+      transport: 'streamable_http',
+      ...(input.url !== undefined ? { url: input.url } : {}),
+    },
+    // Never for a server somebody just pasted a URL for. Its tool descriptions
+    // reach the model, so a human reads them first.
+    autoApprove: false,
+    ...(input.perUserAuth ? { userId: actorIdOf(ctx.principal) } : {}),
+  });
+
+  return ok({
+    id: binding._id,
+    alias: binding.alias,
+    status: binding.status,
+    capabilities: discovered.total,
+    ...(discovered.error !== undefined ? { discoveryError: discovered.error } : {}),
+  }, 201);
 });

@@ -15,7 +15,7 @@ import type { Client } from '@modelcontextprotocol/client';
 import { canonicalCapabilityName, type DiscoveredCapability } from '@salvations/core';
 import { ScopedResponseCache, clampTtl, parseCacheScope, type CacheScope } from './cache';
 import type { McpServerDefinition } from './client';
-import type { McpClientManager } from './client';
+import type { ConnectOptions, McpClientManager } from './client';
 import { capabilityScopeKey, type ConnectionScopeKey } from './scope';
 
 /** What one discovery pass learned. */
@@ -38,6 +38,14 @@ export interface DiscoveryOutcome {
 export interface DiscoveryOptions {
   /** Ignores any cached result. Used after a reconnect or a re-auth. */
   readonly refresh?: boolean;
+  /**
+   * Passed through to the connection.
+   *
+   * Needed because discovery opens the connection itself: a first-party server
+   * that could be CALLED but not DISCOVERED would have no capabilities, and so
+   * nothing callable.
+   */
+  readonly connect?: ConnectOptions;
   /** Prompts and resources are discovered too, but only tools matter in Phase 1. */
   readonly kinds?: readonly ('tool' | 'prompt' | 'resource' | 'resource_template')[];
 }
@@ -106,8 +114,11 @@ export class CapabilityDiscovery {
       if (cached !== undefined) return { ...cached, servedFromCache: true };
     }
 
-    const outcome = await this.#manager.run(definition, scope, (client) =>
-      this.#collect(client, definition, scope, options.kinds ?? DEFAULT_KINDS),
+    const outcome = await this.#manager.run(
+      definition,
+      scope,
+      (client) => this.#collect(client, definition, scope, options.kinds ?? DEFAULT_KINDS),
+      options.connect ?? {},
     );
 
     this.#cache.set(scope, CACHE_METHOD, outcome, outcome.ttlMs, outcome.cacheScope);

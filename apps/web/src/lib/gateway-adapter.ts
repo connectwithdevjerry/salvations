@@ -16,6 +16,7 @@ import {
   ToolGateway as McpToolGateway,
   type GatewayDeps, type InvocationContext, type McpClientManager, type McpServerRegistry,
   type PermissionOutcome,
+  type ConnectOptions,
 } from '@salvations/mcp';
 import {
   AuditRepository, CapabilityRepository, MongoPermissionBroker, RunRepository, ScopedDb,
@@ -27,6 +28,12 @@ export interface GatewayAdapterDeps {
   readonly workspaceId: string;
   readonly registry: McpServerRegistry;
   readonly manager: McpClientManager;
+  /**
+   * Passed to every connection the gateway opens.
+   *
+   * Carries `openInProcess`, which is how a first-party server is reached.
+   */
+  readonly connectOptions?: ConnectOptions;
   readonly principal: Principal;
   readonly agentId?: string;
   readonly userId?: string;
@@ -61,6 +68,7 @@ export function createToolGateway(deps: GatewayAdapterDeps): ToolGateway {
 
   const gatewayDeps: GatewayDeps = {
     manager: deps.manager,
+    ...(deps.connectOptions !== undefined ? { connectOptions: deps.connectOptions } : {}),
 
     async resolveCapability(canonicalName) {
       if (splitCanonicalName(canonicalName) === undefined) return undefined;

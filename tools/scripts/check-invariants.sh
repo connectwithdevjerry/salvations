@@ -30,6 +30,26 @@ check() {
   fi
 }
 
+# Everywhere a dependency is NOT allowed, computed as "every package and app
+# except the ones named".
+#
+# Written this way round deliberately. These checks used to carry hand-written
+# lists of directories to search, and every package added since was silently
+# outside all of them — five of them, at one point, with no invariant covering
+# any. A denylist rots the moment somebody adds a package and does not think
+# about it, which is exactly when an invariant has to hold.
+everywhere_but() {
+  local allowed=" $* " dir
+  for dir in packages/*/ packages/providers/*/ apps/*/; do
+    dir="${dir%/}"
+    [ -d "$dir" ] || continue
+    # Not a package itself, just the folder holding them.
+    [ "$dir" = "packages/providers" ] && continue
+    case "$allowed" in *" $dir "*) continue ;; esac
+    printf '%s\n' "$dir"
+  done
+}
+
 echo "Architectural invariants"
 echo
 
@@ -51,21 +71,26 @@ check "I3 " "runtime/core/mcp/db name no platform" \
   packages/runtime packages/core packages/mcp packages/db
 
 # I4 — the MongoDB driver is importable only from packages/db.
+mapfile -t I4_DIRS < <(everywhere_but packages/db)
 check "I4 " "mongodb imported only in packages/db" \
   "from ['\"]mongodb['\"]|require\\(['\"]mongodb['\"]\\)" \
-  packages/core packages/runtime packages/mcp packages/crypto \
-  packages/contracts packages/observability packages/channels apps
+  "${I4_DIRS[@]}"
 
-# I5 — the MCP SDK is importable only from packages/mcp.
-check "I5 " "@modelcontextprotocol imported only in packages/mcp" \
+# I5 — the MCP SDK is importable only from the two packages that speak the
+#      protocol: packages/mcp is our CLIENT side, packages/servers our SERVER
+#      side. Both are protocol-facing by definition, and keeping the SDK to
+#      them is what makes a spec bump a two-package change.
+mapfile -t I5_DIRS < <(everywhere_but packages/mcp packages/servers)
+check "I5 " "@modelcontextprotocol confined to mcp + servers" \
   "from ['\"]@modelcontextprotocol/" \
-  packages/core packages/runtime packages/db packages/crypto \
-  packages/contracts packages/observability apps
+  "${I5_DIRS[@]}"
 
 # I6 — provider SDKs are importable only from their own adapter packages.
+mapfile -t I6_DIRS < <(everywhere_but \
+  packages/providers/anthropic packages/providers/openai packages/providers/google)
 check "I6 " "provider SDKs confined to adapters" \
   "from ['\"](@anthropic-ai/sdk|openai|@google/genai)['\"]" \
-  packages/core packages/runtime packages/mcp packages/db apps
+  "${I6_DIRS[@]}"
 
 # I7 — every provider adapter runs the shared conformance suite. (AC-14)
 #      Without this, a fourth adapter can be added that quietly skips it, and

@@ -31,6 +31,7 @@
       "@salvations/channels": ["./packages/channels/src/index.ts"],
       "@salvations/billing": ["./packages/billing/src/index.ts"],
       "@salvations/schedule": ["./packages/schedule/src/index.ts"],
+      "@salvations/servers": ["./packages/servers/src/index.ts"],
       "@salvations/crypto": ["./packages/crypto/src/index.ts"],
       "@salvations/db": ["./packages/db/src/index.ts"],
       "@salvations/db/*": ["./packages/db/src/*"],

@@ -65,7 +65,12 @@ interface McpServerRow {
  * workspace-owned ones — so a catalog read is an explicit platform read rather
  * than a widened tenant query.
  */
-export function bindingSource(database: Database, workspaceId: string): BindingSource {
+export function bindingSource(
+  database: Database,
+  workspaceId: string,
+  /** Present: only this assistant's connections (and any pre-assistant rows). */
+  agentId?: string,
+): BindingSource {
   const scoped = new ScopedDb(database, workspaceId);
   const bindings = scoped.collection<McpServerBindingDoc>('mcpServerBindings');
 
@@ -101,7 +106,7 @@ export function bindingSource(database: Database, workspaceId: string): BindingS
       const out: { binding: BindingRecord; server: ServerRecord }[] =
         [...firstPartyBindings(workspaceId)];
 
-      const docs = await bindings.find({ enabled: true } as never);
+      const docs = await bindings.find(ownedBy(agentId) as never);
       for (const doc of docs) {
         const record = await toRecords(doc);
         if (record !== undefined) out.push(record);
@@ -110,6 +115,15 @@ export function bindingSource(database: Database, workspaceId: string): BindingS
     },
   };
 }
+
+/**
+ * Enabled bindings an assistant may reach: its own, plus rows written before
+ * connections belonged to an assistant, which every assistant still sees.
+ */
+const ownedBy = (agentId: string | undefined) =>
+  agentId === undefined
+    ? { enabled: true }
+    : { enabled: true, $or: [{ agentId }, { agentId: null }, { agentId: { $exists: false } }] };
 
 const toBindingRecord = (doc: McpServerBindingDoc, workspaceId: string): BindingRecord => ({
   id: doc._id,
@@ -188,7 +202,9 @@ export async function openSession(
   const priorEvents = await runs.eventsSince(String(run.id), -1, 1);
   runStore.resumeEventSeqFrom((priorEvents.at(-1)?.seq ?? -1) + 1);
 
-  const source = bindingSource(database, workspaceId);
+  // Scoped to the run's assistant: another assistant's connections are not
+  // this one's, and two assistants may share an alias for different servers.
+  const source = bindingSource(database, workspaceId, String(run.agentId));
   const registry = new McpServerRegistry(source);
   const principal = run.principal as Principal;
   const userId = principal.type === 'user' ? String(principal.userId) : undefined;
@@ -298,10 +314,16 @@ export async function openSession(
     },
 
     async bindingIdByAlias() {
+      // The first-party servers too. Without them here the selector could not
+      // trace `memory__recall` to a binding and dropped every first-party tool
+      // — an agent with a memory it could never reach.
       const docs = await new ScopedDb(database, workspaceId)
         .collection<McpServerBindingDoc>('mcpServerBindings')
-        .find({ enabled: true } as never);
-      return new Map(docs.map((d) => [d.alias, d._id]));
+        .find(ownedBy(String(run.agentId)) as never);
+      return new Map([
+        ...firstPartyBindings(workspaceId).map((b) => [b.binding.alias, b.binding.id] as const),
+        ...docs.map((d) => [d.alias, d._id] as const),
+      ]);
     },
 
     async systemDirectives(current): Promise<readonly SystemDirective[]> {

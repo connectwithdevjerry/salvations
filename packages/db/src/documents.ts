@@ -239,6 +239,12 @@ export interface ApprovalDoc extends TenantDoc {
 
 export interface McpServerBindingDoc extends TenantDoc {
   mcpServerId: string;
+  /**
+   * The assistant this connection belongs to. Integrations are peculiar to an
+   * assistant: its GitHub is not another assistant's GitHub. Null on rows
+   * written before that was so — those stay visible to every assistant.
+   */
+  agentId?: string | null;
   alias: string;
   credentialId?: string | null;
   perUserAuth: boolean;

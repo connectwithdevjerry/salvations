@@ -87,6 +87,14 @@ export class CapabilityRepository {
     return rows.length;
   }
 
+  /** The same count, for one assistant's bindings only. */
+  async countApprovedFor(bindingIds: readonly string[]): Promise<number> {
+    if (bindingIds.length === 0) return 0;
+    return this.#collection.countDocuments({
+      bindingId: { $in: [...bindingIds] }, removedAt: null, 'approval.state': 'approved',
+    } as never);
+  }
+
   async findByCanonicalName(
     bindingId: string,
     scopeKey: string,

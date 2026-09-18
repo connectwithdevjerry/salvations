@@ -11,7 +11,8 @@
  * Each check says what it is waiting for rather than only that it failed, so
  * the checklist doubles as the instructions for finishing.
  */
-import { AgentRepository, ChannelRepository, KnowledgeRepository } from '@salvations/db';
+import { AgentRepository, ChannelRepository, KnowledgeRepository, ScopedDb, type McpServerBindingDoc } from '@salvations/db';
+import { firstPartyBindings } from '@/lib/first-party';
 import { ok } from '@/lib/http';
 import { workspaceRoute } from '@/lib/route';
 
@@ -44,7 +45,15 @@ export const GET = workspaceRoute('workspace:read', async (ctx) => {
   const documents = (await new KnowledgeRepository(ctx.database, ctx.workspaceId).list())
     .filter((d) => d.status === 'ready').length;
 
-  const approvedTools = await ctx.repos.capabilities.countApproved();
+  // This assistant's connections plus the first-party servers — the tools it
+  // can actually reach, not everything anybody in the workspace connected.
+  const own = agent === undefined ? [] : await new ScopedDb(ctx.database, ctx.workspaceId)
+    .collection<McpServerBindingDoc>('mcpServerBindings')
+    .find({ enabled: true, $or: [{ agentId: agent._id }, { agentId: null }, { agentId: { $exists: false } }] } as never);
+  const approvedTools = await ctx.repos.capabilities.countApprovedFor([
+    ...firstPartyBindings(ctx.workspaceId).map((b) => b.binding.id),
+    ...own.map((b) => b._id),
+  ]);
 
   const checks: Check[] = [
     {
@@ -100,7 +109,7 @@ export const GET = workspaceRoute('workspace:read', async (ctx) => {
       ready: approvedTools > 0,
       required: false,
       ...(approvedTools === 0
-        ? { waitingFor: 'No integrations connected yet. Connect one on the Integrations page.' }
+        ? { waitingFor: 'No integrations connected yet. Connect one on its Integrations tab.' }
         : {}),
     },
     {

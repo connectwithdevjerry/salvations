@@ -27,7 +27,6 @@ const SECTIONS: readonly { href: string; label: string; icon: IconName }[] = [
   { href: 'approvals', label: 'Approvals', icon: 'shield' },
   { href: 'schedule', label: 'Schedule', icon: 'clock' },
   { href: 'activity', label: 'Activity', icon: 'pulse' },
-  { href: 'mcp', label: 'Integrations', icon: 'plug' },
   { href: 'models', label: 'Models', icon: 'spark' },
   { href: 'settings', label: 'Settings', icon: 'gear' },
 ];

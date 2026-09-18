@@ -157,7 +157,7 @@ function AgentStep({
       <Head
         icon="agent"
         title="Create your assistant"
-        lede="Give it a name. It starts with sensible instructions, and with everything this workspace already knows."
+        lede="Give it a name. It starts with sensible instructions and everything this workspace already knows; its own integrations come next."
       />
 
       <form

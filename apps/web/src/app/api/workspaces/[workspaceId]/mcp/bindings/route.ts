@@ -14,7 +14,7 @@
  */
 import { installMcpServerSchema } from '@salvations/contracts';
 import { catalogEntry } from '@salvations/catalog';
-import { ScopedDb, type McpServerBindingDoc } from '@salvations/db';
+import { AgentRepository, ScopedDb, type McpServerBindingDoc } from '@salvations/db';
 import { IdPrefix, newId } from '@salvations/core';
 import { errorResponse, jsonBody, ok } from '@/lib/http';
 import { workspaceRoute } from '@/lib/route';
@@ -25,9 +25,14 @@ export const runtime = 'nodejs';
 
 export const GET = workspaceRoute('mcp:read', async (ctx) => {
   const scoped = new ScopedDb(ctx.database, ctx.workspaceId);
+  // `?agent=` narrows to one assistant's connections, plus any written before
+  // connections belonged to an assistant, which every assistant still sees.
+  const agent = new URL(ctx.request.url).searchParams.get('agent');
   const bindings = await scoped
     .collection<McpServerBindingDoc>('mcpServerBindings')
-    .find({} as never);
+    .find((agent === null
+      ? {}
+      : { $or: [{ agentId: agent }, { agentId: null }, { agentId: { $exists: false } }] }) as never);
 
   const servers = await ctx.database
     .collection('mcpServers')
@@ -40,7 +45,9 @@ export const GET = workspaceRoute('mcp:read', async (ctx) => {
       const server = byId.get(b.mcpServerId);
       return {
         id: b._id,
+        agentId: b.agentId ?? undefined,
         alias: b.alias,
+        catalogId: typeof server?.['catalogId'] === 'string' ? server['catalogId'] : undefined,
         serverName: String(server?.['name'] ?? b.alias),
         url: server?.['url'] ?? undefined,
         trustTier: String(server?.['trustTier'] ?? 'untrusted'),
@@ -78,15 +85,18 @@ export const POST = workspaceRoute('mcp:install', async (ctx) => {
   const alias = input.alias ?? entry?.id ?? '';
   const url = entry?.mcp?.url ?? input.url;
 
-  // The alias is unique per workspace, which is what makes canonical tool names
-  // collision-free by construction rather than by a runtime check.
-  const clash = await bindings.findOne({ alias } as never);
+  const agent = await new AgentRepository(ctx.database, ctx.workspaceId).findById(input.agentId);
+  if (agent === null) return errorResponse(404, 'not_found', 'Assistant not found.');
+
+  // The alias is unique per assistant, which is what makes its canonical tool
+  // names collision-free by construction rather than by a runtime check.
+  const clash = await bindings.findOne({ agentId: input.agentId, alias } as never);
   if (clash !== null) {
     return errorResponse(
       409, 'conflict',
       entry !== undefined
-        ? `${entry.name} is already connected.`
-        : `The alias "${alias}" is already used by another server in this workspace.`,
+        ? `${entry.name} is already connected to ${agent.name}.`
+        : `${agent.name} already has a server aliased "${alias}".`,
     );
   }
 
@@ -113,6 +123,7 @@ export const POST = workspaceRoute('mcp:install', async (ctx) => {
   const binding = await bindings.insertOne({
     _id: newId(IdPrefix.mcpBinding),
     mcpServerId,
+    agentId: input.agentId,
     alias,
     credentialId: null,
     perUserAuth: input.perUserAuth,

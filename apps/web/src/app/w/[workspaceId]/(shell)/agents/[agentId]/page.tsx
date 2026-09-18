@@ -10,6 +10,7 @@ import { ConversationView } from '@/components/conversation-view';
 import { KnowledgePanel } from '@/components/knowledge-panel';
 import { SchedulePanel } from '@/components/schedule-panel';
 import { SpeakTab } from '@/components/speak-tab';
+import { IntegrationsTab } from '@/components/integrations-tab';
 import { ago, type AgentRow } from '@/components/agent-sidebar';
 
 /**
@@ -20,13 +21,14 @@ import { ago, type AgentRow } from '@/components/agent-sidebar';
  * what the assistant is for.
  */
 
-type Tab = 'chat' | 'speak' | 'documents' | 'routine' | 'memories' | 'settings';
-const TABS: readonly { id: Tab; label: string; icon: 'chat' | 'mic' | 'book' | 'clock' | 'spark' | 'gear' }[] = [
+type Tab = 'chat' | 'speak' | 'documents' | 'routine' | 'memories' | 'integrations' | 'settings';
+const TABS: readonly { id: Tab; label: string; icon: 'chat' | 'mic' | 'book' | 'clock' | 'spark' | 'plug' | 'gear' }[] = [
   { id: 'chat', label: 'Chat', icon: 'chat' },
   { id: 'speak', label: 'Speak', icon: 'mic' },
   { id: 'documents', label: 'Documents', icon: 'book' },
   { id: 'routine', label: 'Routine', icon: 'clock' },
   { id: 'memories', label: 'Memories', icon: 'spark' },
+  { id: 'integrations', label: 'Integrations', icon: 'plug' },
   { id: 'settings', label: 'Settings', icon: 'gear' },
 ];
 
@@ -132,6 +134,9 @@ export default function AgentPage({
       )}
       {tab === 'memories' && (
         <div className="agent-scroll"><MemoriesTab workspaceId={workspaceId} agentId={agentId} /></div>
+      )}
+      {tab === 'integrations' && (
+        <div className="agent-scroll"><IntegrationsTab workspaceId={workspaceId} agentId={agentId} /></div>
       )}
       {tab === 'settings' && (
         <div className="agent-scroll">

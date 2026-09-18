@@ -34,6 +34,7 @@ export async function runMigrations(uri: string, dbName: string): Promise<void> 
         `(${indexCount()} declared)\n`,
     );
     for (const name of result.created) process.stdout.write(`  + ${name}\n`);
+    for (const name of result.dropped) process.stdout.write(`  - ${name} (retired)\n`);
   } finally {
     await client.close();
   }

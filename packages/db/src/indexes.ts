@@ -124,9 +124,14 @@ export const INDEXES: Readonly<Partial<Record<CollectionName, readonly IndexDef[
   ],
 
   mcpServerBindings: [
-    { name: 'ws_alias', key: { workspaceId: 1, alias: 1 }, options: { unique: true },
-      rationale: 'alias uniqueness is what makes canonical tool names collision-free' },
+    { name: 'ws_agent_alias', key: { workspaceId: 1, agentId: 1, alias: 1 }, options: { unique: true },
+      // Per assistant, not per workspace: two assistants each connecting
+      // GitHub both get the alias "github", and a run only ever sees its own
+      // assistant's bindings, so canonical tool names still cannot collide
+      // where it matters.
+      rationale: 'alias uniqueness within one assistant is what makes its tool names collision-free' },
     { name: 'ws_enabled', key: { workspaceId: 1, enabled: 1 }, rationale: 'list installations' },
+    { name: 'ws_agent', key: { workspaceId: 1, agentId: 1, enabled: 1 }, rationale: 'an assistant\'s own connections' },
     { name: 'server', key: { mcpServerId: 1 }, rationale: 'catalog fan-out' },
   ],
 
@@ -296,9 +301,23 @@ export const INDEXES: Readonly<Partial<Record<CollectionName, readonly IndexDef[
   ],
 };
 
+/**
+ * Indexes that used to exist and must not any more.
+ *
+ * `createIndex` never removes anything, so a unique index whose key has been
+ * narrowed would keep enforcing the OLD rule on a deployment that has run the
+ * sync — here, refusing a second assistant its own "github" binding. Dropped
+ * by name, if present, before the new ones are created.
+ */
+const RETIRED: readonly { collection: CollectionName; name: string; reason: string }[] = [
+  { collection: 'mcpServerBindings', name: 'ws_alias',
+    reason: 'aliases became unique per assistant rather than per workspace' },
+];
+
 export interface IndexSyncResult {
   readonly created: readonly string[];
   readonly existing: readonly string[];
+  readonly dropped: readonly string[];
 }
 
 /**
@@ -310,6 +329,22 @@ export interface IndexSyncResult {
 export async function syncIndexes(db: Db): Promise<IndexSyncResult> {
   const created: string[] = [];
   const existing: string[] = [];
+  const dropped: string[] = [];
+
+  // Retired indexes go first: a narrowed unique index must be gone before
+  // its replacement is created, or the old rule keeps refusing writes.
+  for (const retired of RETIRED) {
+    const collection = db.collection(retired.collection);
+    try {
+      const names = (await collection.indexes()).map((idx) => idx['name']);
+      if (names.includes(retired.name)) {
+        await collection.dropIndex(retired.name);
+        dropped.push(`${retired.collection}.${retired.name}`);
+      }
+    } catch {
+      // Collection does not exist yet; there is nothing to retire.
+    }
+  }
 
   for (const [collectionName, defs] of Object.entries(INDEXES)) {
     if (defs === undefined) continue;
@@ -337,7 +372,7 @@ export async function syncIndexes(db: Db): Promise<IndexSyncResult> {
     }
   }
 
-  return { created, existing };
+  return { created, existing, dropped };
 }
 
 export const indexCount = (): number =>

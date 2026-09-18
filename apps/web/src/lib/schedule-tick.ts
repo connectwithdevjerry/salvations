@@ -132,7 +132,7 @@ async function startRun(
     conversationId: conversation._id,
     agentId: schedule.agentId,
     agentVersionId: agent.currentVersion.versionId,
-    agentSnapshot: await agentSnapshotFor(database, schedule.workspaceId, agent.currentVersion),
+    agentSnapshot: await agentSnapshotFor(database, schedule.workspaceId, schedule.agentId, agent.currentVersion),
     modelBindingId: schedule.modelBindingId,
     trigger: { type: 'schedule', ref: schedule._id },
     /*

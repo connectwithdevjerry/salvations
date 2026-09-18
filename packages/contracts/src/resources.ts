@@ -242,6 +242,8 @@ export const agentSchema = z.object({
 // ─── MCP ────────────────────────────────────────────────────────────────────
 
 export const installMcpServerSchema = z.object({
+  /** The assistant this connection belongs to. Integrations are per assistant. */
+  agentId: idSchema,
   /** A catalogue integration (its id), a platform server, or a URL. One of the three. */
   catalogId: z.string().trim().min(1).max(40).optional(),
   mcpServerId: idSchema.optional(),

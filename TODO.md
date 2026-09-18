@@ -268,6 +268,10 @@ platform exist beside the first three.
       "down"; runs present the stored token per scope
 - [x] Catalogue integrations (GitHub, Notion, Linear) carry the vendor's MCP URL; one Connect
       button; `verified` tier; every tool available to every agent on return
+- [x] Integrations are peculiar to each assistant: bindings carry the assistant, aliases are
+      unique per assistant, a run sees only its own assistant's connections (plus first-party),
+      and the Integrations tab lives on the assistant. The old workspace-wide `ws_alias` index
+      is retired by the sync
 - [ ] Vendor MCP URLs were written from memory — the docs hosts are blocked from this session.
       Verify `api.githubcopilot.com/mcp/`, `mcp.notion.com/mcp`, `mcp.linear.app/mcp` against each
       vendor's page before relying on them

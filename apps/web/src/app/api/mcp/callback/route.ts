@@ -23,9 +23,19 @@ import type { PendingConsent } from '@/app/api/workspaces/[workspaceId]/mcp/bind
 
 export const runtime = 'nodejs';
 
-const back = (workspaceId: string | undefined, query: Record<string, string>): Response => {
+const back = (
+  workspaceId: string | undefined,
+  query: Record<string, string>,
+  agentId?: string | null,
+): Response => {
   const base = env().PUBLIC_BASE_URL.replace(/\/$/, '');
-  const target = new URL(workspaceId === undefined ? '/go' : `/w/${workspaceId}/mcp`, `${base}/`);
+  // To the assistant whose connection this is; to the assistants list when
+  // there is no longer one to go to.
+  const path = workspaceId === undefined
+    ? '/go'
+    : agentId == null ? `/w/${workspaceId}/agents` : `/w/${workspaceId}/agents/${agentId}`;
+  const target = new URL(path, `${base}/`);
+  if (agentId != null) target.searchParams.set('tab', 'integrations');
   for (const [key, value] of Object.entries(query)) target.searchParams.set(key, value);
   const response = Response.redirect(target.toString(), 303);
   // The cookie has done its job either way; a stale one would confuse the
@@ -80,7 +90,7 @@ export async function GET(request: Request): Promise<Response> {
 
   const server = await database.collection('mcpServers').findOne({ _id: binding.mcpServerId } as never);
   const serverUrl = server?.['url'];
-  if (typeof serverUrl !== 'string') return back(pending.workspaceId, { error: 'mcp_gone' });
+  if (typeof serverUrl !== 'string') return back(pending.workspaceId, { error: 'mcp_gone' }, binding.agentId);
 
   const scope = pending.userId === undefined
     ? workspaceScope(pending.workspaceId, binding._id)
@@ -96,7 +106,7 @@ export async function GET(request: Request): Promise<Response> {
     );
   } catch (caught) {
     console.error('[mcp callback]', caught instanceof Error ? caught.message : caught);
-    return back(pending.workspaceId, { error: 'mcp_failed' });
+    return back(pending.workspaceId, { error: 'mcp_failed' }, binding.agentId);
   }
 
   // Authorised. Now ask what it offers, with the token just stored.
@@ -112,6 +122,8 @@ export async function GET(request: Request): Promise<Response> {
     refresh: true,
   });
 
-  if (outcome.error !== undefined) return back(pending.workspaceId, { error: 'mcp_discovery', alias: binding.alias });
-  return back(pending.workspaceId, { connected: binding.alias, tools: String(outcome.total) });
+  if (outcome.error !== undefined) {
+    return back(pending.workspaceId, { error: 'mcp_discovery', alias: binding.alias }, binding.agentId);
+  }
+  return back(pending.workspaceId, { connected: binding.alias, tools: String(outcome.total) }, binding.agentId);
 }

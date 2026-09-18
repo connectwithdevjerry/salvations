@@ -281,7 +281,7 @@ async function startRun(
     conversationId,
     agentId: row.agentId,
     agentVersionId: agent.currentVersion.versionId,
-    agentSnapshot: await agentSnapshotFor(database, row.workspaceId, agent.currentVersion),
+    agentSnapshot: await agentSnapshotFor(database, row.workspaceId, row.agentId, agent.currentVersion),
     modelBindingId: binding._id,
     trigger: { type: 'channel', ref: `${row.type}:${message.senderRef}` },
     /*

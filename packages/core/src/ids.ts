@@ -97,6 +97,7 @@ export const IdPrefix = {
   usageDay: 'usg',
   subscription: 'sub',
   schedule: 'sch',
+  memoryEntry: 'mem',
 } as const;
 
 /** Casts a raw string to a branded id. Use only at trust boundaries (db reads, validated input). */

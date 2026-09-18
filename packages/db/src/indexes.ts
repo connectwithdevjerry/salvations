@@ -235,6 +235,13 @@ export const INDEXES: Readonly<Partial<Record<CollectionName, readonly IndexDef[
       rationale: 'the tick scans enabled schedules across every workspace' },
   ],
 
+  memoryEntries: [
+    { name: 'ws_agent_current', key: { workspaceId: 1, agentId: 1, validTo: 1, validFrom: -1 },
+      rationale: 'the recall path: one agent current memories, newest first' },
+    { name: 'ws_agent_key', key: { workspaceId: 1, agentId: 1, key: 1, validTo: 1 },
+      rationale: 'finding the entry a new one supersedes' },
+  ],
+
   auditLog: [
     { name: 'ws_recent', key: { workspaceId: 1, createdAt: -1 }, rationale: 'audit browsing' },
     { name: 'ws_action', key: { workspaceId: 1, action: 1, createdAt: -1 },

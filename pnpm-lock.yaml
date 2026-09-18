@@ -65,6 +65,9 @@ importers:
       '@salvations/mcp':
         specifier: workspace:*
         version: link:../../packages/mcp
+      '@salvations/memory':
+        specifier: workspace:*
+        version: link:../../packages/memory
       '@salvations/observability':
         specifier: workspace:*
         version: link:../../packages/observability
@@ -77,6 +80,9 @@ importers:
       '@salvations/schedule':
         specifier: workspace:*
         version: link:../../packages/schedule
+      '@salvations/servers':
+        specifier: workspace:*
+        version: link:../../packages/servers
       '@vercel/functions':
         specifier: ^3.9.7
         version: 3.9.7(ws@8.21.3)
@@ -197,6 +203,12 @@ importers:
       ajv-formats:
         specifier: ^3.0.1
         version: 3.0.1(ajv@8.20.0)
+
+  packages/memory:
+    dependencies:
+      '@salvations/core':
+        specifier: workspace:*
+        version: link:../core
 
   packages/observability:
     dependencies:

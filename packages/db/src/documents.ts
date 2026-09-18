@@ -469,6 +469,38 @@ export interface ScheduleDoc extends TenantDoc {
   updatedAt: Date;
 }
 
+/**
+ * Something an agent remembers.
+ *
+ * Never updated — only superseded. A correction writes a new row and closes
+ * the old one, so "why did it believe that in March?" stays answerable and a
+ * wrong correction is recoverable. That is worth the extra rows: the failure
+ * mode of updating in place is a belief silently rewritten with no way back.
+ *
+ * `embeddings` is keyed by the MODEL that produced each vector, not by a single
+ * field. Two models put the same sentence in two unrelated spaces, so a cosine
+ * between them is a number with no meaning — keying them apart is what makes
+ * that mistake impossible to make by accident, and it also means re-embedding
+ * on a new model is an additive write rather than a rebuild.
+ */
+export interface MemoryEntryDoc extends TenantDoc {
+  /** Per AGENT. Memory that ended with a conversation would not be memory. */
+  agentId: string;
+  kind: string;
+  /** A stable handle for a recurring belief, and the only supersession key. */
+  key?: string | null;
+  content: string;
+  importance: number;
+  sourceRunId?: string | null;
+  createdBy?: string | null;
+  validFrom: Date;
+  /** Null while current. */
+  validTo?: Date | null;
+  supersededBy?: string | null;
+  /** `{ openai_text_embedding_3_large: [...] }` — never a bare vector field. */
+  embeddings?: Record<string, number[]> | null;
+}
+
 export interface AuditLogDoc extends TenantDoc {
   actor: { type: string; id?: string | null };
   action: string;

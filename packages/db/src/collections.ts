@@ -50,6 +50,7 @@ export const TENANT_COLLECTIONS = [
   'usageDaily',
   'subscriptions',
   'schedules',
+  'memoryEntries',
 ] as const;
 
 /**

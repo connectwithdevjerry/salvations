@@ -44,7 +44,10 @@ export const PATCH = workspaceRoute<{ agentId: string }>('agents:write', async (
     {
       versionId: agent.currentVersion.versionId,
       version: agent.currentVersion.version,
-      systemPrompt: input.systemPrompt,
+      // Omitted means UNCHANGED, not "reset to the default". This is an edit:
+      // a caller that sends only a model role must not silently wipe
+      // instructions somebody spent time on.
+      systemPrompt: input.systemPrompt ?? agent.currentVersion.systemPrompt,
       modelRole: input.modelRole,
       capabilityBindings: input.capabilityBindings.map((b) => ({ ...b, tools: [...b.tools] })),
       guardrails: input.guardrails ?? agent.currentVersion.guardrails,

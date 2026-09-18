@@ -2,6 +2,7 @@
 
 import { use, useCallback, useEffect, useState } from 'react';
 import { api, ws } from '@/lib/client/api';
+import { DEFAULT_SYSTEM_PROMPT } from '@salvations/catalog';
 
 interface Agent {
   id: string; name: string; description?: string; modelRole: string;
@@ -99,7 +100,16 @@ function AgentEditor({
 }) {
   const [name, setName] = useState(agent?.name ?? '');
   const [description, setDescription] = useState(agent?.description ?? '');
-  const [systemPrompt, setSystemPrompt] = useState(agent?.systemPrompt ?? '');
+  /*
+   * Prefilled with the default rather than left blank.
+   *
+   * A new agent starts with instructions that work, and they are here to be
+   * read and changed — not a blank box somebody has to fill before they can
+   * continue. Editing an existing agent shows what it actually says.
+   */
+  const [systemPrompt, setSystemPrompt] = useState(
+    agent?.systemPrompt ?? DEFAULT_SYSTEM_PROMPT,
+  );
   const [modelRole, setModelRole] = useState(agent?.modelRole ?? 'chat');
   const [attached, setAttached] = useState<Set<string>>(
     new Set((agent?.capabilityBindings ?? []).map((b) => b.bindingId)),
@@ -152,10 +162,20 @@ function AgentEditor({
             id="systemPrompt" required value={systemPrompt}
             onChange={(e) => setSystemPrompt(e.target.value)}
           />
-          <p className="muted">
-            Part of the cacheable prefix, so it stays identical between steps and the cache keeps
-            hitting.
-          </p>
+          <div className="row" style={{ justifyContent: 'space-between', marginTop: 6 }}>
+            <p className="muted" style={{ margin: 0 }}>
+              Part of the cacheable prefix, so it stays identical between steps and the cache
+              keeps hitting.
+            </p>
+            {systemPrompt !== DEFAULT_SYSTEM_PROMPT && (
+              <button
+                type="button" className="ghost"
+                onClick={() => setSystemPrompt(DEFAULT_SYSTEM_PROMPT)}
+              >
+                Reset to default
+              </button>
+            )}
+          </div>
         </div>
         <div>
           <label htmlFor="modelRole">Model role</label>

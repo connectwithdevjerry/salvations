@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { CHANNELS, formatPrice, type CatalogEntry, type Plan } from '@salvations/catalog';
+import {
+  CHANNELS, DEFAULT_AGENT_NAME, formatPrice, type CatalogEntry, type Plan,
+} from '@salvations/catalog';
 import { api, ws, ApiError } from '@/lib/client/api';
 import { auth } from '@/lib/client/auth';
 import { BrandMark, Icon, Option, StepDots, Tile, TickList } from '@/components/ui';
@@ -206,33 +208,17 @@ function Head({
 
 /* -------------------------------------------------------------- 1. agent -- */
 
-const STARTERS = [
-  {
-    id: 'assistant',
-    title: 'A general assistant',
-    subtitle: 'Answers, drafts and research. A sensible first agent.',
-    name: 'Assistant',
-    prompt:
-      'You are a careful assistant. Answer directly and say plainly when you are ' +
-      'unsure. Use a tool when it will give a better answer than guessing, and ' +
-      'explain what you did.',
-  },
-  {
-    id: 'blank',
-    title: 'Start fresh',
-    subtitle: 'Write the instructions yourself.',
-    name: '',
-    prompt: '',
-  },
-  {
-    id: 'import',
-    title: 'Import existing',
-    subtitle: 'Paste a system prompt you already have from somewhere else.',
-    name: '',
-    prompt: '',
-  },
-] as const;
-
+/**
+ * Naming the agent.
+ *
+ * A name and nothing else. There is no instructions box, because asking
+ * somebody to write a system prompt puts a blank page in front of them at the
+ * moment they have the least idea what to put on it — and what they write
+ * under that pressure is usually worse than a considered default.
+ *
+ * The default is stored ON the agent, so it is visible and editable on the
+ * agent page the moment they want to change it. Deferred, not hidden.
+ */
 function AgentStep({
   workspaceId, onDone, onError,
 }: {
@@ -241,84 +227,58 @@ function AgentStep({
   onDone: (agent: { id: string; name: string }) => void;
   onError: (message: string) => void;
 }) {
-  const [choice, setChoice] = useState<string>(STARTERS[0].id);
-  const [name, setName] = useState<string>(STARTERS[0].name);
-  const [prompt, setPrompt] = useState<string>(STARTERS[0].prompt);
+  const [name, setName] = useState(DEFAULT_AGENT_NAME);
   const [busy, setBusy] = useState(false);
-
-  function choose(id: string) {
-    setChoice(id);
-    const starter = STARTERS.find((s) => s.id === id);
-    if (starter !== undefined) {
-      setName(starter.name);
-      setPrompt(starter.prompt);
-    }
-  }
 
   return (
     <>
       <Head
         icon="agent"
         title="Create your first agent"
-        lede="A name, a set of instructions, and the tools you let it reach. All three are yours to change later."
+        lede="Give it a name. It starts with sensible instructions you can change whenever you like."
       />
 
-      <p className="eyebrow">Starting point</p>
+      <form
+        className="stack"
+        onSubmit={async (event) => {
+          event.preventDefault();
+          if (workspaceId === undefined) return;
+          setBusy(true);
+          try {
+            // No systemPrompt: the server applies the default, and it lands on
+            // the agent rather than being injected invisibly at run time.
+            const created = await api.post<{ id: string; name: string }>(
+              `${ws(workspaceId)}/agents`,
+              { name, modelRole: 'chat' },
+            );
+            onDone({ id: created.id, name });
+          } catch (caught) {
+            onError(caught instanceof Error ? caught.message : 'Could not create the agent.');
+            setBusy(false);
+          }
+        }}
+      >
+        <div>
+          <label htmlFor="agentName">Name</label>
+          <input
+            id="agentName" required autoFocus placeholder={DEFAULT_AGENT_NAME}
+            value={name} onChange={(e) => setName(e.target.value)}
+          />
+          <p className="muted" style={{ margin: '6px 0 0' }}>
+            What you will call it. Next you will pick where to talk to it, and which model
+            it thinks with.
+          </p>
+        </div>
 
-      {STARTERS.map((starter) => (
-        <Option
-          key={starter.id}
-          icon="agent"
-          title={starter.title}
-          subtitle={starter.subtitle}
-          open={choice === starter.id}
-          onToggle={() => choose(starter.id)}
-        >
-          <form
-            className="stack"
-            onSubmit={async (event) => {
-              event.preventDefault();
-              if (workspaceId === undefined) return;
-              setBusy(true);
-              try {
-                const created = await api.post<{ id: string; name: string }>(
-                  `${ws(workspaceId)}/agents`,
-                  { name, systemPrompt: prompt, modelRole: 'chat' },
-                );
-                onDone({ id: created.id, name });
-              } catch (caught) {
-                onError(caught instanceof Error ? caught.message : 'Could not create the agent.');
-                setBusy(false);
-              }
-            }}
-          >
-            <div>
-              <label htmlFor="agentName">Name</label>
-              <input
-                id="agentName" required placeholder="Assistant"
-                value={name} onChange={(e) => setName(e.target.value)}
-              />
-            </div>
-            <div>
-              <label htmlFor="prompt">
-                {starter.id === 'import' ? 'Paste your instructions' : 'Instructions'}
-              </label>
-              <textarea
-                id="prompt" required value={prompt}
-                placeholder={starter.id === 'import'
-                  ? 'Paste the system prompt you were using elsewhere.'
-                  : undefined}
-                onChange={(e) => setPrompt(e.target.value)}
-              />
-            </div>
-            {/* Waits on the workspace, which is being made in the background.
-                Disabled for a moment beats a form that silently does nothing. */}
-            <button className="primary" type="submit" disabled={busy || workspaceId === undefined}>
-              {busy ? 'Creating…' : 'Create agent'} <Icon name="arrow" size={15} />
-            </button>
-          </form>
-        </Option>
-      ))}
+        <div className="wizard-foot">
+          <span className="faint">You can edit its instructions later.</span>
+          {/* Waits on the workspace, which is being made in the background.
+              Disabled for a moment beats a form that silently does nothing. */}
+          <button className="primary" type="submit" disabled={busy || workspaceId === undefined}>
+            {busy ? 'Creating…' : 'Continue'} <Icon name="arrow" size={15} />
+          </button>
+        </div>
+      </form>
     </>
   );
 }

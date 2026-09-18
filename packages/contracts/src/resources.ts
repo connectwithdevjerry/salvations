@@ -192,7 +192,14 @@ export const capabilityBindingSchema = z.object({
 export const upsertAgentSchema = z.object({
   name: nameSchema,
   description: descriptionSchema.optional(),
-  systemPrompt: boundedText(20_000),
+  /**
+   * Optional. Absent, the boundary applies the default.
+   *
+   * Nobody should have to write a system prompt to get started: it is a blank
+   * page at the moment somebody has least idea what to put on it. The default
+   * is stored on the agent like any other, so it stays visible and editable.
+   */
+  systemPrompt: boundedText(20_000).optional(),
   modelRole: modelRoleSchema.default('chat'),
   capabilityBindings: z.array(capabilityBindingSchema).max(50).default([]),
   budget: budgetRequestSchema.optional(),

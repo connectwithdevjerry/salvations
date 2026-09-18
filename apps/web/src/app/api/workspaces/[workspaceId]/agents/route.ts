@@ -1,4 +1,5 @@
 import { upsertAgentSchema } from '@salvations/contracts';
+import { DEFAULT_SYSTEM_PROMPT } from '@salvations/catalog';
 import { AgentRepository } from '@salvations/db';
 import { jsonBody, ok } from '@/lib/http';
 import { workspaceRoute } from '@/lib/route';
@@ -28,7 +29,11 @@ export const POST = workspaceRoute('agents:write', async (ctx) => {
     slug: slugOf(input.name),
     name: input.name,
     ...(input.description !== undefined ? { description: input.description } : {}),
-    systemPrompt: input.systemPrompt,
+    // Applied HERE rather than injected at run time, so the agent carries its
+    // own instructions: visible on the agent page, editable, and versioned like
+    // anything else it says. A default living only in the runtime would be a
+    // set of instructions nobody could read or change.
+    systemPrompt: input.systemPrompt ?? DEFAULT_SYSTEM_PROMPT,
     modelRole: input.modelRole,
     createdBy: actorIdOf(ctx.principal),
   });

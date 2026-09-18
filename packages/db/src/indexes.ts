@@ -240,6 +240,19 @@ export const INDEXES: Readonly<Partial<Record<CollectionName, readonly IndexDef[
       rationale: 'the recall path: one agent current memories, newest first' },
     { name: 'ws_agent_key', key: { workspaceId: 1, agentId: 1, key: 1, validTo: 1 },
       rationale: 'finding the entry a new one supersedes' },
+    { name: 'ws_agent_key_current',
+      key: { workspaceId: 1, agentId: 1, key: 1 },
+      options: {
+        unique: true,
+        // Only CURRENT, KEYED entries. Superseded ones share a key by design —
+        // that is the history — and keyless ones must be free to repeat, since
+        // two memories can read alike and mean different things.
+        partialFilterExpression: { validTo: null, key: { $type: 'string' } },
+      },
+      rationale:
+        'one current belief per key, enforced by the database. Close-then-insert '
+        + 'cannot hold this alone: concurrent writers all close the same row and then '
+        + 'all insert, leaving several entries each claiming to be true.' },
   ],
 
   auditLog: [

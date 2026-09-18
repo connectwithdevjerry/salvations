@@ -68,12 +68,18 @@ describe.skipIf(URI === undefined || URI === '')('memory against a real database
     expect(current[0]?.content).toBe('Prefers tables.');
   });
 
-  it('leaves exactly one current belief when two corrections race', async () => {
+  it('leaves exactly one current belief when corrections race', async () => {
     /*
-     * The reason supersession is a conditional write. A read-then-write would
-     * let both see the same current entry, close it twice and leave two rows
-     * claiming to be true — after which recall returns a belief and its
-     * replacement side by side and the agent contradicts itself.
+     * This failed the first time it ran, and the fix was not a smaller bug.
+     *
+     * Close-then-insert cannot hold "one current belief per key" at all: three
+     * concurrent writers all close the SAME row — one succeeds, two match
+     * nothing — and then all three insert, leaving three entries each claiming
+     * to be true. Recall would return a belief and two replacements side by
+     * side and the agent would contradict itself out of its own memory.
+     *
+     * The invariant is enforced by a unique partial index; the repository
+     * retries when it loses the race.
      */
     await remember({ key: 'timezone', content: 'UTC' });
 
@@ -153,6 +159,74 @@ describe.skipIf(URI === undefined || URI === '')('memory against a real database
     expect(await other.current(AGENT)).toHaveLength(0);
     expect(await other.findById(entry._id)).toBeNull();
     expect(await other.forget(AGENT, entry._id)).toBe(false);
+  });
+
+  it('stores embeddings as an object, never null', async () => {
+    // A dotted or merged write needs something to write INTO. Null is what
+    // broke `attachEmbedding` the first time this suite ran.
+    const { entry } = await remember();
+    const stored = await repo.findById(entry._id);
+    expect(stored?.embeddings).toEqual({});
+  });
+
+  it('attaches a vector to a row whose embeddings are null', async () => {
+    /*
+     * Exactly the shape a re-embedding migration exists to fix: a memory
+     * written before any embedding model was configured. A dotted $set cannot
+     * traverse null and fails with "cannot create field in element
+     * {embeddings: null}" — on precisely the rows that most need fixing.
+     */
+    const { entry } = await remember();
+    await db.collection('memoryEntries')
+      .updateOne({ _id: entry._id as never }, { $set: { embeddings: null } });
+
+    await repo.attachEmbedding(entry._id, 'openai_small', [0.1, 0.2]);
+
+    const stored = await repo.findById(entry._id);
+    expect(stored?.embeddings?.['openai_small']).toEqual([0.1, 0.2]);
+  });
+
+  it('refuses a second current entry under the same key', async () => {
+    // The invariant is the DATABASE's, not the repository's. Close-then-insert
+    // cannot hold it under concurrency, so the index has to.
+    const { entry } = await remember({ key: 'timezone', content: 'UTC' });
+
+    await expect(db.collection('memoryEntries').insertOne({
+      _id: 'mem_duplicate' as never,
+      workspaceId: WS,
+      agentId: AGENT,
+      kind: 'preference',
+      key: 'timezone',
+      content: 'Also claiming to be current.',
+      importance: 0.5,
+      validFrom: new Date(),
+      validTo: null,
+      supersededBy: null,
+      embeddings: {},
+    } as never)).rejects.toMatchObject({ code: 11000 });
+
+    expect(entry.validTo).toBeNull();
+  });
+
+  it('allows many current entries with no key', async () => {
+    // Keyless memories must be free to repeat: two can read alike and mean
+    // different things, and the index must not collapse them.
+    await remember({ content: 'Prefers tables in reports.' });
+    await remember({ content: 'Prefers tables in email.' });
+    await remember({ content: 'Prefers tables in decks.' });
+
+    expect(await repo.current(AGENT)).toHaveLength(3);
+  });
+
+  it('keeps every superseded entry under one key', async () => {
+    // The history shares a key by design — the index must only constrain the
+    // CURRENT one, or a second correction would be impossible.
+    await remember({ key: 'timezone', content: 'UTC' });
+    await remember({ key: 'timezone', content: 'Europe/London' });
+    await remember({ key: 'timezone', content: 'Asia/Tokyo' });
+
+    expect(await repo.history(AGENT, 'timezone')).toHaveLength(3);
+    expect((await repo.current(AGENT)).filter((e) => e.key === 'timezone')).toHaveLength(1);
   });
 
   it('adds a vector without disturbing one from another model', async () => {

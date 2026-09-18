@@ -11,7 +11,7 @@
  * Nothing here ever updates `content`. A correction is a new row plus a close
  * on the old one, which is what makes the history real rather than decorative.
  */
-import type { Db } from 'mongodb';
+import type { Db, MongoServerError } from 'mongodb';
 import { IdPrefix, newId } from '@salvations/core';
 import type { MemoryEntryDoc } from '../documents';
 import { ScopedDb, type ScopedCollection } from '../scoped';
@@ -26,6 +26,21 @@ export interface RememberInput {
   readonly createdBy: string | undefined;
   readonly embeddings: Record<string, number[]> | undefined;
 }
+
+/** Mongo's code for a unique-index collision. */
+const DUPLICATE_KEY = 11000;
+
+const isDuplicate = (caught: unknown): boolean =>
+  (caught as MongoServerError | undefined)?.code === DUPLICATE_KEY;
+
+/**
+ * How many times to re-run a close-then-insert that lost a race.
+ *
+ * Each retry means another writer inserted between our close and our insert.
+ * Three is far beyond what concurrent corrections to one belief produce; more
+ * than that is not contention, it is a loop.
+ */
+const MAX_SUPERSEDE_ATTEMPTS = 3;
 
 /**
  * How many current entries one recall may consider.
@@ -63,19 +78,47 @@ export class MemoryRepository {
      */
     readonly superseded: boolean;
   }> {
-    const now = new Date();
-    const id = newId(IdPrefix.memoryEntry);
+    const keyed = input.key !== undefined && input.key !== '';
+    if (!keyed) {
+      return { entry: await this.#insert(input, newId(IdPrefix.memoryEntry), new Date()), superseded: false };
+    }
 
-    let superseded = false;
-    if (input.key !== undefined && input.key !== '') {
+    /*
+     * Close, then insert, and retry if somebody got in between.
+     *
+     * Closing alone cannot hold "one current belief per key": three concurrent
+     * corrections all close the SAME row — one succeeds, two match nothing —
+     * and then all three insert, leaving three entries each claiming to be
+     * true. The unique partial index is what actually enforces it; this loop is
+     * how a loser of that race recovers rather than failing the agent's write.
+     */
+    for (let attempt = 0; attempt < MAX_SUPERSEDE_ATTEMPTS; attempt += 1) {
+      const now = new Date();
+      const id = newId(IdPrefix.memoryEntry);
+
       const closed = await this.#entries.updateOne(
         { agentId: input.agentId, key: input.key, validTo: null } as never,
         { $set: { validTo: now, supersededBy: id } } as never,
       );
-      superseded = closed.modifiedCount === 1;
+
+      try {
+        const entry = await this.#insert(input, id, now);
+        return { entry, superseded: closed.modifiedCount === 1 };
+      } catch (caught) {
+        // Somebody inserted a current entry after our close. Go round again:
+        // this time we will close theirs.
+        if (!isDuplicate(caught)) throw caught;
+      }
     }
 
-    const entry = await this.#entries.insertOne({
+    throw new Error(
+      `Could not store a memory under "${input.key ?? ''}" after `
+      + `${MAX_SUPERSEDE_ATTEMPTS} attempts — something is rewriting it continuously.`,
+    );
+  }
+
+  async #insert(input: RememberInput, id: string, now: Date): Promise<MemoryEntryDoc> {
+    return this.#entries.insertOne({
       _id: id,
       agentId: input.agentId,
       kind: input.kind,
@@ -87,10 +130,10 @@ export class MemoryRepository {
       validFrom: now,
       validTo: null,
       supersededBy: null,
-      embeddings: input.embeddings ?? null,
+      // `{}` rather than null, so a later `embeddings.<model>` write has
+      // something to write INTO. A dotted path cannot traverse null.
+      embeddings: input.embeddings ?? {},
     } as never);
-
-    return { entry, superseded };
   }
 
   /** Everything this agent currently believes, newest first. */
@@ -135,7 +178,14 @@ export class MemoryRepository {
     return result.modifiedCount === 1;
   }
 
-  /** Adds a vector under its model key, leaving any others untouched. */
+  /**
+   * Adds a vector under its model key, leaving any others untouched.
+   *
+   * A merge rather than a dotted `$set`. The dotted form cannot traverse a null
+   * — and an entry written before embeddings existed has exactly that — so it
+   * fails with "cannot create field in element {embeddings: null}" on precisely
+   * the rows a re-embedding migration exists to fix.
+   */
   async attachEmbedding(
     entryId: string,
     modelKey: string,
@@ -143,9 +193,18 @@ export class MemoryRepository {
   ): Promise<void> {
     await this.#entries.updateOne(
       { _id: entryId } as never,
-      // A dotted path, so re-embedding on a new model never disturbs the
-      // vectors already stored for another one.
-      { $set: { [`embeddings.${modelKey}`]: [...vector] } } as never,
+      [
+        {
+          $set: {
+            embeddings: {
+              $mergeObjects: [
+                { $ifNull: ['$embeddings', {}] },
+                { [modelKey]: [...vector] },
+              ],
+            },
+          },
+        },
+      ] as never,
     );
   }
 

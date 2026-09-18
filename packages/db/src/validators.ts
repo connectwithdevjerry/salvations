@@ -184,6 +184,39 @@ export const VALIDATORS: Partial<Record<CollectionName, JsonSchema>> = {
     },
   },
 
+  knowledgeDocuments: {
+    bsonType: 'object',
+    required: ['_id', 'workspaceId', 'title', 'fileName', 'contentHash', 'status', 'chunkCount', 'createdAt'],
+    properties: {
+      ...tenantBase,
+      title: str,
+      fileName: str,
+      mimeType: str,
+      sizeBytes: int,
+      contentHash: str,
+      status: oneOfStrings('ingesting', 'ready', 'failed'),
+      error: nullable(str),
+      chunkCount: int,
+      embeddingModelKey: nullable(str),
+      createdBy: str,
+      createdAt: date,
+      updatedAt: date,
+    },
+  },
+
+  knowledgeChunks: {
+    bsonType: 'object',
+    required: ['_id', 'workspaceId', 'documentId', 'index', 'content', 'createdAt'],
+    properties: {
+      ...tenantBase,
+      documentId: str,
+      index: int,
+      content: str,
+      embeddings: nullable(obj),
+      createdAt: date,
+    },
+  },
+
   auditLog: {
     bsonType: 'object',
     required: ['_id', 'workspaceId', 'actor', 'action', 'subject', 'createdAt'],

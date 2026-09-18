@@ -12,14 +12,15 @@
  * would let it ask.
  */
 import {
-  createConversationServer, createMemoryServer, linkedPair,
+  createConversationServer, createKnowledgeServer, createMemoryServer, linkedPair,
   type ConversationSource, type ServerContext,
 } from '@salvations/servers';
 import { ConversationRepository, toMessage } from '@salvations/db';
 import type { Database } from '@salvations/db';
 import type { InProcessOpener } from '@salvations/mcp';
-import { MEMORY_ALIAS, CONVERSATION_ALIAS } from './first-party';
+import { MEMORY_ALIAS, CONVERSATION_ALIAS, KNOWLEDGE_ALIAS } from './first-party';
 import { createMemorySource } from './memory-service';
+import { createKnowledgeSource } from './knowledge-service';
 
 export interface OpenerInput {
   readonly database: Database;
@@ -63,6 +64,15 @@ function build(alias: string, input: OpenerInput) {
 
   if (alias === CONVERSATION_ALIAS) {
     return createConversationServer(input.context, conversationSource(input, workspaceId));
+  }
+
+  if (alias === KNOWLEDGE_ALIAS) {
+    // Workspace-scoped, not agent-scoped: knowledge is the business context
+    // every agent shares.
+    return createKnowledgeServer(input.context, createKnowledgeSource({
+      database: input.database,
+      workspaceId,
+    }));
   }
 
   return undefined;

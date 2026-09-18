@@ -18,6 +18,7 @@
     "@salvations/core": "workspace:*",
     "@salvations/crypto": "workspace:*",
     "@salvations/db": "workspace:*",
+    "@salvations/knowledge": "workspace:*",
     "@salvations/mcp": "workspace:*",
     "@salvations/memory": "workspace:*",
     "@salvations/observability": "workspace:*",
@@ -28,11 +29,13 @@
     "@vercel/functions": "^3.9.7",
     "mongodb": "^7.6.0",
     "next": "^16.3.5",
+    "qrcode": "^1.5.4",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@types/qrcode": "^1.5.5",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0"
   }

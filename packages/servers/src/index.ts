@@ -9,3 +9,8 @@ export {
   MAX_RESULTS as MEMORY_MAX_RESULTS, MAX_CONTENT as MEMORY_MAX_CONTENT,
   type MemorySource,
 } from './memory';
+export {
+  createKnowledgeServer, SERVER_NAME as KNOWLEDGE_SERVER,
+  MAX_RESULTS as KNOWLEDGE_MAX_RESULTS, MAX_READ as KNOWLEDGE_MAX_READ,
+  type KnowledgeSource,
+} from './knowledge';

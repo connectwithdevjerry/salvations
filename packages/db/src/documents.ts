@@ -501,6 +501,44 @@ export interface MemoryEntryDoc extends TenantDoc {
   embeddings?: Record<string, number[]> | null;
 }
 
+/**
+ * A document somebody uploaded for the workspace's agents to know.
+ *
+ * Scoped to the WORKSPACE. Knowledge is the business context, uploaded before
+ * any agent exists and shared by all of them; a second agent should not have
+ * to be taught what the first one was.
+ */
+export interface KnowledgeDocumentDoc extends TenantDoc {
+  title: string;
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  /** SHA-256 of the extracted text. Unique per workspace while the document lives. */
+  contentHash: string;
+  status: 'ingesting' | 'ready' | 'failed';
+  error?: string | null;
+  chunkCount: number;
+  /** Which model embedded the chunks, or null when none was bound at upload. */
+  embeddingModelKey?: string | null;
+  createdBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/**
+ * One searchable piece of a document.
+ *
+ * `embeddings` is keyed by model exactly as memory's is, and for the same
+ * reason: vectors from two models are two unrelated spaces.
+ */
+export interface KnowledgeChunkDoc extends TenantDoc {
+  documentId: string;
+  index: number;
+  content: string;
+  embeddings?: Record<string, number[]> | null;
+  createdAt: Date;
+}
+
 export interface AuditLogDoc extends TenantDoc {
   actor: { type: string; id?: string | null };
   action: string;

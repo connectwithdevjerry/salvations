@@ -233,21 +233,25 @@ platform exist beside the first three.
 - [ ] Decide what a limit actually does when reached — currently nothing enforces `limits`
 - [ ] Customer portal link for changing the card on file
 
-### 1.5.4 Still to decide or build
+### 1.5.4 Knowledge, memory and the agent's server — done
 
-- [ ] **Documents** and **Memories** — already scoped as Phase 2 below (vector search, ingestion,
-      bitemporal memory). Named here only because the screenshots put them in the navigation;
-      the plan for them has not changed and neither has their cost.
-- [ ] **Browser** — covered today by connecting a browser MCP server. A first-class page is a
-      product decision, not a missing capability.
-- [ ] **Per-user isolated machines** — a different execution model from the sliced executor.
-      The current model isolates by workspace, not by process.
-- [ ] ❌ **"Sign in with ChatGPT"** — not buildable. It requires embedding the Codex CLI's own
-      public client id (impersonating another application) and routing a personal ChatGPT
-      subscription through a third party. OpenAI's terms make subscriptions personal and
-      single-user, and Anthropic's February 2026 terms explicitly prohibit subscription OAuth
-      tokens in third-party tools, with billing enforcement since April 2026. The API-key path
-      already works for every vendor in the registry and is the honest version of this.
+- [x] `packages/knowledge` — text extraction (text, Markdown, HTML, CSV, JSON; PDF/Word refused
+      with the fix in the message), paragraph-first chunking with overlap, two-signal ranking
+- [x] `knowledgeDocuments` / `knowledgeChunks` — workspace-scoped, compound text index for
+      lexical candidates, bounded vector scan for semantic ones, unique-per-content
+- [x] First-party `knowledge` server: `search`, `documents`, `read` — read-only by construction
+- [x] Knowledge page: upload or type in, "try a question" runs the agents' own search
+- [x] Per-agent memory (`memoryEntries`, first-party `memory` server) — bitemporal, one current
+      belief per key enforced by the database
+- [x] An agent attached to nothing reaches EVERYTHING the workspace connects (expanded onto the
+      run's snapshot, so it stays auditable); a narrowed list is the deliberate exception
+- [x] Create-agent wizard from the Agents page: name → Telegram (QR to BotFather for people
+      without a bot; QR + deep link for the handshake) → own Claude/OpenAI key → the agent's
+      server coming together, every line a real check
+- [ ] PDF and Word ingestion — needs a parser that is its own project; refused honestly for now
+- [ ] Atlas `$vectorSearch` once a workspace outgrows the in-process candidate caps
+
+### 1.5.5 Still to decide or build
 
 ---
 

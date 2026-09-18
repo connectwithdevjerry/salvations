@@ -125,6 +125,20 @@ export const createScheduleSchema = z.object({
   prompt: boundedText(4_000),
 });
 
+/**
+ * Knowledge typed in rather than uploaded — a paragraph somebody wants the
+ * agents to know without making a file of it.
+ */
+export const createKnowledgeTextSchema = z.object({
+  title: nameSchema,
+  text: boundedText(200_000),
+});
+
+export const knowledgeSearchSchema = z.object({
+  q: z.string().trim().min(1).max(300),
+  limit: z.coerce.number().int().min(1).max(20).default(5),
+});
+
 export const modelRoleSchema = z.enum([
   'chat', 'reasoning', 'summarizer', 'cheap', 'embedding', 'transcription',
 ]);
@@ -134,6 +148,8 @@ export const createProviderConfigSchema = z.object({
   name: nameSchema,
   apiKey: z.string().min(1).max(500),
   baseUrl: z.string().url().optional(),
+  /** Which catalogue model to bind to the chat role, when not the vendor's default. */
+  chatModelId: z.string().trim().min(1).max(80).optional(),
 });
 
 export const providerConfigSchema = z.object({

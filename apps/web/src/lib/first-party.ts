@@ -23,9 +23,11 @@ export interface FirstPartyBinding {
 /** Stable ids. They appear on capability rows, so changing one is a migration. */
 export const MEMORY_BINDING_ID = 'mcb_first_party_memory';
 export const CONVERSATION_BINDING_ID = 'mcb_first_party_conversation';
+export const KNOWLEDGE_BINDING_ID = 'mcb_first_party_knowledge';
 
 const MEMORY_SERVER_ID = 'mcs_first_party_memory';
 const CONVERSATION_SERVER_ID = 'mcs_first_party_conversation';
+const KNOWLEDGE_SERVER_ID = 'mcs_first_party_knowledge';
 
 /**
  * The aliases prefix every tool name — `memory__recall`, `chat__recall`.
@@ -35,6 +37,7 @@ const CONVERSATION_SERVER_ID = 'mcs_first_party_conversation';
  */
 export const MEMORY_ALIAS = 'memory';
 export const CONVERSATION_ALIAS = 'chat';
+export const KNOWLEDGE_ALIAS = 'knowledge';
 
 function binding(id: string, serverId: string, alias: string): FirstPartyBinding {
   return {
@@ -64,11 +67,15 @@ export function firstPartyBindings(workspaceId: string): readonly FirstPartyBind
   return [
     binding(MEMORY_BINDING_ID, MEMORY_SERVER_ID, MEMORY_ALIAS),
     binding(CONVERSATION_BINDING_ID, CONVERSATION_SERVER_ID, CONVERSATION_ALIAS),
+    binding(KNOWLEDGE_BINDING_ID, KNOWLEDGE_SERVER_ID, KNOWLEDGE_ALIAS),
   ].map((entry) => ({
     ...entry,
     binding: { ...entry.binding, workspaceId },
   }));
 }
 
-export const isFirstParty = (bindingId: string): boolean =>
-  bindingId === MEMORY_BINDING_ID || bindingId === CONVERSATION_BINDING_ID;
+const FIRST_PARTY_IDS: ReadonlySet<string> = new Set([
+  MEMORY_BINDING_ID, CONVERSATION_BINDING_ID, KNOWLEDGE_BINDING_ID,
+]);
+
+export const isFirstParty = (bindingId: string): boolean => FIRST_PARTY_IDS.has(bindingId);

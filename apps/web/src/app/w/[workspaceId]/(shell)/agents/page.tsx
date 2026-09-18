@@ -1,6 +1,7 @@
 'use client';
 
 import { use, useCallback, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { api, ws } from '@/lib/client/api';
 import { DEFAULT_SYSTEM_PROMPT } from '@salvations/catalog';
 
@@ -18,6 +19,7 @@ const ROLES = ['chat', 'reasoning', 'summarizer', 'cheap'] as const;
 
 export default function AgentsPage({ params }: { params: Promise<{ workspaceId: string }> }) {
   const { workspaceId } = use(params);
+  const router = useRouter();
   const [agents, setAgents] = useState<Agent[]>([]);
   const [editing, setEditing] = useState<AgentDetail | 'new'>();
   const [bindings, setBindings] = useState<Binding[]>([]);
@@ -48,7 +50,11 @@ export default function AgentsPage({ params }: { params: Promise<{ workspaceId: 
 
       {editing === undefined ? (
         <>
-          <button className="primary" onClick={() => setEditing('new')}>New agent</button>
+          {/* Creation is the wizard: name, a way to reach it, a model. Editing
+              is the form below, which shows everything the wizard set. */}
+          <button className="primary" onClick={() => router.push(`/w/${workspaceId}/agents/new`)}>
+            Create agent
+          </button>
           <div style={{ marginTop: 12 }}>
             {agents.map((agent) => (
               <div key={agent.id} className="card">
@@ -186,7 +192,12 @@ function AgentEditor({
         </div>
         <div>
           <label>Servers</label>
-          {bindings.length === 0 && <p className="muted">No MCP servers installed yet.</p>}
+          <p className="muted" style={{ margin: '0 0 6px' }}>
+            Leave every box empty and the agent uses everything this workspace connects — its
+            memory, the knowledge base, and every integration, including ones added later. Tick
+            boxes only to restrict it to those.
+          </p>
+          {bindings.length === 0 && <p className="muted">No integrations connected yet.</p>}
           {bindings.map((binding) => (
             <label
               key={binding.id}

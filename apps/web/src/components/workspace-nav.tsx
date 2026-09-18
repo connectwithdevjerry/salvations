@@ -15,11 +15,12 @@ interface Workspace { id: string; name: string; role: string }
  * saves forty pixels and costs everyone who has not memorised which glyph means
  * "approvals". The label is small, and it is always there.
  *
- * Only sections that exist appear. A rail advertising Documents and Memories
- * before either is built teaches people that half the product is broken.
+ * Only sections that exist appear. A rail advertising a section before it is
+ * built teaches people that half the product is broken.
  */
 const SECTIONS: readonly { href: string; label: string; icon: IconName }[] = [
   { href: 'chat', label: 'Chat', icon: 'chat' },
+  { href: 'knowledge', label: 'Knowledge', icon: 'book' },
   { href: 'agents', label: 'Agents', icon: 'agent' },
   { href: 'approvals', label: 'Approvals', icon: 'shield' },
   { href: 'schedule', label: 'Schedule', icon: 'clock' },

@@ -21,6 +21,7 @@ import { DEFAULT_BUDGET, asId, type RunId, type WorkspaceId } from '@salvations/
 import { db } from './db';
 import { repositories } from './container';
 import { VercelBackgroundTrigger } from './trigger';
+import { agentSnapshotFor } from '@/lib/agent-snapshot';
 
 /**
  * How many missed occurrences one schedule may catch up on in a single tick.
@@ -131,7 +132,7 @@ async function startRun(
     conversationId: conversation._id,
     agentId: schedule.agentId,
     agentVersionId: agent.currentVersion.versionId,
-    agentSnapshot: agent.currentVersion,
+    agentSnapshot: await agentSnapshotFor(database, schedule.workspaceId, agent.currentVersion),
     modelBindingId: schedule.modelBindingId,
     trigger: { type: 'schedule', ref: schedule._id },
     /*

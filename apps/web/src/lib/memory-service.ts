@@ -24,9 +24,11 @@ export const EMBEDDING_ROLE = 'embedding';
 /** Below this, a memory is not relevant enough to be worth the context. */
 export const RELEVANCE_FLOOR = 0.08;
 
-interface Embedder {
+export interface Embedder {
   readonly key: string;
   embed(text: string): Promise<readonly number[] | undefined>;
+  /** Several at once, in order. Absent entries are inputs the provider refused. */
+  embedMany(texts: readonly string[]): Promise<readonly (readonly number[] | undefined)[]>;
 }
 
 /**
@@ -36,8 +38,11 @@ interface Embedder {
  * follows it should use the same model — vectors from two models are not
  * comparable, and silently mixing them within one run would poison the very
  * entries just written.
+ *
+ * Shared with knowledge, which stores its vectors under the same model key so
+ * a query embedded once can be compared against both.
  */
-async function embedderFor(
+export async function embedderFor(
   database: Database,
   workspaceId: string,
 ): Promise<Embedder | undefined> {
@@ -64,17 +69,23 @@ async function embedderFor(
   // support degrades to lexical rather than failing every recall.
   if (provider.embed === undefined) return undefined;
 
+  const embedMany = async (texts: readonly string[]) => {
+    if (texts.length === 0) return [];
+    try {
+      const result = await provider.embed?.({ modelId: binding.modelId, inputs: texts });
+      return texts.map((_, index) => result?.vectors[index]);
+    } catch {
+      // A failed embedding degrades recall; it must not fail the run. The
+      // lexical and recency signals still work.
+      return texts.map(() => undefined);
+    }
+  };
+
   return {
     key: embeddingKey(String(providerRow.providerType), binding.modelId),
+    embedMany,
     async embed(text) {
-      try {
-        const result = await provider.embed?.({ modelId: binding.modelId, inputs: [text] });
-        return result?.vectors[0];
-      } catch {
-        // A failed embedding degrades recall; it must not fail the run. The
-        // lexical and recency signals still work.
-        return undefined;
-      }
+      return (await embedMany([text]))[0];
     },
   };
 }

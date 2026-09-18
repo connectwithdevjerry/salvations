@@ -1,8 +1,9 @@
 /**
- * Whether this workspace can actually do anything yet.
+ * Whether an agent can actually do anything yet.
  *
- * The last onboarding step shows a checklist filling in. Every line here is a
- * real query against real state — there is no timer and nothing is staged. A
+ * The last step of creating an agent shows its server coming together — the
+ * memory, the knowledge, the context, the tools, the model. Every line here is
+ * a real query against real state; there is no timer and nothing is staged. A
  * progress animation that finishes regardless is worse than no animation: it
  * teaches somebody the setup succeeded, and they find out otherwise the first
  * time they ask their agent for something.
@@ -10,7 +11,7 @@
  * Each check says what it is waiting for rather than only that it failed, so
  * the checklist doubles as the instructions for finishing.
  */
-import { AgentRepository, ChannelRepository } from '@salvations/db';
+import { AgentRepository, ChannelRepository, KnowledgeRepository } from '@salvations/db';
 import { ok } from '@/lib/http';
 import { workspaceRoute } from '@/lib/route';
 
@@ -27,40 +28,84 @@ interface Check {
 }
 
 export const GET = workspaceRoute('workspace:read', async (ctx) => {
-  const agents = await new AgentRepository(ctx.database, ctx.workspaceId).list();
-  const agent = agents[0];
+  const agents = new AgentRepository(ctx.database, ctx.workspaceId);
+  const requested = new URL(ctx.request.url).searchParams.get('agent');
+  const agent = requested === null
+    ? (await agents.list())[0]
+    : (await agents.findById(requested)) ?? undefined;
 
   // The role the agent actually asks for, not an assumption that it is 'chat'.
-  // Checking the wrong role would report a model as missing when one is bound,
-  // or present when it is bound to something the agent never requests.
   const role = agent?.currentVersion.modelRole ?? 'chat';
   const binding = await ctx.repos.models.forRole(role);
 
   const channels = await new ChannelRepository(ctx.database, ctx.workspaceId).list();
-  const connected = channels.filter((c) => c.status === 'connected');
+  const connected = channels.filter((c) => c.status === 'connected' && (agent === undefined || c.agentId === agent._id));
+
+  const documents = (await new KnowledgeRepository(ctx.database, ctx.workspaceId).list())
+    .filter((d) => d.status === 'ready').length;
 
   const approvedTools = await ctx.repos.capabilities.countApproved();
 
   const checks: Check[] = [
     {
       id: 'agent',
-      label: 'Your agent exists',
+      label: 'Agent',
       ready: agent !== undefined,
       required: true,
       ...(agent === undefined ? { waitingFor: 'Create an agent.' } : {}),
     },
     {
       id: 'model',
-      label: 'It has a model to think with',
+      label: 'Model to think with',
       ready: binding !== null,
       required: true,
       ...(binding === null
-        ? { waitingFor: `Nothing is bound to the "${role}" role yet.` }
+        ? { waitingFor: `Nothing is bound to the "${role}" role yet. Connect Claude or OpenAI.` }
+        : {}),
+    },
+    {
+      // Exists the moment the agent does: memory is per agent and needs no setup.
+      id: 'memory',
+      label: 'Memory',
+      ready: agent !== undefined,
+      required: true,
+      ...(agent === undefined ? { waitingFor: 'Comes with the agent.' } : {}),
+    },
+    {
+      id: 'context',
+      label: 'Conversation context',
+      ready: agent !== undefined,
+      required: true,
+      ...(agent === undefined ? { waitingFor: 'Comes with the agent.' } : {}),
+    },
+    {
+      id: 'knowledge',
+      label: documents === 0
+        ? 'Knowledge'
+        : `Knowledge — ${documents} ${documents === 1 ? 'document' : 'documents'}`,
+      ready: documents > 0,
+      // The agent works without it; it just answers from general knowledge.
+      required: false,
+      ...(documents === 0
+        ? { waitingFor: 'Nothing uploaded yet. Add documents on the Knowledge page.' }
+        : {}),
+    },
+    {
+      id: 'tools',
+      label: approvedTools === 0
+        ? 'Tools'
+        : `Tools — ${approvedTools} available`,
+      // Approved, not merely discovered. An installed server whose tools nobody
+      // has read yet gives the agent nothing it may actually call.
+      ready: approvedTools > 0,
+      required: false,
+      ...(approvedTools === 0
+        ? { waitingFor: 'No integrations connected yet. Connect one on the Integrations page.' }
         : {}),
     },
     {
       id: 'channel',
-      label: 'You can reach it from a chat app',
+      label: connected.length === 0 ? 'Chat app' : `Chat app — ${connected.map((c) => c.identity.handle).join(', ')}`,
       ready: connected.length > 0,
       // Optional on purpose: the web chat works without any channel at all.
       required: false,
@@ -68,23 +113,12 @@ export const GET = workspaceRoute('workspace:read', async (ctx) => {
         ? { waitingFor: 'No chat platform connected. The web chat works regardless.' }
         : {}),
     },
-    {
-      id: 'tools',
-      label: 'It has tools it can use',
-      // Approved, not merely discovered. An installed server whose tools nobody
-      // has read yet gives the agent nothing it may actually call.
-      ready: approvedTools > 0,
-      required: false,
-      ...(approvedTools === 0
-        ? { waitingFor: 'No approved tools yet. Connect an MCP server on the Integrations page.' }
-        : {}),
-    },
   ];
 
   return ok({
     checks,
-    // Only the required ones gate. A workspace with no MCP server is a working
-    // workspace; a workspace with no model is not.
+    // Only the required ones gate. A workspace with no integration is a
+    // working workspace; a workspace with no model is not.
     ready: checks.filter((c) => c.required).every((c) => c.ready),
     agentName: agent?.name,
   });

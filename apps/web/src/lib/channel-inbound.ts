@@ -29,6 +29,7 @@ import { db } from './db';
 import { repositories } from './container';
 import { VercelBackgroundTrigger } from './trigger';
 import { env } from './env';
+import { agentSnapshotFor } from '@/lib/agent-snapshot';
 
 /** How long a connect code is worth trying. Long enough to find the app. */
 export const CONNECT_CODE_TTL_MS = 30 * 60 * 1000;
@@ -179,7 +180,7 @@ async function completeHandshake(
   message: InboundMessage,
   repos: Repos,
 ): Promise<DeliveryOutcome> {
-  const offered = message.text.trim().toUpperCase();
+  const offered = offeredCode(message.text);
   const claimed = await channels.claim(row._id, offered, message.chatRef);
 
   if (claimed === null) {
@@ -280,7 +281,7 @@ async function startRun(
     conversationId,
     agentId: row.agentId,
     agentVersionId: agent.currentVersion.versionId,
-    agentSnapshot: agent.currentVersion,
+    agentSnapshot: await agentSnapshotFor(database, row.workspaceId, agent.currentVersion),
     modelBindingId: binding._id,
     trigger: { type: 'channel', ref: `${row.type}:${message.senderRef}` },
     /*
@@ -394,4 +395,17 @@ async function reply(
     // turning "could not reach Telegram" into a 500 makes it retry the whole
     // delivery — which would start the run again.
   }
+}
+
+/**
+ * The code as the person sent it.
+ *
+ * Telegram's deep link delivers it as `/start <code>` — that is what the QR
+ * code and the "Open @bot" button send — and a person typing it sends the
+ * bare code. Both are the same proof, so both match. Only the last word is
+ * taken, so "here is the code ABCD2345" still works.
+ */
+export function offeredCode(text: string): string {
+  const words = text.trim().split(/\s+/);
+  return (words[words.length - 1] ?? '').toUpperCase();
 }

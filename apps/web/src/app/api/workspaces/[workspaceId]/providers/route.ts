@@ -7,7 +7,7 @@
  */
 import { createProviderConfigSchema } from '@salvations/contracts';
 import { KNOWN_PROVIDER_TYPES, isKnownProviderType } from '@salvations/provider-registry';
-import { CATALOG_MODELS, defaultBindings } from '@salvations/catalog';
+import { CATALOG_MODELS, defaultBindings, modelsFor } from '@salvations/catalog';
 import { errorResponse, jsonBody, ok } from '@/lib/http';
 import { workspaceRoute } from '@/lib/route';
 import { actorIdOf } from '@/lib/principal';
@@ -58,6 +58,21 @@ export const POST = workspaceRoute('providers:write', async (ctx) => {
     );
   }
 
+  // Checked BEFORE anything is stored, so a bad model id leaves no orphaned
+  // key or provider behind. The person may have picked a chat model; anything
+  // else stays the catalogue's default. Only a model the catalogue lists for this vendor —
+  // an id typed from memory is exactly the mistake the catalogue exists to stop.
+  const chosen = input.chatModelId === undefined
+    ? undefined
+    : modelsFor(input.providerType).find((m) => m.id === input.chatModelId);
+  if (input.chatModelId !== undefined && chosen === undefined) {
+    return errorResponse(
+      422, 'validation_failed',
+      `"${input.chatModelId}" is not a ${input.providerType} model this deployment offers.`,
+    );
+  }
+
+
   const credential = await ctx.repos.credentials.store({
     name: `${input.name} API key`,
     kind: 'api_key',
@@ -89,7 +104,10 @@ export const POST = workspaceRoute('providers:write', async (ctx) => {
   const taken = new Set(existing.filter((b) => b.enabled).map((b) => b.role));
   const created: string[] = [];
 
-  for (const suggestion of defaultBindings(input.providerType)) {
+  const suggestions = defaultBindings(input.providerType).map((suggestion) =>
+    suggestion.role === 'chat' && chosen !== undefined ? { ...suggestion, model: chosen } : suggestion);
+
+  for (const suggestion of suggestions) {
     if (taken.has(suggestion.role)) continue;
     await ctx.repos.models.createBinding({
       providerConfigId: provider._id,

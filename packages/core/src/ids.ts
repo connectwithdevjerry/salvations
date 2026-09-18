@@ -98,6 +98,8 @@ export const IdPrefix = {
   subscription: 'sub',
   schedule: 'sch',
   memoryEntry: 'mem',
+  knowledgeDocument: 'kdc',
+  knowledgeChunk: 'kch',
 } as const;
 
 /** Casts a raw string to a branded id. Use only at trust boundaries (db reads, validated input). */

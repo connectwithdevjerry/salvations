@@ -255,6 +255,33 @@ export const INDEXES: Readonly<Partial<Record<CollectionName, readonly IndexDef[
         + 'all insert, leaving several entries each claiming to be true.' },
   ],
 
+  knowledgeDocuments: [
+    { name: 'ws_recent', key: { workspaceId: 1, createdAt: -1 }, rationale: 'the knowledge page' },
+    {
+      name: 'ws_hash_live', key: { workspaceId: 1, contentHash: 1 },
+      options: {
+        unique: true,
+        // A failed ingestion may be retried by uploading again; only a live
+        // document claims its hash.
+        partialFilterExpression: { status: { $in: ['ingesting', 'ready'] } },
+      },
+      rationale: 'the same content uploaded twice is one document, not two answering in stereo',
+    },
+  ],
+
+  knowledgeChunks: [
+    { name: 'ws_doc_index', key: { workspaceId: 1, documentId: 1, index: 1 }, options: { unique: true },
+      rationale: 'reading a document in order, and deleting it whole' },
+    {
+      name: 'ws_content_text', key: { workspaceId: 1, content: 'text' },
+      options: { default_language: 'english' },
+      // Compound with the workspace prefix, so a $text search is scoped like
+      // every other query here rather than ranking every tenant's chunks.
+      rationale: 'lexical candidate selection in the database, which is what keeps search bounded '
+        + 'once a workspace has more chunks than one process should rank',
+    },
+  ],
+
   auditLog: [
     { name: 'ws_recent', key: { workspaceId: 1, createdAt: -1 }, rationale: 'audit browsing' },
     { name: 'ws_action', key: { workspaceId: 1, action: 1, createdAt: -1 },

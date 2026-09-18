@@ -16,6 +16,7 @@ import { errorResponse, jsonBody, ok } from '@/lib/http';
 import { workspaceRoute } from '@/lib/route';
 import { actorIdOf } from '@/lib/principal';
 import { VercelBackgroundTrigger } from '@/lib/trigger';
+import { agentSnapshotFor } from '@/lib/agent-snapshot';
 
 export const runtime = 'nodejs';
 
@@ -87,7 +88,7 @@ export const POST = workspaceRoute<{ conversationId: string }>(
       agentVersionId: agent.currentVersion.versionId,
       // PINNED. An edit to the agent after this point cannot change what this
       // run does.
-      agentSnapshot: agent.currentVersion,
+      agentSnapshot: await agentSnapshotFor(ctx.database, ctx.workspaceId, agent.currentVersion),
       modelBindingId,
       trigger: { type: 'user', ref: actorIdOf(ctx.principal) },
       principal: delegated(ctx.principal),

@@ -21,16 +21,19 @@ export type Permission =
   | 'runs:read' | 'runs:create' | 'runs:cancel'
   | 'approvals:decide'
   | 'channels:read' | 'channels:write'
+  | 'knowledge:read' | 'knowledge:write'
   | 'audit:read';
 
 const VIEWER: readonly Permission[] = [
   'workspace:read', 'members:read', 'agents:read', 'mcp:read',
   'policies:read', 'providers:read', 'conversations:read', 'runs:read',
-  'channels:read',
+  'channels:read', 'knowledge:read',
 ];
 
 const MEMBER: readonly Permission[] = [
   ...VIEWER, 'conversations:write', 'runs:create', 'runs:cancel', 'approvals:decide',
+  // Uploading what the agents should know is everyday work, not administration.
+  'knowledge:write',
 ];
 
 const ADMIN: readonly Permission[] = [

@@ -21,6 +21,7 @@
 import { ChannelRepository, ConversationRepository, AgentRepository, PlatformDb } from '@salvations/db';
 import type { ChannelDoc } from '@salvations/db';
 import { channelAdapter, type InboundMessage, type VerifyContext } from '@salvations/channels';
+import { transcribeAudio } from './transcribe';
 import {
   DEFAULT_BUDGET, asId, type RunId, type UserId, type WorkspaceId,
 } from '@salvations/core';
@@ -136,7 +137,19 @@ export async function handleDelivery(
       return plain(200, 'ok');
     }
 
-    const runId = await startRun(handle.db, row, message, repos, channels);
+    /*
+     * A voice note becomes words before anything else happens.
+     *
+     * The transcript is sent back to the person first. Transcription is the
+     * one step here that can silently substitute something they did not say,
+     * and they are the only one who can catch it — so it is shown at the
+     * moment it happens rather than discovered three replies later when the
+     * answer makes no sense.
+     */
+    const heard = await hear(handle.db, row, message, repos);
+    if (heard === undefined) return plain(200, 'ok');
+
+    const runId = await startRun(handle.db, row, heard, repos, channels);
     if (runId !== undefined) await channels.attachRun(row._id, message.messageRef, runId);
 
     return plain(200, 'ok');
@@ -291,6 +304,76 @@ async function startRun(
 
   await new VercelBackgroundTrigger().trigger(asId<RunId>(run._id));
   return run._id;
+}
+
+
+/**
+ * Resolves a message to the words it contains.
+ *
+ * Returns undefined when there is nothing to answer — the person has already
+ * been told why, and starting a run on an empty message would produce an agent
+ * replying to silence.
+ */
+async function hear(
+  database: Awaited<ReturnType<typeof db>>['db'],
+  row: ChannelDoc,
+  message: InboundMessage,
+  repos: Repos,
+): Promise<InboundMessage | undefined> {
+  if (message.audio === undefined) return message;
+
+  const adapter = channelAdapter(row.type);
+  if (adapter?.fetchAudio === undefined) {
+    await reply(row, message.chatRef, 'I cannot fetch recordings on this platform yet.', repos);
+    return undefined;
+  }
+
+  const token = await repos.credentials.resolve(row.tokenCredentialId);
+  if (token === null) {
+    await reply(row, message.chatRef, 'I could not reach that recording.', repos);
+    return undefined;
+  }
+
+  let bytes: ArrayBuffer;
+  try {
+    bytes = await adapter.fetchAudio(token.expose(), message.audio);
+  } catch (caught) {
+    await reply(
+      row, message.chatRef,
+      caught instanceof Error ? caught.message : 'I could not download that recording.',
+      repos,
+    );
+    return undefined;
+  }
+
+  const outcome = await transcribeAudio(database, row.workspaceId, message.audio, bytes);
+
+  if (outcome.kind === 'unconfigured') {
+    await reply(
+      row, message.chatRef,
+      'I got your voice note, but no model is set up to listen to audio yet. '
+      + 'Bind one to the transcription role on the Models page.',
+      repos,
+    );
+    return undefined;
+  }
+
+  if (outcome.kind === 'failed') {
+    await reply(row, message.chatRef, outcome.message, repos);
+    return undefined;
+  }
+
+  // Shown back before the answer. Quoted so it reads as a repetition of what
+  // was heard rather than as the agent speaking.
+  await reply(row, message.chatRef, `\u201c${outcome.text}\u201d`, repos);
+
+  // A caption alongside the recording is also something the person said, so it
+  // is kept rather than replaced.
+  const typed = message.text.trim();
+  return {
+    ...message,
+    text: typed === '' ? outcome.text : `${typed}\n\n${outcome.text}`,
+  };
 }
 
 /** Says something back. Never throws — a failed reply must not retry the run. */

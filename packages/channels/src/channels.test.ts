@@ -1,7 +1,7 @@
 import { createHmac, generateKeyPairSync, sign as signEd25519 } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { channelAdapter, CHANNEL_IDS, ChannelError } from './index';
-import { telegramAdapter, chunk, SECRET_HEADER } from './telegram';
+import { telegramAdapter, chunk, SECRET_HEADER, MAX_AUDIO_BYTES } from './telegram';
 import { discordAdapter } from './discord';
 import { slackAdapter, MAX_SKEW_SECONDS } from './slack';
 
@@ -119,7 +119,124 @@ describe('telegram', () => {
     expect(result.kind).toBe('ignored');
   });
 
+  describe('voice notes', () => {
+    const withSecret = (secret: string) => new Headers({ [SECRET_HEADER]: secret });
+    const delivery = (message: unknown) => JSON.stringify({ update_id: 1, message });
+
+    const voiceNote = (over: Record<string, unknown> = {}) => delivery({
+      message_id: 7,
+      from: { id: 9, is_bot: false, username: 'ada' },
+      chat: { id: -100, type: 'private' },
+      voice: { file_id: 'file_1', mime_type: 'audio/ogg', duration: 4, file_size: 2048 },
+      ...over,
+    });
+
+    it('is no longer dropped', () => {
+      // It used to be ignored outright, which gave the person silence —
+      // indistinguishable from the bot being broken.
+      const result = telegramAdapter.receive(
+        voiceNote(), withSecret(CONTEXT.webhookSecret), CONTEXT,
+      );
+
+      expect(result).toMatchObject({
+        kind: 'message',
+        message: { text: '', audio: { fileRef: 'file_1', mimeType: 'audio/ogg' } },
+      });
+    });
+
+    it('keeps a caption, which is also something they said', () => {
+      const result = telegramAdapter.receive(
+        voiceNote({ caption: 'about the meeting' }), withSecret(CONTEXT.webhookSecret), CONTEXT,
+      );
+      expect(result).toMatchObject({ message: { text: 'about the meeting' } });
+    });
+
+    it('treats a sent audio file the same as a held-to-talk recording', () => {
+      const result = telegramAdapter.receive(
+        delivery({
+          message_id: 7,
+          from: { id: 9, is_bot: false },
+          chat: { id: -100, type: 'private' },
+          audio: { file_id: 'file_2', mime_type: 'audio/mpeg' },
+        }),
+        withSecret(CONTEXT.webhookSecret),
+        CONTEXT,
+      );
+      expect(result).toMatchObject({ message: { audio: { fileRef: 'file_2' } } });
+    });
+
+    it('assumes ogg when Telegram does not say', () => {
+      // Telegram's own voice notes are Opus in Ogg and it often omits the type.
+      const result = telegramAdapter.receive(
+        voiceNote({ voice: { file_id: 'f' } }), withSecret(CONTEXT.webhookSecret), CONTEXT,
+      );
+      expect(result).toMatchObject({ message: { audio: { mimeType: 'audio/ogg' } } });
+    });
+
+    it('declines a recording too large to fetch', () => {
+      const result = telegramAdapter.receive(
+        voiceNote({ voice: { file_id: 'f', file_size: MAX_AUDIO_BYTES + 1 } }),
+        withSecret(CONTEXT.webhookSecret),
+        CONTEXT,
+      );
+      expect(result.kind).toBe('ignored');
+    });
+
+    it('still ignores a message with neither text nor audio', () => {
+      const result = telegramAdapter.receive(
+        delivery({
+          message_id: 7, from: { id: 9, is_bot: false }, chat: { id: 1, type: 'private' },
+        }),
+        withSecret(CONTEXT.webhookSecret),
+        CONTEXT,
+      );
+      expect(result.kind).toBe('ignored');
+    });
+
+    it('resolves the file and fetches it without putting the token in a body', async () => {
+      const calls: string[] = [];
+      const impl = (async (url: string | URL) => {
+        calls.push(String(url));
+        return String(url).includes('getFile')
+          ? new Response(JSON.stringify({ ok: true, result: { file_path: 'voice/f.oga' } }))
+          : new Response(new Uint8Array([1, 2, 3]));
+      }) as unknown as typeof fetch;
+
+      const bytes = await telegramAdapter.fetchAudio?.(
+        '123:ABC', { fileRef: 'file_1', mimeType: 'audio/ogg' }, impl,
+      );
+
+      expect(bytes?.byteLength).toBe(3);
+      // Two hops: Telegram will not serve a file by id, so the path has to be
+      // resolved first and then fetched from a different host.
+      expect(calls[0]).toContain('getFile');
+      expect(calls[1]).toContain('voice/f.oga');
+    });
+
+    it('refuses when Telegram will not say where the file is', async () => {
+      const impl = (async () =>
+        new Response(JSON.stringify({ ok: true, result: {} }))) as unknown as typeof fetch;
+
+      await expect(
+        telegramAdapter.fetchAudio?.('123:ABC', { fileRef: 'f', mimeType: 'audio/ogg' }, impl),
+      ).rejects.toThrow(/where that file is/);
+    });
+
+    it('re-checks the size on getFile, where it is first reliable', async () => {
+      // The size on the update can be absent entirely, so the only trustworthy
+      // check is the one after resolution.
+      const impl = (async () => new Response(JSON.stringify({
+        ok: true, result: { file_path: 'v/f.oga', file_size: MAX_AUDIO_BYTES + 1 },
+      }))) as unknown as typeof fetch;
+
+      await expect(
+        telegramAdapter.fetchAudio?.('123:ABC', { fileRef: 'f', mimeType: 'audio/ogg' }, impl),
+      ).rejects.toThrow(/too large/);
+    });
+  });
+
   it('sends a long answer as several messages, each inside the limit', async () => {
+
     const { impl, calls } = stubFetch({ ok: true, result: {} });
     const long = `${'a'.repeat(5000)}\n${'b'.repeat(200)}`;
     await telegramAdapter.send('123:ABC', '-100', long, impl);

@@ -12,6 +12,23 @@
  * platform's payload into `InboundMessage` and an answer back into an API call.
  */
 
+/**
+ * A voice note or audio file, not yet fetched.
+ *
+ * A reference rather than bytes, because deciding what to do with it is not
+ * the adapter's business: whether this deployment can transcribe at all, and
+ * whether the file is small enough to be worth downloading, are questions the
+ * caller answers. An adapter that eagerly downloaded would spend bandwidth on
+ * every voice note even where transcription is switched off.
+ */
+export interface InboundAudio {
+  /** Opaque to everything but the adapter that produced it. */
+  readonly fileRef: string;
+  readonly mimeType: string;
+  readonly durationSeconds?: number;
+  readonly sizeBytes?: number;
+}
+
 /** A message that arrived from a person, normalised. */
 export interface InboundMessage {
   /** The platform's own id for the chat, opaque to us. Routes the reply. */
@@ -20,7 +37,13 @@ export interface InboundMessage {
   readonly senderRef: string;
   /** How the sender is known on that platform, for display only. */
   readonly senderLabel: string;
+  /**
+   * What was typed. Empty when the message was purely a voice note — the text
+   * then comes from transcribing `audio`.
+   */
   readonly text: string;
+  /** Present when the message was spoken rather than typed. */
+  readonly audio?: InboundAudio;
   /** The platform's message id, used to drop a redelivery. */
   readonly messageRef: string;
 }
@@ -105,6 +128,20 @@ export interface ChannelAdapter {
 
   /** Sends a reply. Throws on refusal — a silent failure is a lost answer. */
   send(token: string, chatRef: string, text: string, fetchImpl?: typeof fetch): Promise<void>;
+
+  /**
+   * Fetches audio the adapter previously referenced.
+   *
+   * Absent on a platform whose files we cannot reach. Bytes, not a URL: on
+   * every one of these platforms the file sits behind the bot's own
+   * credentials, so a URL would either be useless to the transcription vendor
+   * or would require handing that vendor the bot token.
+   */
+  fetchAudio?(
+    token: string,
+    audio: InboundAudio,
+    fetchImpl?: typeof fetch,
+  ): Promise<ArrayBuffer>;
 }
 
 /** A platform refused. Carries its own words, which are usually the diagnosis. */

@@ -192,3 +192,42 @@ export interface EmbeddingResult {
   readonly dimensions: number;
   readonly usage: Usage;
 }
+
+/**
+ * Turning spoken audio into text.
+ *
+ * Bytes rather than a URL, because the file usually sits behind the chat
+ * platform's own authentication and the transcription vendor has no way to
+ * fetch it. Handing over bytes we already hold is also the only version where
+ * a token never has to be shared with a third party to let it read the file.
+ */
+export interface TranscriptionRequest {
+  readonly modelId: string;
+  /**
+   * An ArrayBuffer rather than a Uint8Array.
+   *
+   * It is what `Response.arrayBuffer()` hands back, which is how every caller
+   * here obtains the audio, and it is what a Blob or File accepts without a
+   * view-offset copy in between.
+   */
+  readonly audio: ArrayBuffer;
+  readonly mimeType: string;
+  /** Some vendors infer the codec from the extension and nothing else. */
+  readonly fileName: string;
+  /**
+   * A HINT, never a constraint.
+   *
+   * Passed when the platform told us which language the sender uses. Forcing a
+   * language turns a bilingual speaker's message into confident nonsense, so
+   * this only ever nudges.
+   */
+  readonly languageHint?: string;
+}
+
+export interface TranscriptionResult {
+  readonly text: string;
+  /** What the vendor decided it heard, when it says. */
+  readonly language?: string;
+  readonly durationSeconds?: number;
+  readonly usage?: Usage;
+}

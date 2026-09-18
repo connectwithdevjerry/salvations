@@ -9,7 +9,10 @@
  * header. That is the whole of its authentication — there is no signature — so
  * the secret is generated per connection and compared in constant time.
  */
-import { ChannelError, type ChannelAdapter, type ChannelIdentity, type InboundResult } from './port';
+import {
+  ChannelError,
+  type ChannelAdapter, type ChannelIdentity, type InboundAudio, type InboundResult,
+} from './port';
 import { timingSafeEqualString } from './compare';
 
 const API = 'https://api.telegram.org';
@@ -23,12 +26,34 @@ export const SECRET_HEADER = 'x-telegram-bot-api-secret-token';
 interface TelegramResponse<T> { ok: boolean; result?: T; description?: string }
 
 interface TelegramUser { id: number; is_bot: boolean; first_name?: string; username?: string }
+interface TelegramVoice {
+  file_id: string;
+  mime_type?: string;
+  duration?: number;
+  file_size?: number;
+}
+
 interface TelegramMessage {
   message_id: number;
   from?: TelegramUser;
   chat?: { id: number; type: string };
   text?: string;
+  /** A held-to-talk recording. */
+  voice?: TelegramVoice;
+  /** A sent audio file — same handling, different field. */
+  audio?: TelegramVoice;
+  /** A caption on a voice note or file, which is text the person typed. */
+  caption?: string;
 }
+
+/**
+ * How large a voice note may be before we decline to fetch it.
+ *
+ * Telegram's own ceiling for a bot download is 20MB, and a voice note that
+ * large is not a message anybody is waiting on a quick answer to. Declining
+ * with a sentence beats spending the bandwidth and then timing out.
+ */
+export const MAX_AUDIO_BYTES = 20 * 1024 * 1024;
 
 async function call<T>(
   token: string,
@@ -134,9 +159,28 @@ export const telegramAdapter: ChannelAdapter = {
     // A bot answering a bot is how a loop starts, and Telegram will happily
     // deliver one bot's message to another.
     if (message.from.is_bot) return { kind: 'ignored', reason: 'Sent by a bot.' };
-    if (message.text === undefined || message.text.trim() === '') {
-      return { kind: 'ignored', reason: 'No text — a photo, sticker or voice note.' };
+    // A held-to-talk recording and a sent audio file are the same thing to us.
+    const spoken = message.voice ?? message.audio;
+    // A caption is text the person typed alongside it, and it is still what
+    // they said.
+    const typed = message.text ?? message.caption ?? '';
+
+    if (typed.trim() === '' && spoken === undefined) {
+      return { kind: 'ignored', reason: 'Nothing to read — a photo, sticker or file.' };
     }
+
+    if (spoken !== undefined && (spoken.file_size ?? 0) > MAX_AUDIO_BYTES) {
+      return { kind: 'ignored', reason: 'The recording is too large to fetch.' };
+    }
+
+    const audio: InboundAudio | undefined = spoken === undefined ? undefined : {
+      fileRef: spoken.file_id,
+      // Telegram's own voice notes are Opus in an Ogg container and it does not
+      // always say so.
+      mimeType: spoken.mime_type ?? 'audio/ogg',
+      ...(spoken.duration !== undefined ? { durationSeconds: spoken.duration } : {}),
+      ...(spoken.file_size !== undefined ? { sizeBytes: spoken.file_size } : {}),
+    };
 
     return {
       kind: 'message',
@@ -146,7 +190,8 @@ export const telegramAdapter: ChannelAdapter = {
         senderLabel: message.from.username !== undefined
           ? `@${message.from.username}`
           : message.from.first_name ?? String(message.from.id),
-        text: message.text,
+        text: typed,
+        ...(audio !== undefined ? { audio } : {}),
         messageRef: String(message.message_id),
       },
     };
@@ -156,5 +201,35 @@ export const telegramAdapter: ChannelAdapter = {
     for (const part of chunk(text)) {
       await call(token, 'sendMessage', { chat_id: chatRef, text: part }, fetchImpl);
     }
+  },
+
+  /**
+   * Fetches a voice note.
+   *
+   * Two round trips, because Telegram will not serve a file by id: getFile
+   * resolves the id to a path, and the path is then fetched from a different
+   * host with the token IN THE URL. That is Telegram's design, not a choice
+   * here, and it is why this URL is never logged.
+   */
+  async fetchAudio(token, audio, fetchImpl = globalThis.fetch): Promise<ArrayBuffer> {
+    const file = await call<{ file_path?: string; file_size?: number }>(
+      token, 'getFile', { file_id: audio.fileRef }, fetchImpl,
+    );
+    if (file.file_path === undefined) {
+      throw new ChannelError('telegram', 'Telegram would not say where that file is.');
+    }
+    // Checked again here: the size on the update can be absent, and getFile is
+    // the first point at which it is reliably known.
+    if ((file.file_size ?? 0) > MAX_AUDIO_BYTES) {
+      throw new ChannelError('telegram', 'That recording is too large to fetch.');
+    }
+
+    const response = await fetchImpl(`${API}/file/bot${token}/${file.file_path}`);
+    if (!response.ok) {
+      throw new ChannelError(
+        'telegram', `Telegram would not serve that file (${response.status}).`, response.status,
+      );
+    }
+    return await response.arrayBuffer();
   },
 };

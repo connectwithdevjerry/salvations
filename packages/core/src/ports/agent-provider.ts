@@ -7,7 +7,7 @@
  */
 import type {
   EmbeddingRequest, EmbeddingResult, GenerationRequest, ModelCapabilities,
-  ProviderEvent, ProviderType, TokenCount,
+  ProviderEvent, ProviderType, TokenCount, TranscriptionRequest, TranscriptionResult,
 } from '../entities/model';
 
 export interface AgentProvider {
@@ -20,6 +20,15 @@ export interface AgentProvider {
 
   countTokens?(req: GenerationRequest): Promise<TokenCount>;
   embed?(req: EmbeddingRequest): Promise<EmbeddingResult>;
+
+  /**
+   * Optional, like the two above, because not every vendor does it.
+   *
+   * Optional rather than a method that throws: a caller can check whether the
+   * capability is there before offering it to somebody, instead of discovering
+   * at the moment of use that this workspace's provider cannot hear.
+   */
+  transcribe?(req: TranscriptionRequest): Promise<TranscriptionResult>;
 }
 
 export interface ProviderCredentials {

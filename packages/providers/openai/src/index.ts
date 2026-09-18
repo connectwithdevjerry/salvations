@@ -9,6 +9,7 @@ import {
   asProviderType,
   type AgentProvider, type GenerationRequest, type ModelCapabilities,
   type ProviderCredentials, type ProviderEvent, type ProviderType,
+  type TranscriptionRequest, type TranscriptionResult,
 } from '@salvations/core';
 import { capabilitiesFor, knownModels } from './capabilities';
 import { StreamDecoder, encodeRequest, mapError } from './translate';
@@ -66,6 +67,32 @@ class OpenAIProvider implements AgentProvider {
     } catch (error) {
       if (signal.aborted) return;
       yield { type: 'error', error: mapError(error) };
+    }
+  }
+
+  /**
+   * Speech to text.
+   *
+   * A dedicated endpoint here, rather than audio pushed through the chat
+   * completion: it returns the transcript and nothing else, which is exactly
+   * what a transcript should be. Asking a chat model to "transcribe this" gets
+   * a transcript wrapped in commentary, or summarised, or answered instead.
+   */
+  async transcribe(request: TranscriptionRequest): Promise<TranscriptionResult> {
+    try {
+      const result = await this.#client.audio.transcriptions.create({
+        // Named, because several vendors — this one included — infer the codec
+        // from the extension rather than the declared media type.
+        file: new File([request.audio], request.fileName, { type: request.mimeType }),
+        model: request.modelId,
+        // A hint only. Forcing a language turns a bilingual speaker's message
+        // into confident nonsense.
+        ...(request.languageHint !== undefined ? { language: request.languageHint } : {}),
+      });
+
+      return { text: result.text };
+    } catch (error) {
+      throw mapError(error);
     }
   }
 }

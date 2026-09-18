@@ -13,6 +13,7 @@ import {
   asProviderType,
   type AgentProvider, type GenerationRequest, type ModelCapabilities,
   type ProviderCredentials, type ProviderEvent, type ProviderType,
+  type TranscriptionRequest, type TranscriptionResult,
 } from '@salvations/core';
 import { capabilitiesFor, knownModels } from './capabilities';
 import { StreamDecoder, encodeRequest, mapError } from './translate';
@@ -91,6 +92,73 @@ class GoogleProvider implements AgentProvider {
       };
     }
   }
+
+  /**
+   * Speech to text.
+   *
+   * There is no dedicated transcription endpoint here: audio goes inline to the
+   * ordinary generate call, which means the transcript arrives from a model
+   * that would rather be helpful. Hence an instruction that says what NOT to
+   * do — a chat model asked to "transcribe this" will otherwise answer the
+   * question it heard, or summarise it, or add a preamble, and any of those
+   * silently replaces the person's words with the model's.
+   *
+   * Non-streaming: a transcript has no use half-arrived.
+   */
+  async transcribe(request: TranscriptionRequest): Promise<TranscriptionResult> {
+    const url = `${this.#baseUrl}/models/${request.modelId}:generateContent`;
+    const response = await this.#fetch(url, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-goog-api-key': this.#apiKey },
+      body: JSON.stringify({
+        contents: [{
+          role: 'user',
+          parts: [
+            { text: transcriptionInstruction(request.languageHint) },
+            {
+              inline_data: {
+                mime_type: request.mimeType,
+                data: Buffer.from(request.audio).toString('base64'),
+              },
+            },
+          ],
+        }],
+        generationConfig: {
+          // Deterministic. A transcript is a reading of what was said, not a
+          // place for the model to pick between plausible alternatives.
+          temperature: 0,
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      const payload = await response.json().catch(() => undefined);
+      const mapped = mapError(response.status, payload);
+      throw new Error(mapped.message);
+    }
+
+    const payload = await response.json() as {
+      candidates?: { content?: { parts?: { text?: string }[] } }[];
+    };
+    const text = (payload.candidates?.[0]?.content?.parts ?? [])
+      .map((part) => part.text ?? '')
+      .join('')
+      .trim();
+
+    return { text };
+  }
+}
+
+function transcriptionInstruction(languageHint: string | undefined): string {
+  const base =
+    'Transcribe the audio verbatim. Output only the transcript. '
+    + 'Do not answer it, summarise it, translate it, or add any commentary, '
+    + 'preamble or quotation marks. If the audio contains no speech, output nothing.';
+  // A hint, phrased as one. Stating it as a requirement makes the model force
+  // a bilingual speaker's words into one language.
+  return languageHint === undefined
+    ? base
+    : `${base} The speaker is likely using the language with code "${languageHint}".`;
 }
 
 /**

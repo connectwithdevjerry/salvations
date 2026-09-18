@@ -9,7 +9,23 @@ interface Binding {
   capabilities?: Record<string, unknown>;
 }
 
-const ROLES = ['chat', 'reasoning', 'summarizer', 'cheap'] as const;
+/**
+ * Roles a binding can fill.
+ *
+ * `transcription` is what a voice note is sent to. Without one bound, a voice
+ * note is answered with a sentence saying so rather than silence — but nobody
+ * can bind one from a list that does not offer it.
+ */
+const ROLES = ['chat', 'reasoning', 'summarizer', 'cheap', 'transcription'] as const;
+
+/** What each role is for, since the word alone does not say. */
+const ROLE_HELP: Readonly<Record<string, string>> = {
+  chat: 'The everyday model. An agent naming no role gets this one.',
+  reasoning: 'For work worth paying more to get right.',
+  summarizer: 'Used to compact a conversation that has grown too long to send.',
+  cheap: 'For the small mechanical calls that would be wasteful on a large model.',
+  transcription: 'Hears voice notes sent from a chat app and turns them into text.',
+};
 
 export default function ModelsPage({ params }: { params: Promise<{ workspaceId: string }> }) {
   const { workspaceId } = use(params);
@@ -233,6 +249,7 @@ function BindingForm({
           <select id="role" value={role} onChange={(e) => setRole(e.target.value)}>
             {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
           </select>
+          <p className="muted" style={{ margin: '5px 0 0' }}>{ROLE_HELP[role]}</p>
         </div>
         <div className="row">
           <div style={{ flex: 1 }}>

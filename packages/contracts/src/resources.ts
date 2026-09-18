@@ -125,6 +125,10 @@ export const createScheduleSchema = z.object({
   prompt: boundedText(4_000),
 });
 
+export const modelRoleSchema = z.enum([
+  'chat', 'reasoning', 'summarizer', 'cheap', 'embedding', 'transcription',
+]);
+
 export const createProviderConfigSchema = z.object({
   providerType: z.string().trim().min(1).max(40),
   name: nameSchema,
@@ -146,7 +150,7 @@ export const createModelBindingSchema = z.object({
   providerConfigId: idSchema,
   modelId: z.string().trim().min(1).max(120),
   name: nameSchema,
-  role: z.enum(['chat', 'reasoning', 'summarizer', 'cheap', 'embedding']).default('chat'),
+  role: modelRoleSchema.default('chat'),
   fallbackBindingId: idSchema.optional(),
   maxOutputTokens: z.number().int().min(1).max(200_000).optional(),
   rates: z.object({
@@ -176,7 +180,6 @@ export const capabilityBindingSchema = z.object({
   tools: z.array(z.string().max(120)).max(200).default([]),
 });
 
-export const modelRoleSchema = z.enum(['chat', 'reasoning', 'summarizer', 'cheap', 'embedding']);
 
 /**
  * An agent names a ROLE, not a model binding.

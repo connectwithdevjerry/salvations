@@ -15,7 +15,12 @@ describe('api keys', () => {
     const minted = mintApiKey();
     expect(minted.keyHash).toHaveLength(64);
     expect(minted.keyHash).not.toContain(minted.key.expose());
-    expect(JSON.stringify(minted)).not.toContain(minted.key.expose().split('_')[3]);
+    // The secret is taken positionally, not by splitting on '_': it is
+    // base64url and may itself contain one, in which case the split gives an
+    // empty string and the assertion passes or fails on the dice.
+    const secret = minted.key.expose().slice(`sk_live_${minted.prefix}_`.length);
+    expect(secret.length).toBeGreaterThan(20);
+    expect(JSON.stringify(minted)).not.toContain(secret);
   });
 
   it('verifies a correct key and rejects a wrong one', () => {

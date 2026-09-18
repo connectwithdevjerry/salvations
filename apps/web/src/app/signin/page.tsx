@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { SIGN_IN_ERRORS, auth } from '@/lib/client/auth';
@@ -22,8 +22,23 @@ function CallbackError() {
   return message === undefined ? null : <p className="error">{message}</p>;
 }
 
+/**
+ * Where to go after signing in.
+ *
+ * Only a path on this site. An absolute URL here would make the sign-in page
+ * an open redirect — a link that looks like ours and lands somewhere else.
+ * Read from the location after mount rather than through `useSearchParams`,
+ * which would opt the whole page out of static rendering.
+ */
+function readReturnTo(search: string): string {
+  const raw = new URLSearchParams(search).get('returnTo') ?? '';
+  return raw.startsWith('/') && !raw.startsWith('//') ? raw : '/go';
+}
+
 export default function SignInPage() {
   const router = useRouter();
+  const [returnTo, setReturnTo] = useState('/go');
+  useEffect(() => { setReturnTo(readReturnTo(window.location.search)); }, []);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string>();
@@ -35,7 +50,7 @@ export default function SignInPage() {
     setError(undefined);
     try {
       await auth.signIn({ email, password });
-      router.push('/go');
+      router.push(returnTo);
     } catch (caught) {
       // The server already refuses to say whether the address exists; repeating
       // its message keeps the client from inventing a more helpful one.
@@ -57,7 +72,7 @@ export default function SignInPage() {
           <CallbackError />
         </Suspense>
 
-        <GoogleButton returnTo="/go" />
+        <GoogleButton returnTo={returnTo} />
 
         <div className="divider"><span>or</span></div>
 

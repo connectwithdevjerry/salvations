@@ -14,3 +14,8 @@ export {
   MAX_RESULTS as KNOWLEDGE_MAX_RESULTS, MAX_READ as KNOWLEDGE_MAX_READ,
   type KnowledgeSource,
 } from './knowledge';
+export {
+  createAssistantServer, SERVER_NAME as ASSISTANT_SERVER, MAX_ASK,
+  type AssistantAnswer, type AssistantSource,
+} from './assistant';
+export { serveOverHttp, type HttpServerFactory } from './http';

@@ -279,7 +279,21 @@ platform exist beside the first three.
       Shown as coming soon rather than as a button that cannot complete
 - [ ] Disconnecting an integration (no delete route yet) and token refresh on expiry sweep
 
-### 1.5.6 Still to decide or build
+### 1.5.6 Every assistant is an MCP server — done
+
+- [x] `/mcp/w/{workspace}/assistants/{assistant}` — created with the assistant, served stateless
+      over streamable HTTP through `packages/servers`, authenticated with our own keys
+- [x] One surface: `ask` (a real run — model, memory, knowledge, every integration, approvals
+      included), `describe`, `recall`, `remember`, `search_knowledge`, `conversations`
+- [x] `assistantSurface()` is the single definition of what an assistant can do; runs, the
+      `capabilities` tool and the server all read it
+- [x] API keys can finally be minted, listed and revoked; scopes are capped at the minter's own
+- [x] Server tab: URL, what it unites, keys shown once, client config
+- [ ] Re-export integration tools raw on the assistant's server — needs somewhere for an
+      approval to wait outside a run; `ask` is the honest route until then
+- [ ] OAuth on the assistant's server, for clients that cannot send a bearer header
+
+### 1.5.7 Still to decide or build
 
 ---
 

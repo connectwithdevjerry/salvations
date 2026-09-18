@@ -37,6 +37,7 @@ import { VercelBackgroundTrigger } from './trigger';
 import { firstPartyBindings } from './first-party';
 import { firstPartyOpener } from './first-party-open';
 import { mcpConnectOptions } from './mcp-auth';
+import { assistantSurface } from './assistant-surface';
 import { discoverAndRecord } from './discovery-service';
 // Re-exported so existing importers keep working; they live in their own module
 // because the services the container composes need them too, and importing the
@@ -209,10 +210,6 @@ export async function openSession(
   const principal = run.principal as Principal;
   const userId = principal.type === 'user' ? String(principal.userId) : undefined;
 
-  const capabilities = new CapabilityRepository(
-    new ScopedDb(database, workspaceId).collection<McpCapabilityDoc>('mcpCapabilities'),
-  );
-
   /*
    * Opens a first-party server for THIS run.
    *
@@ -236,12 +233,8 @@ export async function openSession(
       ...(userId !== undefined ? { createdBy: userId } : {}),
       // Reported by the `capabilities` tool, so an agent asked what it can do
       // looks rather than guesses.
-      availableTools: async () => {
-        const live = await capabilities.listForScope([`workspace`, ...(userId === undefined ? [] : [`user:${userId}`])]);
-        return live
-          .filter((cap) => cap.approval.state === 'approved')
-          .map((cap) => ({ name: cap.canonicalName, description: cap.description ?? '' }));
-      },
+      availableTools: async () =>
+        (await assistantSurface(database, workspaceId, String(run.agentId), userId)).tools,
     }),
   };
 

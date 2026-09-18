@@ -73,6 +73,14 @@ export const GET = workspaceRoute('workspace:read', async (ctx) => {
         : {}),
     },
     {
+      // Exists the moment the agent does: the URL is derived from it.
+      id: 'server',
+      label: 'Its own MCP server',
+      ready: agent !== undefined,
+      required: true,
+      ...(agent === undefined ? { waitingFor: 'Comes with the agent.' } : {}),
+    },
+    {
       // Exists the moment the agent does: memory is per agent and needs no setup.
       id: 'memory',
       label: 'Memory',

@@ -6,9 +6,9 @@
  * hash would be both slow and a timing oracle.
  */
 import type { Db } from 'mongodb';
-import { verifyApiKey, parseApiKey } from '@salvations/crypto';
-import type { Permission } from '@salvations/core';
-import { PlatformDb } from '../scoped';
+import { mintApiKey, verifyApiKey, parseApiKey, type Secret } from '@salvations/crypto';
+import { IdPrefix, newId, type Permission } from '@salvations/core';
+import { PlatformDb, ScopedDb } from '../scoped';
 import type { TenantDoc } from '../documents';
 
 export interface ApiKeyDoc extends TenantDoc {
@@ -110,6 +110,51 @@ export class ApiKeyRepository {
         scopes: doc.scopes as Permission[],
       },
     };
+  }
+
+  /**
+   * Mints a key for a workspace.
+   *
+   * The secret is returned exactly once, wrapped; only its hash and a lookup
+   * prefix are stored. Scopes are whatever the caller decided — checking
+   * them against the minter's own grants is the route's job, since only it
+   * knows who is asking.
+   */
+  async mint(
+    workspaceId: string,
+    input: { name: string; scopes: readonly Permission[]; createdBy: string; expiresAt?: Date },
+  ): Promise<{ readonly id: string; readonly key: Secret; readonly prefix: string }> {
+    const minted = mintApiKey('live');
+    const doc = await new ScopedDb(this.#db, workspaceId).collection<ApiKeyDoc>('apiKeys').insertOne({
+      _id: newId(IdPrefix.apiKey),
+      name: input.name,
+      prefix: minted.prefix,
+      keyHash: minted.keyHash,
+      scopes: [...input.scopes],
+      createdBy: input.createdBy,
+      createdAt: new Date(),
+      lastUsedAt: null,
+      expiresAt: input.expiresAt ?? null,
+      revokedAt: null,
+    } as never);
+    return { id: doc._id, key: minted.key, prefix: minted.prefix };
+  }
+
+  /** Metadata only, live keys first. The hash never leaves this module. */
+  async listForWorkspace(workspaceId: string): Promise<Omit<ApiKeyDoc, 'keyHash'>[]> {
+    return new ScopedDb(this.#db, workspaceId).collection<ApiKeyDoc>('apiKeys').find(
+      {} as never,
+      { sort: { createdAt: -1 }, projection: { keyHash: 0 } },
+    ) as never;
+  }
+
+  /** Revoking keeps the row: who minted what, and when it stopped, is audit. */
+  async revoke(workspaceId: string, apiKeyId: string): Promise<boolean> {
+    const result = await new ScopedDb(this.#db, workspaceId).collection<ApiKeyDoc>('apiKeys').updateOne(
+      { _id: apiKeyId, revokedAt: null } as never,
+      { $set: { revokedAt: new Date() } } as never,
+    );
+    return result.modifiedCount === 1;
   }
 
   /** Written out of band: a usage timestamp must never slow or fail a request. */

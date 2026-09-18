@@ -14,6 +14,8 @@ export const GET = workspaceRoute<{ agentId: string }>('agents:read', async (ctx
     id: agent._id,
     name: agent.name,
     description: agent.description === '' ? undefined : agent.description,
+    category: agent.category ?? undefined,
+    color: agent.color ?? undefined,
     systemPrompt: agent.currentVersion.systemPrompt,
     modelRole: agent.currentVersion.modelRole,
     capabilityBindings: agent.currentVersion.capabilityBindings,
@@ -55,6 +57,15 @@ export const PATCH = workspaceRoute<{ agentId: string }>('agents:write', async (
     `Edited by ${actorIdOf(ctx.principal)}`,
     actorIdOf(ctx.principal),
   );
+
+  // Name, description, group and colour are not versioned: none of it reaches
+  // a run, and a rename should not archive anything.
+  await repo.setMeta(params.agentId, {
+    name: input.name,
+    description: input.description ?? '',
+    category: input.category === undefined || input.category === '' ? null : input.category,
+    ...(input.color !== undefined ? { color: input.color } : {}),
+  });
 
   const updated = await repo.findById(params.agentId);
   return ok({ id: params.agentId, version: updated?.currentVersion.version ?? 0 });

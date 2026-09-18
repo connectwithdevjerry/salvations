@@ -57,6 +57,8 @@ export class AgentRepository {
     slug: string;
     name: string;
     description?: string;
+    category?: string | undefined;
+    color?: string | undefined;
     systemPrompt: string;
     modelRole: string;
     createdBy: string;
@@ -67,6 +69,8 @@ export class AgentRepository {
       slug: input.slug,
       name: input.name,
       description: input.description ?? '',
+      category: input.category ?? null,
+      color: input.color ?? null,
       currentVersion: {
         versionId: newId(IdPrefix.agentVersion),
         version: 1,
@@ -80,6 +84,29 @@ export class AgentRepository {
       createdAt: now,
       updatedAt: now,
     } as never);
+  }
+
+  /**
+   * Changes what an agent is CALLED and where it is FILED.
+   *
+   * Not a version: none of this reaches a run. A rename or a move between
+   * categories must not archive a version and invalidate nothing.
+   */
+  async setMeta(
+    agentId: string,
+    meta: { name?: string; description?: string; category?: string | null; color?: string | null },
+  ): Promise<void> {
+    const set: Record<string, unknown> = { updatedAt: new Date() };
+    if (meta.name !== undefined) set['name'] = meta.name;
+    if (meta.description !== undefined) set['description'] = meta.description;
+    if (meta.category !== undefined) set['category'] = meta.category;
+    if (meta.color !== undefined) set['color'] = meta.color;
+    await this.#agents.updateOne({ _id: agentId } as never, { $set: set } as never);
+  }
+
+  /** How many live agents there are — the avatar palette rotates on it. */
+  async count(): Promise<number> {
+    return this.#agents.countDocuments({ isArchived: false } as never);
   }
 
   /**

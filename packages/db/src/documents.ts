@@ -60,6 +60,10 @@ export interface AgentDoc extends TenantDoc {
   slug: string;
   name: string;
   description?: string;
+  /** How the person groups their assistants in the list. Free text; null is "Assistants". */
+  category?: string | null;
+  /** The avatar tint, a hex colour. Assigned at creation, changeable. */
+  color?: string | null;
   currentVersion: {
     versionId: string;
     version: number;

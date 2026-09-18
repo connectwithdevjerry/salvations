@@ -142,13 +142,21 @@ function AgentStep({
   onError: (message: string) => void;
 }) {
   const [name, setName] = useState(DEFAULT_AGENT_NAME);
+  const [category, setCategory] = useState('');
+  const [groups, setGroups] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    void api.get<{ items: { category?: string }[] }>(`${ws(workspaceId)}/agents`)
+      .then((r) => setGroups([...new Set(r.items.map((a) => a.category).filter((c): c is string => c !== undefined))]))
+      .catch(() => undefined);
+  }, [workspaceId]);
 
   return (
     <>
       <Head
         icon="agent"
-        title="Create your agent"
+        title="Create your assistant"
         lede="Give it a name. It starts with sensible instructions, and with everything this workspace already knows."
       />
 
@@ -164,7 +172,7 @@ function AgentStep({
             // integration, including ones connected later.
             const created = await api.post<{ id: string; name: string }>(
               `${ws(workspaceId)}/agents`,
-              { name, modelRole: 'chat' },
+              { name, modelRole: 'chat', ...(category.trim() !== '' ? { category: category.trim() } : {}) },
             );
             onDone({ id: created.id, name });
           } catch (caught) {
@@ -182,6 +190,21 @@ function AgentStep({
           <p className="muted" style={{ margin: '6px 0 0' }}>
             What you will call it. Next you will connect the Telegram bot it answers on, and
             the model it thinks with.
+          </p>
+        </div>
+
+        <div>
+          <label htmlFor="agentGroup">Group <span className="faint">(optional)</span></label>
+          <input
+            id="agentGroup" list="wizard-groups" placeholder="Assistants"
+            value={category} onChange={(e) => setCategory(e.target.value)}
+          />
+          <datalist id="wizard-groups">
+            {groups.map((g) => <option key={g} value={g} />)}
+          </datalist>
+          <p className="muted" style={{ margin: '6px 0 0' }}>
+            Where it sits in the list — a client, a team, a project. Leave it blank to keep
+            things simple.
           </p>
         </div>
 
@@ -866,7 +889,7 @@ function ReadyStep({ workspaceId, agentId, agentName }: { workspaceId: string; a
         <button
           className="primary lg"
           type="button"
-          onClick={() => router.push(`/w/${workspaceId}/chat`)}
+          onClick={() => router.push(`/w/${workspaceId}/agents/${agentId}`)}
         >
           {ready ? `Talk to ${agentName}` : 'Go anyway'} <Icon name="arrow" size={16} />
         </button>

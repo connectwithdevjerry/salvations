@@ -208,6 +208,9 @@ export const capabilityBindingSchema = z.object({
 export const upsertAgentSchema = z.object({
   name: nameSchema,
   description: descriptionSchema.optional(),
+  /** Which group the assistant is listed under. Empty means the default group. */
+  category: z.string().trim().max(40).optional(),
+  color: z.string().regex(/^#[0-9a-fA-F]{6}$/, 'A hex colour like #3b82f6').optional(),
   /**
    * Optional. Absent, the boundary applies the default.
    *

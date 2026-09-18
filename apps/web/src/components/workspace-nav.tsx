@@ -19,9 +19,11 @@ interface Workspace { id: string; name: string; role: string }
  * built teaches people that half the product is broken.
  */
 const SECTIONS: readonly { href: string; label: string; icon: IconName }[] = [
-  { href: 'chat', label: 'Chat', icon: 'chat' },
+  // Chat lives under each assistant, so there is no separate Chat entry: an
+  // entry that opened a list of conversations from every assistant at once
+  // was a second, worse way to reach the same thing.
+  { href: 'agents', label: 'Assistants', icon: 'agent' },
   { href: 'knowledge', label: 'Knowledge', icon: 'book' },
-  { href: 'agents', label: 'Agents', icon: 'agent' },
   { href: 'approvals', label: 'Approvals', icon: 'shield' },
   { href: 'schedule', label: 'Schedule', icon: 'clock' },
   { href: 'activity', label: 'Activity', icon: 'pulse' },

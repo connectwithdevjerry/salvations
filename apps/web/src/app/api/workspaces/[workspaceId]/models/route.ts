@@ -23,6 +23,10 @@ export const GET = workspaceRoute('providers:read', async (ctx) => {
       providerType: byId.get(b.providerConfigId)?.providerType ?? 'unknown',
       modelId: b.modelId,
       role: b.role,
+      // Reported so the page can show which bindings have no rate. A binding
+      // costed at zero cannot exceed any budget, which looks like a budget
+      // working right up until the invoice arrives.
+      cost: { inputPerMTok: b.cost?.inputPerMTok ?? 0, outputPerMTok: b.cost?.outputPerMTok ?? 0 },
       fallbackBindingId: b.fallbackBindingId ?? undefined,
       // Read from the adapter and cached, never typed in by a person.
       capabilities: b.capabilities ?? undefined,

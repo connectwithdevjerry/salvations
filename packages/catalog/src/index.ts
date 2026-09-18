@@ -10,6 +10,7 @@ export { CHANNELS } from './channels';
 export { INTEGRATIONS } from './integrations';
 export * from './plans';
 export * from './prompt';
+export * from './models';
 
 import type { CatalogEntry } from './types';
 import { CHANNELS } from './channels';

@@ -3,7 +3,20 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "exports": { ".": "./src/index.ts", "./*": "./src/*.ts" },
-  "scripts": { "typecheck": "tsc --noEmit -p tsconfig.json" },
-  "dependencies": { "@salvations/core": "workspace:*", "@salvations/provider-anthropic": "workspace:*", "@salvations/provider-openai": "workspace:*", "@salvations/provider-google": "workspace:*" }
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@salvations/core": "workspace:*",
+    "@salvations/provider-anthropic": "workspace:*",
+    "@salvations/provider-openai": "workspace:*",
+    "@salvations/provider-google": "workspace:*"
+  },
+  "devDependencies": {
+    "@salvations/catalog": "workspace:*"
+  }
 }

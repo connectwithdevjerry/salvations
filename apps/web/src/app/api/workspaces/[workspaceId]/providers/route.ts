@@ -7,6 +7,7 @@
  */
 import { createProviderConfigSchema } from '@salvations/contracts';
 import { KNOWN_PROVIDER_TYPES, isKnownProviderType } from '@salvations/provider-registry';
+import { CATALOG_MODELS, defaultBindings } from '@salvations/catalog';
 import { errorResponse, jsonBody, ok } from '@/lib/http';
 import { workspaceRoute } from '@/lib/route';
 import { actorIdOf } from '@/lib/principal';
@@ -26,6 +27,11 @@ export const GET = workspaceRoute('providers:read', async (ctx) => {
     // it did not invent. A name typed into a form is a configuration error
     // hours later; a name absent from this list cannot be chosen at all.
     knownTypes: KNOWN_PROVIDER_TYPES.map(String),
+    // The models this deployment can actually offer, with rates where one could
+    // be stated. The UI picks from these rather than asking somebody to type a
+    // model id — an unrecognised one still runs, on a fallback profile, and
+    // truncates conversations for no visible reason.
+    models: CATALOG_MODELS,
     items: items.map((p) => ({
       id: p._id,
       providerType: p.providerType,
@@ -72,5 +78,45 @@ export const POST = workspaceRoute('providers:write', async (ctx) => {
     createdAt: new Date(),
   });
 
-  return ok({ id: provider._id, providerType: provider.providerType, name: input.name }, 201);
+  /*
+   * Bind the suggested roles straight away.
+   *
+   * Connecting a key should leave a workspace able to run, not facing three
+   * more forms. Only roles nothing is bound to yet: a second provider must not
+   * silently take the chat role from the one already answering.
+   */
+  const existing = await ctx.repos.models.list();
+  const taken = new Set(existing.filter((b) => b.enabled).map((b) => b.role));
+  const created: string[] = [];
+
+  for (const suggestion of defaultBindings(input.providerType)) {
+    if (taken.has(suggestion.role)) continue;
+    await ctx.repos.models.createBinding({
+      providerConfigId: provider._id,
+      modelId: suggestion.model.id,
+      displayName: suggestion.model.displayName,
+      role: suggestion.role,
+      params: {},
+      capabilities: null,
+      capabilitiesFetchedAt: null,
+      cost: {
+        // Zero when the catalogue could not state a rate honestly. That shows
+        // on the models page as "rate not set", which is the truth — and better
+        // than a guess, which would enforce a budget against a number nobody
+        // chose and looks correct while doing it.
+        inputPerMTok: suggestion.model.rates?.inputPerMTok ?? 0,
+        outputPerMTok: suggestion.model.rates?.outputPerMTok ?? 0,
+      },
+      fallbackBindingId: null,
+      enabled: true,
+    });
+    created.push(suggestion.role);
+  }
+
+  return ok({
+    id: provider._id,
+    providerType: provider.providerType,
+    name: input.name,
+    boundRoles: created,
+  }, 201);
 });

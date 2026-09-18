@@ -275,6 +275,10 @@ importers:
       '@salvations/provider-openai':
         specifier: workspace:*
         version: link:../openai
+    devDependencies:
+      '@salvations/catalog':
+        specifier: workspace:*
+        version: link:../../catalog
 
   packages/providers/testkit:
     dependencies:

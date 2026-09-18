@@ -2,10 +2,12 @@
 
 import { use, useCallback, useEffect, useState } from 'react';
 import { api, ws } from '@/lib/client/api';
+import { rateHasExpired, type CatalogModel } from '@salvations/catalog';
 
 interface Provider { id: string; providerType: string; name: string; keyHint: string }
 interface Binding {
   id: string; name: string; providerType: string; modelId: string; role: string;
+  cost: { inputPerMTok: number; outputPerMTok: number };
   capabilities?: Record<string, unknown>;
 }
 
@@ -33,14 +35,20 @@ export default function ModelsPage({ params }: { params: Promise<{ workspaceId: 
   // Which vendors this deployment has adapters for. Served by the registry so
   // the form cannot offer a type the boundary will then reject.
   const [knownTypes, setKnownTypes] = useState<string[]>([]);
+  // Served by the registry, so the form offers only models an adapter can
+  // actually describe.
+  const [models, setModels] = useState<CatalogModel[]>([]);
   const [bindings, setBindings] = useState<Binding[]>([]);
   const [error, setError] = useState<string>();
 
   const reload = useCallback(() => {
-    void api.get<{ items: Provider[]; knownTypes: string[] }>(`${ws(workspaceId)}/providers`)
+    void api.get<{ items: Provider[]; knownTypes: string[]; models: CatalogModel[] }>(
+      `${ws(workspaceId)}/providers`,
+    )
       .then((r) => {
         setProviders(r.items);
         setKnownTypes(r.knownTypes);
+        setModels(r.models);
       }).catch(() => undefined);
     void api.get<{ items: Binding[] }>(`${ws(workspaceId)}/models`)
       .then((r) => setBindings(r.items)).catch(() => undefined);
@@ -87,6 +95,7 @@ export default function ModelsPage({ params }: { params: Promise<{ workspaceId: 
         <BindingForm
           workspaceId={workspaceId}
           providers={providers}
+          models={models}
           onDone={reload}
           onError={setError}
         />
@@ -94,7 +103,9 @@ export default function ModelsPage({ params }: { params: Promise<{ workspaceId: 
 
       {bindings.length > 0 && (
         <table>
-          <thead><tr><th>Binding</th><th>Model</th><th>Role</th><th>Tools</th></tr></thead>
+          <thead>
+            <tr><th>Binding</th><th>Model</th><th>Role</th><th>Rate</th><th>Tools</th></tr>
+          </thead>
           <tbody>
             {bindings.map((binding) => {
               const tools = binding.capabilities?.['tools'] as { supported?: boolean } | undefined;
@@ -103,6 +114,17 @@ export default function ModelsPage({ params }: { params: Promise<{ workspaceId: 
                   <td>{binding.name}</td>
                   <td className="mono">{binding.providerType}/{binding.modelId}</td>
                   <td><span className="badge">{binding.role}</span></td>
+                  <td>
+                    {binding.cost.inputPerMTok === 0 && binding.cost.outputPerMTok === 0 ? (
+                      // A binding costed at zero cannot exceed any budget, which
+                      // looks like a budget working right up until the invoice.
+                      <span className="badge warn">no rate set</span>
+                    ) : (
+                      <span className="mono muted">
+                        ${binding.cost.inputPerMTok} / ${binding.cost.outputPerMTok}
+                      </span>
+                    )}
+                  </td>
                   <td className="muted">
                     {/* Read from the adapter, never typed in by a person. */}
                     {tools === undefined ? 'not yet described'
@@ -185,20 +207,40 @@ function ProviderForm({
 }
 
 function BindingForm({
-  workspaceId, providers, onDone, onError,
+  workspaceId, providers, models, onDone, onError,
 }: {
   workspaceId: string;
   providers: Provider[];
+  models: CatalogModel[];
   onDone: () => void;
   onError: (message: string) => void;
 }) {
   const [providerConfigId, setProviderConfigId] = useState(providers[0]?.id ?? '');
   const [modelId, setModelId] = useState('');
-  const [name, setName] = useState('');
   const [role, setRole] = useState<string>('chat');
-  const [inputRate, setInputRate] = useState('3');
-  const [outputRate, setOutputRate] = useState('15');
+  const [inputRate, setInputRate] = useState('');
+  const [outputRate, setOutputRate] = useState('');
   const [busy, setBusy] = useState(false);
+
+  // Only models belonging to the selected provider's vendor.
+  const provider = providers.find((p) => p.id === providerConfigId);
+  const available = models.filter((m) => m.providerType === provider?.providerType);
+  const chosen = available.find((m) => m.id === modelId);
+
+  /*
+   * Picking a model fills in its rate.
+   *
+   * Editable afterwards, because the catalogue's number carries a date and
+   * prices move. Left EMPTY when the catalogue has no rate — an empty field
+   * that must be filled is honest, where a prefilled guess would enforce a
+   * budget against a number nobody chose.
+   */
+  function pick(id: string) {
+    setModelId(id);
+    const model = available.find((m) => m.id === id);
+    setInputRate(model?.rates === undefined ? '' : String(model.rates.inputPerMTok));
+    setOutputRate(model?.rates === undefined ? '' : String(model.rates.outputPerMTok));
+  }
 
   return (
     <div className="card">
@@ -211,11 +253,16 @@ function BindingForm({
           setBusy(true);
           try {
             await api.post(`${ws(workspaceId)}/models`, {
-              providerConfigId, modelId, name, role,
+              providerConfigId,
+              modelId,
+              // The display name comes from the catalogue rather than being
+              // asked for: it is the vendor's name for the model, and nobody
+              // has a better one.
+              name: chosen?.displayName ?? modelId,
+              role,
               rates: { inputPerMTok: Number(inputRate), outputPerMTok: Number(outputRate) },
             });
             setModelId('');
-            setName('');
             onDone();
           } catch (caught) {
             onError(caught instanceof Error ? caught.message : 'Could not add that binding.');
@@ -234,15 +281,23 @@ function BindingForm({
           </select>
         </div>
         <div>
-          <label htmlFor="modelId">Model id</label>
-          <input
-            id="modelId" required placeholder="claude-…"
-            value={modelId} onChange={(e) => setModelId(e.target.value)}
-          />
-        </div>
-        <div>
-          <label htmlFor="bindingName">Display name</label>
-          <input id="bindingName" required value={name} onChange={(e) => setName(e.target.value)} />
+          <label htmlFor="modelId">Model</label>
+          <select id="modelId" required value={modelId} onChange={(e) => pick(e.target.value)}>
+            <option value="">Choose a model…</option>
+            {available.map((model) => (
+              <option key={model.id} value={model.id}>{model.displayName}</option>
+            ))}
+          </select>
+          {chosen !== undefined && (
+            <p className="muted" style={{ margin: '5px 0 0' }}>
+              {chosen.summary} <span className="mono">{chosen.id}</span>
+            </p>
+          )}
+          {available.length === 0 && (
+            <p className="muted" style={{ margin: '5px 0 0' }}>
+              No models are catalogued for this provider in this build.
+            </p>
+          )}
         </div>
         <div>
           <label htmlFor="role">Role</label>
@@ -269,8 +324,26 @@ function BindingForm({
         </div>
         <p className="muted" style={{ margin: 0 }}>
           Rates are what budgets are enforced against, so a run stops on real cost rather than a
-          token guess.
+          token guess.{' '}
+          {chosen?.rates !== undefined && (
+            <>
+              Filled in from our catalogue, checked on {chosen.rates.checkedOn} — confirm against
+              your provider&apos;s current pricing.
+            </>
+          )}
+          {chosen !== undefined && chosen.rates === undefined && (
+            <>
+              We do not have a rate for this model, so you will need to enter one. A guess here
+              would enforce a budget against a number nobody chose.
+            </>
+          )}
         </p>
+        {chosen?.rates !== undefined && rateHasExpired(chosen.rates) && (
+          <p className="error" style={{ margin: 0 }}>
+            That was an introductory rate and it ended on {chosen.rates.introductoryUntil}.
+            Check the current price before relying on a budget set against it.
+          </p>
+        )}
         <button className="primary" type="submit" disabled={busy}>Add binding</button>
       </form>
     </div>

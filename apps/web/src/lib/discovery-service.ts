@@ -15,13 +15,14 @@
  * the server's own TTL, and reconcile writes nothing when the hash matches.
  */
 import {
-  CapabilityDiscovery, userScope, workspaceScope,
+  AuthorizationRequiredError, CapabilityDiscovery, userScope, workspaceScope,
   type ConnectOptions, type McpServerDefinition,
 } from '@salvations/mcp';
 import { CapabilityRepository, ScopedDb } from '@salvations/db';
 import type { Database, McpCapabilityDoc, McpServerBindingDoc } from '@salvations/db';
 import { mcpManager } from './singletons';
 import { isFirstParty } from './first-party';
+import { mcpConnectOptions } from './mcp-auth';
 
 export interface DiscoverInput {
   readonly database: Database;
@@ -47,6 +48,11 @@ export interface DiscoverOutcome {
   readonly removed: number;
   readonly total: number;
   readonly error?: string;
+  /**
+   * Present when the server wants consent before it will say what it offers.
+   * Not an error: the binding sits in `pending_auth` until the person returns.
+   */
+  readonly authorizationUrl?: string;
 }
 
 export async function discoverAndRecord(input: DiscoverInput): Promise<DiscoverOutcome> {
@@ -64,7 +70,12 @@ export async function discoverAndRecord(input: DiscoverInput): Promise<DiscoverO
       input.definition,
       scope,
       {
-        ...(input.connect !== undefined ? { connect: input.connect } : {}),
+        // A remote server gets a provider for its scope, so a stored token is
+        // presented and a missing one becomes a consent URL rather than a 401.
+        connect: {
+          ...mcpConnectOptions(input.database, input.workspaceId),
+          ...(input.connect ?? {}),
+        },
         ...(input.refresh === true ? { refresh: true } : {}),
       },
     );
@@ -88,6 +99,11 @@ export async function discoverAndRecord(input: DiscoverInput): Promise<DiscoverO
       total: outcome.capabilities.length,
     };
   } catch (caught) {
+    if (caught instanceof AuthorizationRequiredError) {
+      await awaitingConsent(input);
+      return { added: 0, changed: 0, removed: 0, total: 0, authorizationUrl: caught.authorizationUrl };
+    }
+
     const message = caught instanceof Error ? caught.message : String(caught);
     // Recorded on the binding rather than thrown. A server that is down must
     // show as unreachable on the integrations page, not fail the install that
@@ -142,6 +158,19 @@ async function noteFailure(input: DiscoverInput, message: string): Promise<void>
         $inc: { 'health.consecutiveFailures': 1 },
         $set: { 'health.lastError': message.slice(0, 500), status: 'error' },
       } as never,
+    )
+    .catch(() => undefined);
+}
+
+/** Consent wanted: the binding waits, and does not count as failing. */
+async function awaitingConsent(input: DiscoverInput): Promise<void> {
+  if (isFirstParty(input.definition.bindingId)) return;
+
+  await new ScopedDb(input.database, input.workspaceId)
+    .collection<McpServerBindingDoc>('mcpServerBindings')
+    .updateOne(
+      { _id: input.definition.bindingId } as never,
+      { $set: { status: 'pending_auth', 'health.lastError': null } } as never,
     )
     .catch(() => undefined);
 }

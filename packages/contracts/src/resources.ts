@@ -239,16 +239,21 @@ export const agentSchema = z.object({
 // ─── MCP ────────────────────────────────────────────────────────────────────
 
 export const installMcpServerSchema = z.object({
-  /** Either a catalog entry, or a URL for a server the workspace knows about. */
+  /** A catalogue integration (its id), a platform server, or a URL. One of the three. */
+  catalogId: z.string().trim().min(1).max(40).optional(),
   mcpServerId: idSchema.optional(),
   url: z.string().url().optional(),
   name: nameSchema.optional(),
-  alias: aliasSchema,
+  /** Defaults to the catalogue id when connecting a catalogue integration. */
+  alias: aliasSchema.optional(),
   perUserAuth: z.boolean().default(false),
   headers: z.record(z.string(), z.string()).optional(),
 }).refine(
-  (value) => value.mcpServerId !== undefined || value.url !== undefined,
-  { message: 'Name a catalog server or supply a URL.' },
+  (value) => value.catalogId !== undefined || value.mcpServerId !== undefined || value.url !== undefined,
+  { message: 'Name a catalogue integration, a catalog server, or supply a URL.' },
+).refine(
+  (value) => value.catalogId !== undefined || value.alias !== undefined,
+  { message: 'An alias is required unless connecting a catalogue integration.' },
 );
 
 export const mcpBindingSchema = z.object({

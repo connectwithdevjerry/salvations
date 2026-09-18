@@ -21,6 +21,11 @@ const GOOGLE_WORKSPACE: CatalogEntry = {
   setup: 'oauth',
   accent: '#EA4335',
   docs: 'https://developers.google.com/workspace',
+  // Google publishes no hosted MCP server for Workspace, and the direct
+  // adapter — Gmail, Calendar, Drive over their REST APIs with our own OAuth —
+  // is not written yet. Offered as unavailable rather than as a button that
+  // cannot complete.
+  unavailable: 'Coming soon. Google Workspace needs its own adapter; the Google sign-in you may already use is separate from this.',
   steps: [
     {
       title: 'Review what you are granting',
@@ -51,6 +56,7 @@ const GITHUB: CatalogEntry = {
   setup: 'mcp',
   accent: '#8b949e',
   docs: 'https://github.com/github/github-mcp-server',
+  mcp: { url: 'https://api.githubcopilot.com/mcp/' },
   steps: [
     {
       title: 'Connect over MCP',
@@ -72,6 +78,7 @@ const NOTION: CatalogEntry = {
   setup: 'mcp',
   accent: '#e6e6e6',
   docs: 'https://developers.notion.com/docs/mcp',
+  mcp: { url: 'https://mcp.notion.com/mcp' },
   steps: [
     {
       title: 'Connect over MCP',
@@ -93,6 +100,7 @@ const LINEAR: CatalogEntry = {
   setup: 'mcp',
   accent: '#5E6AD2',
   docs: 'https://linear.app/docs/mcp',
+  mcp: { url: 'https://mcp.linear.app/mcp' },
   steps: [
     {
       title: 'Connect over MCP',

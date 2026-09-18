@@ -1,6 +1,7 @@
 'use client';
 
 import { use, useCallback, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { CHANNELS, INTEGRATIONS, searchCatalog, type CatalogEntry } from '@salvations/catalog';
 import { api, ws } from '@/lib/client/api';
 import { CapabilityReview } from '@/components/capability-review';
@@ -46,7 +47,9 @@ export default function IntegrationsPage({
   params: Promise<{ workspaceId: string }>;
 }) {
   const { workspaceId } = use(params);
+  const router = useRouter();
   const [channels, setChannels] = useState<Channel[]>([]);
+  const [notice, setNotice] = useState<string>();
   const [bindings, setBindings] = useState<Binding[]>([]);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [models, setModels] = useState<ModelBinding[]>([]);
@@ -59,6 +62,25 @@ export default function IntegrationsPage({
     void api.get<{ items: Binding[] }>(`${ws(workspaceId)}/mcp/bindings`)
       .then((r) => setBindings(r.items)).catch(() => undefined);
   }, [workspaceId]);
+
+  /*
+   * The OAuth callback lands here with the outcome in the query string. Read
+   * once from the location rather than through useSearchParams, which would
+   * opt the page out of static rendering; then cleared, so a reload does not
+   * announce it twice.
+   */
+  useEffect(() => {
+    const query = new URLSearchParams(window.location.search);
+    const connected = query.get('connected');
+    const failed = query.get('error');
+    if (connected !== null) {
+      const tools = Number(query.get('tools') ?? '0');
+      setNotice(`${connected} is connected — ${tools} ${tools === 1 ? 'tool' : 'tools'} available to your agents.`);
+    } else if (failed !== null) {
+      setError(CALLBACK_ERRORS[failed] ?? 'That connection could not be completed.');
+    }
+    if (connected !== null || failed !== null) router.replace(`/w/${workspaceId}/mcp`);
+  }, [router, workspaceId]);
 
   useEffect(() => {
     reload();
@@ -99,6 +121,12 @@ export default function IntegrationsPage({
       </header>
 
       {error !== undefined && <p className="error" style={{ marginBottom: 12 }}>{error}</p>}
+      {notice !== undefined && (
+        <div className="note" style={{ marginBottom: 12 }}>
+          <span className="tile" aria-hidden><Icon name="check" size={16} /></span>
+          <span>{notice}</span>
+        </div>
+      )}
 
       <Section
         title="Channels"
@@ -136,30 +164,36 @@ export default function IntegrationsPage({
 
       <Section
         title="Integrations"
-        lede="External services your agents can use. Each is reached through an MCP server."
+        lede="Services your agents work in. Connect one and every tool it offers is theirs."
         entries={INTEGRATIONS}
         placeholder="Search integrations…"
-        render={(entry) => (
-          <Entry
-            key={entry.id}
-            entry={entry}
-            badge="Not connected"
-            tone=""
-            open={openId === entry.id}
-            onToggle={() => setOpenId(openId === entry.id ? undefined : entry.id)}
-          >
-            <p className="muted" style={{ marginTop: 0 }}>
-              Connecting grants your agent these permissions:
-            </p>
-            <ScopeList scopes={entry.scopes} />
-            <SetupSteps steps={entry.steps} />
-            <p className="muted" style={{ marginBottom: 0 }}>
-              {entry.name} is reached through its MCP server. Add it under “Any MCP server”
-              below with the URL from {' '}
-              <a href={entry.docs} target="_blank" rel="noreferrer noopener">its documentation</a>.
-            </p>
-          </Entry>
-        )}
+        render={(entry) => {
+          const binding = bindings.find((b) => b.alias === entry.id);
+          const status = entry.unavailable !== undefined
+            ? { label: 'Coming soon', tone: '' }
+            : binding === undefined
+              ? { label: 'Not connected', tone: '' }
+              : STATUS[binding.status] ?? { label: binding.status, tone: '' };
+
+          return (
+            <Entry
+              key={entry.id}
+              entry={entry}
+              badge={status.label}
+              tone={status.tone}
+              open={openId === entry.id}
+              onToggle={() => setOpenId(openId === entry.id ? undefined : entry.id)}
+            >
+              <IntegrationSetup
+                workspaceId={workspaceId}
+                entry={entry}
+                binding={binding}
+                onChanged={reload}
+                onError={setError}
+              />
+            </Entry>
+          );
+        }}
       />
 
       <div className="section-head">
@@ -253,6 +287,126 @@ function Entry({
       </button>
       {open && <div className="option-body">{children}</div>}
     </div>
+  );
+}
+
+/* ----------------------------------------------------- integration setup -- */
+
+/** What the callback's error codes mean, in words somebody can act on. */
+const CALLBACK_ERRORS: Readonly<Record<string, string>> = {
+  mcp_no_pending: 'That consent took too long, or started in another browser. Connect again.',
+  mcp_denied: 'You cancelled on the vendor\'s consent screen. Nothing was connected.',
+  mcp_incomplete: 'The vendor sent an incomplete response. Connect again.',
+  mcp_signed_out: 'You were signed out before consent finished. Sign in and connect again.',
+  mcp_wrong_person: 'That consent belongs to a different account than the one signed in here.',
+  mcp_gone: 'That connection no longer exists.',
+  mcp_failed: 'The vendor rejected the consent. Connect again; if it repeats, the server may have changed.',
+  mcp_discovery: 'Consent worked, but the server would not list its tools. Try authorising again.',
+};
+
+/**
+ * Sends the person to the vendor's consent screen.
+ *
+ * A full navigation, not a fetch: the consent screen is on the vendor's site,
+ * and the callback cookie the authorize route sets is what lets the return
+ * trip find this connection.
+ */
+async function authorise(workspaceId: string, bindingId: string): Promise<'connected' | 'sent'> {
+  const result = await api.post<{ status: string; authorizationUrl?: string }>(
+    `${ws(workspaceId)}/mcp/bindings/${bindingId}/authorize`,
+  );
+  if (result.authorizationUrl === undefined) return 'connected';
+  window.location.assign(result.authorizationUrl);
+  return 'sent';
+}
+
+function IntegrationSetup({
+  workspaceId, entry, binding, onChanged, onError,
+}: {
+  workspaceId: string;
+  entry: CatalogEntry;
+  binding: Binding | undefined;
+  onChanged: () => void;
+  onError: (message: string | undefined) => void;
+}) {
+  const [busy, setBusy] = useState(false);
+
+  if (entry.unavailable !== undefined) {
+    return (
+      <>
+        <p className="muted" style={{ marginTop: 0 }}>Connecting will grant your agents these permissions:</p>
+        <ScopeList scopes={entry.scopes} />
+        <div className="note" style={{ marginTop: 14 }}>
+          <span className="tile" aria-hidden><Icon name="clock" size={16} /></span>
+          <span>{entry.unavailable}</span>
+        </div>
+      </>
+    );
+  }
+
+  if (binding !== undefined && binding.status === 'connected') {
+    return (
+      <div className="stack" style={{ gap: 10 }}>
+        <div className="note">
+          <span className="tile" aria-hidden><Icon name="check" size={16} /></span>
+          <span>
+            <strong>Connected.</strong> {binding.capabilityCount}{' '}
+            {binding.capabilityCount === 1 ? 'tool' : 'tools'} available to every agent.
+          </span>
+        </div>
+        <ScopeList scopes={entry.scopes} />
+        <div>
+          <button
+            type="button" disabled={busy}
+            onClick={async () => {
+              setBusy(true);
+              onError(undefined);
+              try {
+                if (await authorise(workspaceId, binding.id) === 'connected') onChanged();
+              } catch (caught) {
+                onError(caught instanceof Error ? caught.message : 'Could not re-authorise.');
+                setBusy(false);
+              }
+            }}
+          >
+            Re-authorise
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <p className="muted" style={{ marginTop: 0 }}>Connecting grants your agents these permissions:</p>
+      <ScopeList scopes={entry.scopes} />
+      <SetupSteps steps={entry.steps} />
+      {binding?.health.lastError !== undefined && (
+        <p className="error" style={{ margin: '10px 0 0' }}>{binding.health.lastError}</p>
+      )}
+      <div style={{ marginTop: 14 }}>
+        <button
+          className="primary" type="button" disabled={busy}
+          onClick={async () => {
+            setBusy(true);
+            onError(undefined);
+            try {
+              const id = binding?.id ?? (await api.post<{ id: string }>(
+                `${ws(workspaceId)}/mcp/bindings`, { catalogId: entry.id },
+              )).id;
+              if (await authorise(workspaceId, id) === 'connected') onChanged();
+            } catch (caught) {
+              onError(caught instanceof Error ? caught.message : `Could not connect ${entry.name}.`);
+              setBusy(false);
+              onChanged();
+            }
+          }}
+        >
+          {busy ? 'Opening consent…' : binding === undefined ? `Connect ${entry.name}` : 'Authorise'}
+          {' '}<Icon name="arrow" size={14} />
+        </button>
+      </div>
+    </>
   );
 }
 
@@ -579,6 +733,19 @@ function McpServers({
                     Waiting for authorisation. This host identifies itself with a public client
                     metadata document, so there is no per-server secret to manage.
                   </span>
+                  <button
+                    className="primary" type="button" style={{ marginLeft: 'auto', flex: 'none' }}
+                    onClick={async () => {
+                      onError(undefined);
+                      try {
+                        if (await authorise(workspaceId, binding.id) === 'connected') onChanged();
+                      } catch (caught) {
+                        onError(caught instanceof Error ? caught.message : 'Could not start authorisation.');
+                      }
+                    }}
+                  >
+                    Authorise
+                  </button>
                 </div>
               )}
               {binding.health.lastError !== undefined && (

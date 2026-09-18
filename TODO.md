@@ -251,7 +251,24 @@ platform exist beside the first three.
 - [ ] PDF and Word ingestion — needs a parser that is its own project; refused honestly for now
 - [ ] Atlas `$vectorSearch` once a workspace outgrows the in-process candidate caps
 
-### 1.5.5 Still to decide or build
+### 1.5.5 Integrations over OAuth — done
+
+- [x] 🔒 `oauthConnections` credential store: token sets and PKCE verifiers envelope-encrypted like
+      API keys; one row per connection scope; the callback finds a pending consent by its state
+- [x] `/api/mcp/callback` + per-binding `authorize` route; the callback cookie names the
+      connection, the state check proves the response belongs to it
+- [x] A server wanting consent surfaces as `AuthorizationRequiredError` with the URL, never as
+      "down"; runs present the stored token per scope
+- [x] Catalogue integrations (GitHub, Notion, Linear) carry the vendor's MCP URL; one Connect
+      button; `verified` tier; every tool available to every agent on return
+- [ ] Vendor MCP URLs were written from memory — the docs hosts are blocked from this session.
+      Verify `api.githubcopilot.com/mcp/`, `mcp.notion.com/mcp`, `mcp.linear.app/mcp` against each
+      vendor's page before relying on them
+- [ ] Google Workspace: needs its own adapter (Gmail/Calendar/Drive over REST with our OAuth).
+      Shown as coming soon rather than as a button that cannot complete
+- [ ] Disconnecting an integration (no delete route yet) and token refresh on expiry sweep
+
+### 1.5.6 Still to decide or build
 
 ---
 

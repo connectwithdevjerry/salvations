@@ -7,7 +7,10 @@
  * server capability view, which is per-process and short-lived — exactly right
  * for a serverless invocation.
  */
-import { Client, StreamableHTTPClientTransport, type OAuthClientProvider } from '@modelcontextprotocol/client';
+import {
+  Client, StreamableHTTPClientTransport, UnauthorizedError, type OAuthClientProvider,
+} from '@modelcontextprotocol/client';
+import { AuthorizationRequiredError, ScopedOAuthProvider } from './oauth';
 import {
   CircuitBreaker, CircuitOpenError, Semaphore, type CircuitState,
 } from './resilience';
@@ -53,6 +56,17 @@ export type InProcessOpener = (
 
 export interface ConnectOptions {
   readonly authProvider?: OAuthClientProvider;
+  /**
+   * A provider per connection, for a host that serves many.
+   *
+   * `authProvider` is one provider for one connection; the gateway opens many
+   * bindings for many scopes with one options object, and each needs the
+   * provider filed under ITS scope. Consulted only when `authProvider` is absent.
+   */
+  readonly authProviderFor?: (
+    definition: McpServerDefinition,
+    scope: ConnectionScopeKey,
+  ) => OAuthClientProvider | undefined;
   readonly fetch?: typeof globalThis.fetch;
   readonly maxConcurrent?: number;
   /** Required to connect an `in_process` binding, ignored otherwise. */
@@ -107,15 +121,38 @@ export async function createClient(
     },
   });
 
+  const authProvider = options.authProvider ?? options.authProviderFor?.(definition, scope);
+
   const transport = new StreamableHTTPClientTransport(new URL(definition.url), {
-    ...(options.authProvider !== undefined ? { authProvider: options.authProvider } : {}),
+    ...(authProvider !== undefined ? { authProvider } : {}),
     ...(options.fetch !== undefined ? { fetch: options.fetch as never } : {}),
     ...(definition.headers !== undefined
       ? { requestInit: { headers: { ...definition.headers } } }
       : {}),
   });
 
-  await client.connect(transport);
+  try {
+    await client.connect(transport);
+  } catch (caught) {
+    /*
+     * A server that wants consent is a normal outcome, not a failure.
+     *
+     * With a provider attached, the SDK answers a 401 by running the flow
+     * itself: discovers the authorization server, records where the person
+     * must be sent, and then throws its own UnauthorizedError. Translated here
+     * into ours, carrying that URL, so nothing above this package needs the
+     * SDK's error type to know the difference between "down" and "sign in".
+     */
+    if (
+      UnauthorizedError.isInstance(caught)
+      && authProvider instanceof ScopedOAuthProvider
+      && authProvider.authorizationUrl !== undefined
+    ) {
+      await transport.close().catch(() => undefined);
+      throw new AuthorizationRequiredError(authProvider.scopeKey, authProvider.authorizationUrl);
+    }
+    throw caught;
+  }
 
   return {
     client,

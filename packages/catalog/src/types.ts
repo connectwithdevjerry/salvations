@@ -62,6 +62,14 @@ export interface CatalogEntry {
   readonly unavailable?: string;
   /** Where to read more. Always the vendor's own documentation. */
   readonly docs?: string;
+  /**
+   * The vendor's hosted MCP server, for an `mcp` entry.
+   *
+   * Connecting installs a binding to this URL and sends the person to the
+   * vendor's own consent screen; every tool the server offers is then the
+   * agents' to call. Hard-coded so nobody has to find the URL in a docs page.
+   */
+  readonly mcp?: { readonly url: string };
 }
 
 export const isChannel = (entry: CatalogEntry): boolean => entry.kind === 'channel';

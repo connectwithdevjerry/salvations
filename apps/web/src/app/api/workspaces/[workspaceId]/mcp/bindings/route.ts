@@ -1,12 +1,19 @@
 /**
  * Installed MCP servers.
  *
- * Installing one does NOT make its tools callable. Discovery runs, capabilities
- * land as `pending`, and somebody has to approve them — which is the whole
- * point of the approval flow, and why this route returns a binding in
- * `pending_auth` rather than pretending it is ready.
+ * Installing a pasted URL does NOT make its tools callable. Discovery runs,
+ * capabilities land as `pending`, and somebody has to approve them — which is
+ * the whole point of the approval flow.
+ *
+ * A CATALOGUE integration is different: the URL is the vendor's own, hard-coded
+ * here rather than found in a docs page, the person authorises it on the
+ * vendor's consent screen, and every tool it offers is then the agents' to
+ * call. That is what "connect GitHub" means to somebody; a second approval
+ * queue after the consent screen would be the same question asked twice.
+ * What a tool may DO is still policy's decision at call time.
  */
 import { installMcpServerSchema } from '@salvations/contracts';
+import { catalogEntry } from '@salvations/catalog';
 import { ScopedDb, type McpServerBindingDoc } from '@salvations/db';
 import { IdPrefix, newId } from '@salvations/core';
 import { errorResponse, jsonBody, ok } from '@/lib/http';
@@ -57,30 +64,48 @@ export const POST = workspaceRoute('mcp:install', async (ctx) => {
   const scoped = new ScopedDb(ctx.database, ctx.workspaceId);
   const bindings = scoped.collection<McpServerBindingDoc>('mcpServerBindings');
 
+  const entry = input.catalogId === undefined ? undefined : catalogEntry(input.catalogId);
+  if (input.catalogId !== undefined && (entry === undefined || entry.kind !== 'integration')) {
+    return errorResponse(422, 'validation_failed', `There is no "${input.catalogId}" integration.`);
+  }
+  if (entry !== undefined && entry.unavailable !== undefined) {
+    return errorResponse(422, 'unsupported', `${entry.name} cannot be connected yet. ${entry.unavailable}`);
+  }
+  if (entry !== undefined && entry.mcp === undefined) {
+    return errorResponse(422, 'unsupported', `${entry.name} is not reached over MCP.`);
+  }
+
+  const alias = input.alias ?? entry?.id ?? '';
+  const url = entry?.mcp?.url ?? input.url;
+
   // The alias is unique per workspace, which is what makes canonical tool names
   // collision-free by construction rather than by a runtime check.
-  const clash = await bindings.findOne({ alias: input.alias } as never);
+  const clash = await bindings.findOne({ alias } as never);
   if (clash !== null) {
     return errorResponse(
       409, 'conflict',
-      `The alias "${input.alias}" is already used by another server in this workspace.`,
+      entry !== undefined
+        ? `${entry.name} is already connected.`
+        : `The alias "${alias}" is already used by another server in this workspace.`,
     );
   }
 
   let mcpServerId = input.mcpServerId;
   if (mcpServerId === undefined) {
-    // A workspace-owned server: recorded as untrusted, because nobody has
-    // vetted it and a trust tier is a claim somebody has to make.
     mcpServerId = newId(IdPrefix.mcpServer);
     await ctx.database.collection('mcpServers').insertOne({
       _id: mcpServerId,
       workspaceId: ctx.workspaceId,
-      slug: input.alias,
-      name: input.name ?? input.alias,
+      slug: alias,
+      name: entry?.name ?? input.name ?? alias,
       transport: 'streamable_http',
-      url: input.url,
+      url,
       authMode: 'oauth2',
-      trustTier: 'untrusted',
+      // A catalogue server is the vendor's own, at a URL we wrote down; a
+      // pasted one is untrusted because nobody has vetted it and a trust tier
+      // is a claim somebody has to make.
+      trustTier: entry !== undefined ? 'verified' : 'untrusted',
+      ...(entry !== undefined ? { catalogId: entry.id } : {}),
       createdAt: new Date(),
     } as never);
   }
@@ -88,7 +113,7 @@ export const POST = workspaceRoute('mcp:install', async (ctx) => {
   const binding = await bindings.insertOne({
     _id: newId(IdPrefix.mcpBinding),
     mcpServerId,
-    alias: input.alias,
+    alias,
     credentialId: null,
     perUserAuth: input.perUserAuth,
     // Nothing is callable yet: consent has not been given and no capability
@@ -105,15 +130,10 @@ export const POST = workspaceRoute('mcp:install', async (ctx) => {
   /*
    * Discover immediately.
    *
-   * This was the missing step. Installing a server used to write the row and
-   * stop, leaving `discovery: null` — so no capability row was ever created,
-   * the approval queue had nothing in it, and nothing the server offered could
-   * ever be called. A server whose tools never appear looks broken, and the
-   * person has no way to tell whether it is their URL, their credentials or us.
-   *
    * It runs inline rather than in the background so its outcome is part of the
-   * answer: a server needing authorisation says so here, and a server that is
-   * simply unreachable says that instead of silently looking installed.
+   * answer: a server wanting consent answers with the URL to send the person
+   * to, and a server that is simply unreachable says that instead of silently
+   * looking installed.
    */
   const discovered = await discoverAndRecord({
     database: ctx.database,
@@ -123,19 +143,22 @@ export const POST = workspaceRoute('mcp:install', async (ctx) => {
       serverId: mcpServerId,
       alias: binding.alias,
       transport: 'streamable_http',
-      ...(input.url !== undefined ? { url: input.url } : {}),
+      ...(url !== undefined ? { url } : {}),
     },
-    // Never for a server somebody just pasted a URL for. Its tool descriptions
-    // reach the model, so a human reads them first.
-    autoApprove: false,
+    // Only for a catalogue server: the vendor's own, connected by the person
+    // on the vendor's consent screen. Never for a pasted URL, whose tool
+    // descriptions reach the model and so get read by a human first.
+    autoApprove: entry !== undefined,
     ...(input.perUserAuth ? { userId: actorIdOf(ctx.principal) } : {}),
   });
 
   return ok({
     id: binding._id,
     alias: binding.alias,
-    status: binding.status,
+    status: discovered.authorizationUrl !== undefined ? 'pending_auth'
+      : discovered.error !== undefined ? 'error' : 'connected',
     capabilities: discovered.total,
+    ...(discovered.authorizationUrl !== undefined ? { authorizationUrl: discovered.authorizationUrl } : {}),
     ...(discovered.error !== undefined ? { discoveryError: discovered.error } : {}),
   }, 201);
 });

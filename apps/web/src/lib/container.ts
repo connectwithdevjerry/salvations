@@ -36,6 +36,7 @@ import { MongoRunStateStore } from './run-store';
 import { VercelBackgroundTrigger } from './trigger';
 import { firstPartyBindings } from './first-party';
 import { firstPartyOpener } from './first-party-open';
+import { mcpConnectOptions } from './mcp-auth';
 import { discoverAndRecord } from './discovery-service';
 // Re-exported so existing importers keep working; they live in their own module
 // because the services the container composes need them too, and importing the
@@ -204,6 +205,10 @@ export async function openSession(
    * id, so no prompt can reach another agent's memory.
    */
   const connectOptions = {
+    // Remote bindings present the token filed under their own scope. A
+    // binding nobody has authorised yet fails that one tool call with the
+    // consent URL, rather than failing the run.
+    ...mcpConnectOptions(database, workspaceId),
     openInProcess: firstPartyOpener({
       database,
       context: {

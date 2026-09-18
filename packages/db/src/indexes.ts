@@ -86,8 +86,11 @@ export const INDEXES: Readonly<Partial<Record<CollectionName, readonly IndexDef[
     { name: 'binding_user_resource', key: { bindingId: 1, userId: 1, resourceIndicator: 1 },
       options: { unique: true },
       rationale: 'per-user token lookup; RFC 8707 resource binds a token to one server' },
+    { name: 'ws_scope', key: { workspaceId: 1, scopeKey: 1 }, options: { unique: true },
+      rationale: 'the credential store reads and writes by scope key' },
+    { name: 'ws_pending_state', key: { workspaceId: 1, 'pending.state': 1 },
+      rationale: 'the OAuth callback finds the authorization its state belongs to' },
     { name: 'ws_user', key: { workspaceId: 1, userId: 1 }, rationale: 'revocation cascade' },
-    { name: 'expiry', key: { expiresAt: 1 }, rationale: 'refresh sweep' },
   ],
 
   providerConfigs: [

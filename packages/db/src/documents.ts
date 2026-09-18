@@ -539,6 +539,50 @@ export interface KnowledgeChunkDoc extends TenantDoc {
   createdAt: Date;
 }
 
+/**
+ * OAuth credentials for one connection scope.
+ *
+ * One row per scope key — a workspace-wide binding, or one person's use of a
+ * per-user binding — holding everything the OAuth client provider stores for
+ * it. Token sets are encrypted under the workspace's envelope exactly as API
+ * keys are: a bearer token for somebody's GitHub is a credential, whatever
+ * the standard that issued it.
+ */
+export interface OAuthConnectionDoc extends TenantDoc {
+  /** `scopeKeyString` of the connection scope. */
+  scopeKey: string;
+  bindingId: string;
+  /** The person, or `workspace` for a shared binding. Part of the unique key. */
+  userId: string;
+  /** Kept null: one row per scope, and the index needs the field. */
+  resourceIndicator?: string | null;
+  /** Registered client information, keyed by issuer. Public, not secret. */
+  clients?: Record<string, unknown> | null;
+  /** Encrypted token sets, keyed by issuer. */
+  tokens?: Record<string, EncryptedBlob> | null;
+  /** Which issuer's tokens the transport should present when it names none. */
+  latestIssuer?: string | null;
+  /** An authorization in flight: state, verifier, where the person was sent. */
+  pending?: {
+    state: string;
+    codeVerifier: EncryptedBlob;
+    authorizationUrl?: string | null;
+    createdAt: number;
+  } | null;
+  discovery?: Record<string, unknown> | null;
+  updatedAt: Date;
+}
+
+/** An envelope-encrypted value, stored inline. */
+export interface EncryptedBlob {
+  ciphertext: Uint8Array;
+  iv: Uint8Array;
+  authTag: Uint8Array;
+  wrappedDek: Uint8Array;
+  keyProvider: string;
+  kekVersion: number;
+}
+
 export interface AuditLogDoc extends TenantDoc {
   actor: { type: string; id?: string | null };
   action: string;

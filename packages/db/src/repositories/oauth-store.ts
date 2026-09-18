@@ -58,7 +58,10 @@ export class MongoOAuthCredentialStore {
 
   async loadClient(scopeKey: string, issuer: string) {
     const row = await this.#rows.findOne({ scopeKey } as never);
-    return (row?.clients?.[issuer] ?? undefined) as never;
+    // The same field name the save used. CI caught the read using the raw
+    // issuer while the write used the escaped one: every registration was
+    // stored and none could ever be found.
+    return (row?.clients?.[field(issuer)] ?? undefined) as never;
   }
 
   async saveClient(scopeKey: string, issuer: string, info: unknown) {

@@ -674,9 +674,8 @@ interface ProvidersResponse {
  * this only knows how to caption one it is told about.
  */
 const PROVIDER_COPY: Readonly<Record<string, { label: string; placeholder: string; keysAt: string }>> = {
-  anthropic: { label: 'Anthropic', placeholder: 'claude-…', keysAt: 'console.anthropic.com' },
+  anthropic: { label: 'Claude', placeholder: 'claude-…', keysAt: 'console.anthropic.com' },
   openai: { label: 'OpenAI', placeholder: 'gpt-…', keysAt: 'platform.openai.com' },
-  google: { label: 'Google', placeholder: 'gemini-…', keysAt: 'aistudio.google.com' },
 };
 
 const copyFor = (type: string) =>
@@ -733,7 +732,7 @@ function ModelStep({
       <Head
         icon="spark"
         title={`How should ${agentName} think?`}
-        lede="Bring a key from any supported provider. It is encrypted before it is stored and never sent back to this browser."
+        lede="Connect your own Claude or OpenAI key. They bill you directly; we never see the invoice. The key is encrypted before it is stored and never sent back to this browser."
       />
 
       <p className="eyebrow">Provider</p>

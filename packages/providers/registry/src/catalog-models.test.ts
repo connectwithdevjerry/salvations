@@ -12,13 +12,11 @@ import { describe, expect, it } from 'vitest';
 import { CATALOG_MODELS, defaultBindings, modelsFor, rateHasExpired } from '@salvations/catalog';
 import { knownModels as anthropicModels } from '@salvations/provider-anthropic';
 import { knownModels as openaiModels } from '@salvations/provider-openai';
-import { knownModels as googleModels } from '@salvations/provider-google';
 import { KNOWN_PROVIDER_TYPES } from './index';
 
 const KNOWN: Readonly<Record<string, () => readonly string[]>> = {
   anthropic: anthropicModels,
   openai: openaiModels,
-  google: googleModels,
 };
 
 describe('the catalogue against the adapters', () => {

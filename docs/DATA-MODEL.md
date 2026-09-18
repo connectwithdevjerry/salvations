@@ -276,7 +276,7 @@ migration. Documented so nobody discovers the cap in production.
 
 ### 3.2 `messages` — append-only, provider-independent
 
-This is the collection that makes requirement 11 (one conversation across three providers) work.
+This is the collection that makes requirement 11 (one conversation across more than one provider) work.
 
 ```jsonc
 {

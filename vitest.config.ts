@@ -23,7 +23,6 @@ export default defineConfig({
       '@salvations/provider-testkit': r('./packages/providers/testkit/src/index.ts'),
       '@salvations/provider-anthropic': r('./packages/providers/anthropic/src/index.ts'),
       '@salvations/provider-openai': r('./packages/providers/openai/src/index.ts'),
-      '@salvations/provider-google': r('./packages/providers/google/src/index.ts'),
       '@salvations/provider-registry': r('./packages/providers/registry/src/index.ts'),
     },
   },

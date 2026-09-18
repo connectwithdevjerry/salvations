@@ -1,10 +1,13 @@
 /**
  * Provider registry.
  *
- * The one place that knows which vendors exist. packages/core deliberately does
- * not: ProviderType is an opaque string there, so adding a vendor never edits
- * the domain, and the architectural invariants keep the runtime free of vendor
- * names.
+ * The one place that knows which vendors exist. Two, by decision: the person
+ * connects their own Claude or OpenAI key. HIVE holds no key of its own and
+ * bills nobody for inference.
+ *
+ * packages/core deliberately does not know them: ProviderType is an opaque
+ * string there, so adding a vendor never edits the domain, and the
+ * architectural invariants keep the runtime free of vendor names.
  */
 import {
   Errors, asProviderType,
@@ -13,12 +16,10 @@ import {
 } from '@salvations/core';
 import { createProvider as createAnthropic, PROVIDER_TYPE as ANTHROPIC } from '@salvations/provider-anthropic';
 import { createProvider as createOpenAI, PROVIDER_TYPE as OPENAI } from '@salvations/provider-openai';
-import { createProvider as createGoogle, PROVIDER_TYPE as GOOGLE } from '@salvations/provider-google';
 
 const FACTORIES: readonly AgentProviderFactory[] = [
   { providerType: ANTHROPIC, create: (c) => createAnthropic(c) },
   { providerType: OPENAI, create: (c) => createOpenAI(c) },
-  { providerType: GOOGLE, create: (c) => createGoogle(c) },
 ];
 
 /**

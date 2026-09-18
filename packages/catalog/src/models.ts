@@ -65,6 +65,11 @@ export interface CatalogModel {
   readonly billedDifferently?: string;
 }
 
+/**
+ * Two vendors, by decision. The person connects their own Claude or OpenAI key;
+ * HIVE holds no key and bills nobody for inference.
+ */
+
 /** Checked against the vendor's own pricing page on this date. */
 const ANTHROPIC_CHECKED = '2026-06-24';
 const OPENAI_CHECKED = '2026-09-18';
@@ -147,46 +152,7 @@ const OPENAI: readonly CatalogModel[] = [
   },
 ];
 
-/*
- * No rates here, deliberately.
- *
- * The published Gemini pricing I could verify covers a different set of models
- * from the ones this adapter has capability profiles for, and a rate carried
- * over from a neighbouring model is a budget enforced against a number nobody
- * chose. The UI asks instead, and says why.
- */
-const GOOGLE: readonly CatalogModel[] = [
-  {
-    id: 'gemini-3.1-pro-preview',
-    providerType: 'google',
-    displayName: 'Gemini 3.1 Pro (preview)',
-    summary: 'Google\'s most capable, in preview.',
-    roles: ['chat', 'reasoning'],
-  },
-  {
-    id: 'gemini-3-pro',
-    providerType: 'google',
-    displayName: 'Gemini 3 Pro',
-    summary: 'The general-purpose Pro model.',
-    roles: ['chat'],
-  },
-  {
-    id: 'gemini-2.5-pro',
-    providerType: 'google',
-    displayName: 'Gemini 2.5 Pro',
-    summary: 'The previous Pro generation.',
-    roles: ['chat'],
-  },
-  {
-    id: 'gemini-2.5-flash',
-    providerType: 'google',
-    displayName: 'Gemini 2.5 Flash',
-    summary: 'Fast and cheap, for bulk work.',
-    roles: ['cheap', 'summarizer'],
-  },
-];
-
-export const CATALOG_MODELS: readonly CatalogModel[] = [...ANTHROPIC, ...OPENAI, ...GOOGLE];
+export const CATALOG_MODELS: readonly CatalogModel[] = [...ANTHROPIC, ...OPENAI];
 
 export const modelsFor = (providerType: string): readonly CatalogModel[] =>
   CATALOG_MODELS.filter((model) => model.providerType === providerType);

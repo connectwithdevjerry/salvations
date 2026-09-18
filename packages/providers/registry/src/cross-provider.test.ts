@@ -9,7 +9,7 @@ import { createRegistry } from './index';
 /**
  * AC-6 — the acceptance test for the entire vendor-independence claim.
  *
- * One conversation is carried across three vendors in sequence. The canonical
+ * One conversation is carried across both vendors in sequence. The canonical
  * history must survive every hop, opaque reasoning state must replay only on
  * the model that produced it, and must be dropped everywhere else — while the
  * TURN that carried it still gets sent.
@@ -21,7 +21,6 @@ import { createRegistry } from './index';
 const VENDORS = {
   anthropic: { model: 'claude-opus-5' },
   openai: { model: 'gpt-5.6-sol' },
-  google: { model: 'gemini-3.1-pro-preview' },
 } as const;
 
 type VendorName = keyof typeof VENDORS;
@@ -43,22 +42,13 @@ const streamFor = (vendor: VendorName) => (): Response => {
       ev('message_stop', {}),
     ]);
   }
-  if (vendor === 'openai') {
-    const c = (p: Record<string, unknown>) =>
-      `data: ${JSON.stringify({ id: 'c', object: 'chat.completion.chunk', created: 1, model: VENDORS.openai.model, ...p })}`;
-    return sse([
-      c({ choices: [{ index: 0, delta: { role: 'assistant', content: 'ack' }, finish_reason: null }] }),
-      c({ choices: [{ index: 0, delta: {}, finish_reason: 'stop' }] }),
-      c({ choices: [], usage: { prompt_tokens: 5, completion_tokens: 2, prompt_tokens_details: { cached_tokens: 0 } } }),
-      'data: [DONE]',
-    ]);
-  }
+  const c = (p: Record<string, unknown>) =>
+    `data: ${JSON.stringify({ id: 'c', object: 'chat.completion.chunk', created: 1, model: VENDORS.openai.model, ...p })}`;
   return sse([
-    `data: ${JSON.stringify({
-      responseId: 'r',
-      candidates: [{ content: { role: 'model', parts: [{ text: 'ack' }] }, finishReason: 'STOP' }],
-      usageMetadata: { promptTokenCount: 5, candidatesTokenCount: 2 },
-    })}`,
+    c({ choices: [{ index: 0, delta: { role: 'assistant', content: 'ack' }, finish_reason: null }] }),
+    c({ choices: [{ index: 0, delta: {}, finish_reason: 'stop' }] }),
+    c({ choices: [], usage: { prompt_tokens: 5, completion_tokens: 2, prompt_tokens_details: { cached_tokens: 0 } } }),
+    'data: [DONE]',
   ]);
 };
 
@@ -73,17 +63,14 @@ function sentReasoningState(vendor: VendorName, request: CapturedRequest | undef
         String((b as { type?: string }).type).includes('thinking')),
     );
   }
-  // Neither other transport carries resumable reasoning state at all.
+  // The other transport carries no resumable reasoning state at all.
   return false;
 }
 
 function turnCount(vendor: VendorName, request: CapturedRequest | undefined): number {
   const body = request?.body as Record<string, unknown> | undefined;
   if (vendor === 'anthropic') return ((body?.['messages'] ?? []) as unknown[]).length;
-  if (vendor === 'openai') {
-    return ((body?.['messages'] ?? []) as { role?: string }[]).filter((m) => m.role !== 'system').length;
-  }
-  return ((body?.['contents'] ?? []) as unknown[]).length;
+  return ((body?.['messages'] ?? []) as { role?: string }[]).filter((m) => m.role !== 'system').length;
 }
 
 const baseRequest = (messages: readonly CanonicalMessage[]): GenerationRequest => ({
@@ -116,13 +103,13 @@ interface StoredMessage extends CanonicalMessage {
   readonly content: readonly ContentBlock[];
 }
 
-describe('AC-6 — one conversation across three vendors', () => {
+describe('AC-6 — one conversation across both vendors', () => {
   it('carries the full history to every vendor in turn', async () => {
     let history: StoredMessage[] = [
       { role: 'user', content: [{ type: 'text', text: 'first' }] },
     ];
 
-    for (const vendor of ['anthropic', 'openai', 'google'] as VendorName[]) {
+    for (const vendor of ['anthropic', 'openai'] as VendorName[]) {
       const { result, request } = await runTurn(vendor, history);
       expect(result.error, `${vendor} errored`).toBeUndefined();
       expect(turnCount(vendor, request), `${vendor} dropped a turn`).toBe(history.length);
@@ -134,9 +121,10 @@ describe('AC-6 — one conversation across three vendors', () => {
       ];
     }
 
-    // Three assistant turns and four user turns, all canonical, regardless of
+    // Two assistant turns and three user turns, all canonical, regardless of
     // which vendor produced each one.
-    expect(history.filter((m) => m.role === 'assistant')).toHaveLength(3);
+    expect(history.filter((m) => m.role === 'assistant')).toHaveLength(2);
+    expect(history.filter((m) => m.role === 'user')).toHaveLength(3);
     expect(history.every((m) => Array.isArray(m.content))).toBe(true);
   });
 
@@ -156,7 +144,7 @@ describe('AC-6 — one conversation across three vendors', () => {
       { role: 'user', content: [{ type: 'text', text: 'second' }] },
     ];
 
-    for (const vendor of ['openai', 'google'] as VendorName[]) {
+    for (const vendor of ['openai'] as VendorName[]) {
       const { request } = await runTurn(vendor, history);
       expect(sentReasoningState(vendor, request), `${vendor} replayed foreign state`).toBe(false);
       // Dropping the artifact must never drop the turn that carried it.
@@ -194,7 +182,8 @@ describe('AC-6 — one conversation across three vendors', () => {
 
     expect(artifactsForModel(artifacts, a as never)).toEqual(artifacts[a]);
     expect(artifactsForModel(artifacts, b as never)).toEqual(artifacts[b]);
-    expect(artifactsForModel(artifacts, providerKey('google', VENDORS.google.model)))
+    // A key for a model nobody in this conversation has used.
+    expect(artifactsForModel(artifacts, providerKey('elsewhere', 'some-other-model')))
       .toBeUndefined();
   });
 
@@ -203,7 +192,7 @@ describe('AC-6 — one conversation across three vendors', () => {
     // whole abstraction exists to provide.
     const history: StoredMessage[] = [{ role: 'user', content: [{ type: 'text', text: 'hi' }] }];
     const texts: string[] = [];
-    for (const vendor of ['anthropic', 'openai', 'google'] as VendorName[]) {
+    for (const vendor of ['anthropic', 'openai'] as VendorName[]) {
       const { result } = await runTurn(vendor, history);
       texts.push(result.text);
       expect(result.finishReason).toBe('end_turn');
@@ -214,7 +203,7 @@ describe('AC-6 — one conversation across three vendors', () => {
 
   it('reports usage from every vendor, so a run can be billed whoever served it', async () => {
     const history: StoredMessage[] = [{ role: 'user', content: [{ type: 'text', text: 'hi' }] }];
-    for (const vendor of ['anthropic', 'openai', 'google'] as VendorName[]) {
+    for (const vendor of ['anthropic', 'openai'] as VendorName[]) {
       const { result } = await runTurn(vendor, history);
       expect(result.usage?.inputTokens, `${vendor} reported no input tokens`).toBeGreaterThan(0);
       expect(result.usage?.outputTokens, `${vendor} reported no output tokens`).toBeGreaterThan(0);

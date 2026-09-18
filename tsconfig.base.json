@@ -42,7 +42,6 @@
       "@salvations/provider-testkit": ["./packages/providers/testkit/src/index.ts"],
       "@salvations/provider-anthropic": ["./packages/providers/anthropic/src/index.ts"],
       "@salvations/provider-openai": ["./packages/providers/openai/src/index.ts"],
-      "@salvations/provider-google": ["./packages/providers/google/src/index.ts"],
       "@salvations/provider-registry": ["./packages/providers/registry/src/index.ts"]
     }
   },

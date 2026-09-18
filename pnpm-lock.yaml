@@ -232,19 +232,6 @@ importers:
         specifier: ^5.0.0
         version: 5.0.0(@types/node@26.5.1)(vite@8.3.0(@types/node@26.5.1)(esbuild@0.28.2)(tsx@4.23.13))
 
-  packages/providers/google:
-    dependencies:
-      '@salvations/core':
-        specifier: workspace:*
-        version: link:../../core
-    devDependencies:
-      '@salvations/provider-testkit':
-        specifier: workspace:*
-        version: link:../testkit
-      vitest:
-        specifier: ^5.0.0
-        version: 5.0.0(@types/node@26.5.1)(vite@8.3.0(@types/node@26.5.1)(esbuild@0.28.2)(tsx@4.23.13))
-
   packages/providers/openai:
     dependencies:
       '@salvations/core':
@@ -269,9 +256,6 @@ importers:
       '@salvations/provider-anthropic':
         specifier: workspace:*
         version: link:../anthropic
-      '@salvations/provider-google':
-        specifier: workspace:*
-        version: link:../google
       '@salvations/provider-openai':
         specifier: workspace:*
         version: link:../openai

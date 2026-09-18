@@ -13,8 +13,7 @@
   "dependencies": {
     "@salvations/core": "workspace:*",
     "@salvations/provider-anthropic": "workspace:*",
-    "@salvations/provider-openai": "workspace:*",
-    "@salvations/provider-google": "workspace:*"
+    "@salvations/provider-openai": "workspace:*"
   },
   "devDependencies": {
     "@salvations/catalog": "workspace:*"

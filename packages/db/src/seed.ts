@@ -2,7 +2,7 @@
  * Development seed.
  *
  * Creates one workspace with an owner, an agent, and provider configurations
- * for three vendors — the minimum needed to exercise AC-6, the cross-vendor
+ * for several vendors — the minimum needed to exercise AC-6, the cross-vendor
  * conversation. Idempotent: re-running updates rather than duplicating, so it
  * is safe to run against a database you have already been poking at.
  *
@@ -23,7 +23,7 @@ const SEED_AGENT_ID = 'agt_seed000000000000000000000000';
 /**
  * Vendor-neutral by construction.
  *
- * The seed needs three DISTINCT providers to make AC-6 meaningful, but naming
+ * The seed needs several DISTINCT providers to make AC-6 meaningful, but naming
  * them here would put vendor names in a package the invariants keep clean, so
  * they are read from the environment with placeholders that fail loudly if
  * someone tries to use the seed as real configuration.

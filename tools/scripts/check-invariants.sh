@@ -87,7 +87,7 @@ check "I5 " "@modelcontextprotocol confined to mcp + servers" \
 
 # I6 — provider SDKs are importable only from their own adapter packages.
 mapfile -t I6_DIRS < <(everywhere_but \
-  packages/providers/anthropic packages/providers/openai packages/providers/google)
+  packages/providers/anthropic packages/providers/openai)
 check "I6 " "provider SDKs confined to adapters" \
   "from ['\"](@anthropic-ai/sdk|openai|@google/genai)['\"]" \
   "${I6_DIRS[@]}"

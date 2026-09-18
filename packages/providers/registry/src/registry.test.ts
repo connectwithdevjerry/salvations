@@ -8,7 +8,7 @@ const creds = { apiKey: 'test-key-not-real' };
 
 describe('provider registry', () => {
   it('knows exactly the adapters that exist', () => {
-    expect(KNOWN_PROVIDER_TYPES.map(String).sort()).toEqual(['anthropic', 'google', 'openai']);
+    expect(KNOWN_PROVIDER_TYPES.map(String).sort()).toEqual(['anthropic', 'openai']);
   });
 
   it('constructs every known provider', () => {

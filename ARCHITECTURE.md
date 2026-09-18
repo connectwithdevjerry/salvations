@@ -390,7 +390,7 @@ teams reach for. Full detail in [docs/MCP-CLIENT.md](docs/MCP-CLIENT.md) §2.
 ## 10. Phase 1 — the vertical slice
 
 **Objective:** one vertical slice in which every abstraction carries real load. The test is not
-feature count; it is that the same conversation can be driven by three providers and reach a real
+feature count; it is that the same conversation can be driven by more than one provider and reach a real
 third-party MCP server through a real permission gate.
 
 ### 10.1 In scope

@@ -3,6 +3,7 @@
 import { use, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { api, ws } from '@/lib/client/api';
+import { Loader } from '@/components/loader';
 
 /** Kept for old links: a conversation now lives under its assistant. */
 export default function ConversationRedirect({
@@ -24,5 +25,5 @@ export default function ConversationRedirect({
       .catch(() => router.replace(`/w/${workspaceId}/agents`));
   }, [router, workspaceId, conversationId]);
 
-  return <div className="centered" />;
+  return <div className="centered"><Loader /></div>;
 }

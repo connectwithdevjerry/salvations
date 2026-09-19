@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api, ws } from '@/lib/client/api';
 import { Icon } from '@/components/ui';
 import { AgentAvatar } from '@/components/agent-avatar';
+import { Loader } from '@/components/loader';
 
 /**
  * Every assistant, in groups.
@@ -83,7 +84,7 @@ export function AgentSidebar({ workspaceId }: { workspaceId: string }) {
       </div>
 
       <div className="agents-side-list">
-        {agents === undefined && <p className="faint" style={{ padding: '8px 12px' }}>Loading…</p>}
+        {agents === undefined && <Loader inline />}
 
         {groups.map((group) => {
           const isCollapsed = collapsed.has(group.name) && query === '';

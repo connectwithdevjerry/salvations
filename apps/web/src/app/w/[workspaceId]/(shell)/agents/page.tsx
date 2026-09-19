@@ -4,6 +4,7 @@ import { use, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { api, ws } from '@/lib/client/api';
 import { Icon, Tile } from '@/components/ui';
+import { Loader } from '@/components/loader';
 
 /**
  * Nothing chosen yet.
@@ -24,7 +25,7 @@ export default function AgentsIndex({ params }: { params: Promise<{ workspaceId:
   }, [workspaceId]);
 
   if (count === undefined) {
-    return <div className="centered"><p className="muted">Loading your assistants…</p></div>;
+    return <div className="centered"><Loader label="Loading your assistants" /></div>;
   }
 
   if (count === 0) {

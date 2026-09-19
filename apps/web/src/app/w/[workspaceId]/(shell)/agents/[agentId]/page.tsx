@@ -13,6 +13,7 @@ import { SpeakTab } from '@/components/speak-tab';
 import { IntegrationsTab } from '@/components/integrations-tab';
 import { ServerTab } from '@/components/server-tab';
 import { ago, type AgentRow } from '@/components/agent-sidebar';
+import { Loader } from '@/components/loader';
 
 /**
  * One assistant.
@@ -91,7 +92,7 @@ export default function AgentPage({
       <div className="centered">
         {error !== undefined
           ? <p className="error">{error}</p>
-          : <p className="muted">Opening this assistant…</p>}
+          : <Loader label="Opening this assistant" />}
       </div>
     );
   }

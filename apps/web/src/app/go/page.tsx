@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { api, ApiError } from '@/lib/client/api';
+import { Loader } from '@/components/loader';
 
 /**
  * Where a signed-in visitor actually belongs.
@@ -38,5 +39,5 @@ export default function Dispatch() {
       });
   }, [router]);
 
-  return <div className="centered" />;
+  return <div className="centered"><Loader label="Opening your workspace" /></div>;
 }

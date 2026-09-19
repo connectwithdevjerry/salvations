@@ -922,3 +922,28 @@ button.square {
 .speak-status { margin: 0; font-size: 13px; }
 .speak-toggle { display: flex; align-items: center; gap: 7px; font-weight: 400; font-size: 12.5px; color: var(--muted); margin: 0; }
 .speak-toggle input { width: auto; }
+
+/* -------------------------------------------------------------- loader --- */
+
+.loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 32px;
+  color: var(--muted);
+}
+.loader.inline { flex-direction: row; justify-content: flex-start; padding: 12px; gap: 10px; }
+.loader-ring {
+  width: 28px;
+  height: 28px;
+  flex: none;
+  border-radius: 999px;
+  border: 3px solid color-mix(in srgb, var(--accent) 22%, transparent);
+  border-top-color: var(--accent);
+  animation: spin 800ms linear infinite;
+}
+.loader.inline .loader-ring { width: 16px; height: 16px; border-width: 2px; }
+.loader-label { font-size: 13.5px; }
+@media (prefers-reduced-motion: reduce) { .loader-ring { animation-duration: 3s; } }

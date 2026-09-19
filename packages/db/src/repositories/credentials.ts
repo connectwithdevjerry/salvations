@@ -12,6 +12,7 @@ import {
 import type { KeyProvider } from '@salvations/core';
 import { IdPrefix, newId } from '@salvations/core';
 import type { CredentialDoc } from '../documents';
+import { bytes } from '../bytes';
 import { ScopedDb, type ScopedCollection } from '../scoped';
 
 /** How long a resolved secret stays readable before it must be resolved again. */
@@ -144,10 +145,10 @@ export class CredentialRepository {
 
   #toPayload(doc: CredentialDoc): EncryptedPayload {
     return {
-      ciphertext: doc.ciphertext,
-      iv: doc.iv,
-      authTag: doc.authTag,
-      wrappedDek: doc.wrappedDek,
+      ciphertext: bytes(doc.ciphertext),
+      iv: bytes(doc.iv),
+      authTag: bytes(doc.authTag),
+      wrappedDek: bytes(doc.wrappedDek),
       keyProvider: doc.keyProvider,
       kekVersion: doc.kekVersion,
     };

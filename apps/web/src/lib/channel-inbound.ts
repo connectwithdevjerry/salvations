@@ -65,9 +65,10 @@ export async function handleDelivery(
   const handle = await db();
   // Unscoped by necessity and by declaration: the URL names a connection, not
   // a tenant. Everything after this line is scoped to the workspace it names.
-  const row = await new PlatformDb(handle.db, 'channel-delivery')
+  const platform = new PlatformDb(handle.db, 'channel-delivery');
+  const row = await platform
     .collection<ChannelDoc>('channels')
-    .findOne({ _id: channelDocId, type } as never);
+    .findOne({ _id: channelDocId, type } as never, { comment: platform.comment });
 
   // The same answer for "no such connection" and "wrong platform": a webhook
   // URL is a public string, and confirming which ids exist helps only someone

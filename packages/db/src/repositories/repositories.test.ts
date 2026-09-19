@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Db } from 'mongodb';
+import { Binary, type Db } from 'mongodb';
 import { ConversationRepository } from './conversations';
 import { RunRepository } from './runs';
 import { CredentialRepository } from './credentials';
@@ -211,8 +211,13 @@ describe('credential storage', () => {
     await write.store({ name: 'k', kind: 'api_key', plaintext: 'sk-secret', createdBy: 'usr_1' });
     const stored = of('credentials.insertOne')[0]?.doc as Record<string, unknown>;
 
+    // Read back the way the driver returns it: binData comes back as bson
+    // Binary, not as the Uint8Array that went in. This is exactly what broke
+    // every Telegram webhook in production ("Wrapped DEK is truncated").
+    const asDriver = Object.fromEntries(Object.entries(stored).map(([k, v]) =>
+      [k, v instanceof Uint8Array ? new Binary(v) : v]));
     const read = new CredentialRepository(
-      recorder({ 'credentials.findOne': stored }).db, WS, keyProvider,
+      recorder({ 'credentials.findOne': asDriver }).db, WS, keyProvider,
     );
     const secret = await read.resolve(stored['_id'] as string);
     expect(secret).toBeInstanceOf(EphemeralSecret);

@@ -19,6 +19,7 @@ import type { Db } from 'mongodb';
 import { EnvelopeCipher } from '@salvations/crypto';
 import type { KeyProvider } from '@salvations/core';
 import type { EncryptedBlob, OAuthConnectionDoc } from '../documents';
+import { bytes } from '../bytes';
 import { ScopedDb } from '../scoped';
 
 /**
@@ -41,9 +42,6 @@ function partsOf(scopeKey: string): { bindingId: string; userId: string } {
   return { bindingId, userId: who.startsWith('user:') ? who.slice('user:'.length) : 'workspace' };
 }
 
-/** Mongo hands Buffers back for binary fields; the cipher wants Uint8Array. */
-const bytes = (value: unknown): Uint8Array =>
-  value instanceof Uint8Array ? value : new Uint8Array((value as { buffer: Uint8Array }).buffer);
 
 export class MongoOAuthCredentialStore {
   readonly #rows;

@@ -288,8 +288,14 @@ h1, h2, h3 { letter-spacing: -0.018em; }
 
 label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 5px; }
 
+/*
+ * Fields fill their column but never the whole page: a name field a thousand
+ * pixels wide is a bar, not a field. Long-form text gets more room; the chat
+ * box, search fields and anything inside a row are sized by their container.
+ */
 input, textarea, select {
   width: 100%;
+  max-width: 440px;
   padding: 9px 11px;
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
@@ -304,7 +310,10 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
 }
-textarea { min-height: 120px; resize: vertical; font-family: var(--mono); font-size: 13px; }
+textarea { min-height: 120px; max-width: 680px; resize: vertical; font-family: var(--mono); font-size: 13px; }
+.row input, .row select, .row textarea,
+.chat-form textarea, .search input, .speak-controls input,
+.two-up input, .two-up textarea, .demo input { max-width: none; }
 
 button {
   padding: 9px 15px;

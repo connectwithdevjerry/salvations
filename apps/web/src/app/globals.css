@@ -2,9 +2,9 @@
  * One stylesheet, no framework.
  *
  * Dark-first, because the product is a console you leave open: a bright surface
- * is the wrong default for something watched for hours. Light mode is still
- * honoured — the tokens flip under `prefers-color-scheme: light` — but the dark
- * values are the designed ones and the light values are the accommodation.
+ * is the wrong default for something watched for hours. Light mode is a
+ * choice — the system's, or the person's in Settings → Appearance — and the
+ * tokens flip whole; the dark values are the designed ones.
  *
  * Everything here is a token or a primitive. There is deliberately no utility
  * layer: a framework is a dependency chosen ahead of a problem, and Phase 1 has
@@ -42,8 +42,15 @@
   --shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px -12px rgb(0 0 0 / 0.6);
 }
 
+/*
+ * Light mode.
+ *
+ * Followed from the system unless the person chose otherwise: `data-theme`
+ * on the root, set before first paint by the inline script in the layout
+ * and by the Appearance setting, wins over the system preference either way.
+ */
 @media (prefers-color-scheme: light) {
-  :root {
+  :root:not([data-theme="dark"]) {
     color-scheme: light;
     --bg: #fbfbfa;
     --bg-elevated: #ffffff;
@@ -63,6 +70,25 @@
     --shadow: 0 1px 2px rgb(16 24 40 / 0.05), 0 8px 24px -16px rgb(16 24 40 / 0.2);
   }
 }
+:root[data-theme="light"] {
+    color-scheme: light;
+    --bg: #fbfbfa;
+    --bg-elevated: #ffffff;
+    --surface: #ffffff;
+    --surface-raised: #f6f7f9;
+    --border: #e4e4e2;
+    --border-strong: #cfd3da;
+    --text: #12161d;
+    --muted: #5f6775;
+    --faint: #8d95a3;
+    --accent: #2f5bea;
+    --accent-hover: #2247c8;
+    --accent-soft: #eef2fe;
+    --danger: #b4321f;
+    --warn: #8a5a12;
+    --ok: #1f7a4d;
+    --shadow: 0 1px 2px rgb(16 24 40 / 0.05), 0 8px 24px -16px rgb(16 24 40 / 0.2);
+  }
 
 * { box-sizing: border-box; }
 
@@ -961,3 +987,99 @@ button.square {
 .empty h3 { margin: 0 0 6px; font-size: 17px; }
 .empty p { margin: 0; font-size: 13.5px; }
 .empty-action { margin-top: 18px; }
+
+/* ----------------------------------------------------------- appearance --- */
+
+.theme-picker { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.theme-option {
+  display: flex; align-items: center; gap: 10px; text-align: left;
+  padding: 10px 12px; border-radius: var(--radius); background: var(--surface);
+}
+.theme-option.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.theme-option .sub { display: block; font-weight: 400; font-size: 12px; color: var(--muted); }
+.theme-swatch { width: 28px; height: 28px; border-radius: 8px; flex: none; border: 1px solid var(--border-strong); }
+.theme-swatch.light { background: linear-gradient(135deg, #ffffff 50%, #eef2fe 50%); }
+.theme-swatch.dark { background: linear-gradient(135deg, #0b111c 50%, #101f38 50%); }
+.theme-swatch.system { background: linear-gradient(135deg, #ffffff 50%, #0b111c 50%); }
+@media (max-width: 600px) { .theme-picker { grid-template-columns: 1fr; } }
+
+/* ------------------------------------------------------- landing, again --- */
+
+.kicker { font-size: 12.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); margin: 0 0 14px; }
+
+.hero-split {
+  max-width: 1120px;
+  text-align: left;
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: 40px;
+  align-items: center;
+  padding: 56px 28px 40px;
+}
+.hero-split h1 { font-size: clamp(30px, 4.6vw, 46px); letter-spacing: -0.02em; }
+.hero-split p { margin: 0 0 24px; }
+.hero-split .cta { justify-content: flex-start; align-items: center; gap: 16px; }
+
+.demo {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  box-shadow: var(--shadow);
+  font-size: 13.5px;
+}
+.demo-bar { display: flex; align-items: center; gap: 8px; padding: 0 2px 8px; border-bottom: 1px solid var(--border); margin-bottom: 4px; }
+.demo-dot { width: 8px; height: 8px; border-radius: 999px; background: var(--ok); }
+.demo-title { font-weight: 700; }
+.demo-bar .faint { margin-left: auto; }
+.demo-msg { max-width: 88%; padding: 9px 12px; border-radius: 14px; line-height: 1.5; }
+.demo-msg.you { align-self: flex-end; background: var(--accent); color: var(--accent-ink); border-bottom-right-radius: 4px; }
+.demo-msg.them { align-self: flex-start; background: var(--surface-raised); border-bottom-left-radius: 4px; }
+.demo-msg em { color: var(--muted); font-style: italic; }
+.demo-approval {
+  display: flex; gap: 8px; align-items: center;
+  padding: 9px 12px; border-radius: 10px;
+  border: 1px dashed color-mix(in srgb, var(--warn) 55%, transparent);
+  background: color-mix(in srgb, var(--warn) 10%, transparent);
+  color: var(--text);
+}
+.demo-approval svg { color: var(--warn); flex: none; }
+.demo-approval em { color: var(--accent); font-style: normal; font-weight: 600; margin-left: 4px; }
+
+.honeycomb-section { text-align: center; max-width: 820px; margin: 0 auto; padding: 40px 24px 20px; }
+.honeycomb-section h2 { margin: 0 0 8px; font-size: 26px; letter-spacing: -0.02em; }
+.honeycomb { width: min(100%, 460px); height: auto; margin: 10px auto 0; display: block; }
+.honeycomb .cell path { fill: var(--surface); stroke: var(--border-strong); stroke-width: 1.5; }
+.honeycomb .cell.core path { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 2; }
+.honeycomb .cell-label { font-size: 13px; font-weight: 700; fill: var(--text); }
+.honeycomb .cell.core .cell-label { fill: var(--accent); }
+.honeycomb .cell-sub { font-size: 10.5px; fill: var(--muted); }
+.honeycomb-note { max-width: 46ch; margin: 12px auto 0; }
+
+.how { max-width: 1000px; margin: 0 auto; padding: 36px 24px 20px; }
+.how-steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+.how-steps li { display: flex; gap: 14px; align-items: flex-start; }
+.how-n {
+  width: 34px; height: 34px; flex: none; border-radius: 999px; display: grid; place-items: center;
+  background: var(--accent-soft); color: var(--accent); font-weight: 800; font-size: 15px;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+}
+.how-steps h3 { margin: 4px 0 4px; font-size: 16px; }
+.how-steps p { margin: 0; color: var(--muted); font-size: 13.5px; line-height: 1.6; }
+
+.landing-foot {
+  max-width: 1000px; margin: 30px auto 0; padding: 26px 24px 80px;
+  border-top: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap;
+}
+.landing-foot p { margin: 0; color: var(--muted); font-size: 14px; max-width: 60ch; }
+.landing-foot p strong { color: var(--text); }
+
+@media (max-width: 860px) {
+  .hero-split { grid-template-columns: 1fr; padding-top: 32px; }
+  .hero-split h1 br { display: none; }
+  .how-steps { grid-template-columns: 1fr; }
+}

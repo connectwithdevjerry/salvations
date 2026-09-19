@@ -19,9 +19,22 @@ export const viewport = {
   ],
 };
 
+/**
+ * Applies a chosen theme before the first paint.
+ *
+ * Inline and tiny, because the alternative is a flash of the wrong theme on
+ * every load for anyone who chose one. Reads the same key the Appearance
+ * setting writes; anything but "light" or "dark" means "follow the system",
+ * which is the stylesheet's default.
+ */
+const APPLY_THEME = `(function(){try{var t=localStorage.getItem('hive.theme');if(t==='light'||t==='dark'){document.documentElement.setAttribute('data-theme',t)}}catch(e){}})();`;
+
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: APPLY_THEME }} />
+      </head>
       <body>{children}</body>
     </html>
   );

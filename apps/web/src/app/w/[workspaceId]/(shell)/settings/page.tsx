@@ -6,6 +6,7 @@ import { api } from '@/lib/client/api';
 import { auth, type SignedInUser } from '@/lib/client/auth';
 import Link from 'next/link';
 import { Icon, Tile } from '@/components/ui';
+import { ThemePicker } from '@/components/theme-picker';
 
 interface Workspace { id: string; name: string; role: string }
 
@@ -74,6 +75,14 @@ export default function SettingsPage({
             <Icon name="exit" size={15} /> Sign out
           </button>
         </div>
+      </div>
+
+      <p className="eyebrow" style={{ marginTop: 26 }}>Appearance</p>
+      <div className="card">
+        <ThemePicker />
+        <p className="muted" style={{ margin: '10px 0 0' }}>
+          Kept on this device, so your laptop and your office monitor can differ.
+        </p>
       </div>
 
       <p className="eyebrow" style={{ marginTop: 26 }}>Workspace</p>

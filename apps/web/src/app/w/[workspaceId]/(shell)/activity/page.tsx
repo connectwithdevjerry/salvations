@@ -4,6 +4,8 @@ import { use, useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { api, ws } from '@/lib/client/api';
 import { Icon } from '@/components/ui';
+import { EmptyState } from '@/components/empty-state';
+import { Loader } from '@/components/loader';
 
 /**
  * Activity.
@@ -112,11 +114,15 @@ export default function ActivityPage({
         ))}
       </div>
 
-      {runs === undefined && <p className="muted">Loading…</p>}
+      {runs === undefined && <Loader inline label="Loading activity" />}
       {runs?.length === 0 && (
-        <p className="muted">
-          {filter === 'all' ? 'Nothing has run yet.' : `No ${filter} runs.`}
-        </p>
+        <EmptyState
+          art="quiet"
+          title={filter === 'all' ? 'Nothing has run yet' : `No ${filter} runs`}
+          body={filter === 'all'
+            ? 'Every run an assistant makes — from chat, Telegram or a schedule — is listed here with what it cost.'
+            : 'Try another filter.'}
+        />
       )}
 
       {runs !== undefined && runs.length > 0 && (

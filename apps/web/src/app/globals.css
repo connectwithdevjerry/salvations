@@ -953,3 +953,11 @@ button.square {
 .loader.inline .loader-ring { width: 16px; height: 16px; border-width: 2px; }
 .loader-label { font-size: 13.5px; }
 @media (prefers-reduced-motion: reduce) { .loader-ring { animation-duration: 3s; } }
+
+/* --------------------------------------------------------- empty states -- */
+
+.empty { text-align: center; padding: 44px 24px 36px; max-width: 460px; margin: 0 auto; }
+.empty-art { color: var(--accent); display: flex; justify-content: center; margin-bottom: 8px; }
+.empty h3 { margin: 0 0 6px; font-size: 17px; }
+.empty p { margin: 0; font-size: 13.5px; }
+.empty-action { margin-top: 18px; }

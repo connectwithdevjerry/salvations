@@ -4,6 +4,7 @@ import { use, useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { api, ws } from '@/lib/client/api';
 import { ApprovalPrompt } from '@/components/approval-prompt';
+import { EmptyState } from '@/components/empty-state';
 
 interface Approval {
   id: string; runId: string; kind: string; payload: Record<string, unknown>;
@@ -33,7 +34,13 @@ export default function ApprovalsPage({ params }: { params: Promise<{ workspaceI
       </header>
 
       {error !== undefined && <p className="error">{error}</p>}
-      {items?.length === 0 && <p className="muted">Nothing is waiting.</p>}
+      {items?.length === 0 && (
+        <EmptyState
+          art="clear"
+          title="Nothing is waiting on you"
+          body="When an assistant is about to write, send or spend, it stops here and shows you the exact arguments first."
+        />
+      )}
 
       {items?.map((approval) => (
         <div key={approval.id} className="card">

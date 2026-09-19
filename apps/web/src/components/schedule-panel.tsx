@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { api, ws } from '@/lib/client/api';
-import { Icon, Option, Tile } from '@/components/ui';
+import { Icon, Tile } from '@/components/ui';
 import { Loader } from '@/components/loader';
 
 /**
@@ -93,28 +93,32 @@ export function SchedulePanel({
           </span>
         </div>
       ) : (
-        <Option
-          icon="gear"
-          title="New schedule"
-          subtitle="Pick when, and say what to do."
-          open={creating}
-          onToggle={() => setCreating(!creating)}
-        >
-          <ScheduleForm
-            workspaceId={workspaceId}
-            agents={agentId === undefined ? agents : agents.filter((a) => a.id === agentId)}
-            models={models}
-            onDone={() => { setCreating(false); reload(); }}
-            onError={setError}
-          />
-        </Option>
+        <>
+          <div className="row" style={{ marginBottom: 12 }}>
+            <p className="eyebrow" style={{ margin: 0 }}>Schedules</p>
+            <button className={creating ? '' : 'primary'} type="button" onClick={() => setCreating(!creating)}>
+              {creating ? 'Cancel' : 'New schedule'}
+            </button>
+          </div>
+          {creating && (
+            <div className="card">
+              <ScheduleForm
+                workspaceId={workspaceId}
+                agents={agentId === undefined ? agents : agents.filter((a) => a.id === agentId)}
+                models={models}
+                onDone={() => { setCreating(false); reload(); }}
+                onError={setError}
+              />
+            </div>
+          )}
+        </>
       )}
 
       {schedules === undefined && <Loader inline label="Loading schedules" />}
 
       {schedules !== undefined && schedules.length > 0 && (
         <>
-          <p className="eyebrow" style={{ marginTop: 26 }}>Scheduled</p>
+          <p className="eyebrow" style={{ marginTop: 20 }}>Scheduled</p>
           {schedules.map((schedule) => (
             <ScheduleRow
               key={schedule.id}

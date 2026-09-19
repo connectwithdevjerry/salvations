@@ -90,14 +90,16 @@ export default function SettingsPage({
         <>
           <p className="eyebrow" style={{ marginTop: 26 }}>Switch workspace</p>
           {workspaces.filter((w) => w.id !== workspaceId).map((workspace) => (
-            <button
-              key={workspace.id}
-              type="button"
-              style={{ width: '100%', textAlign: 'left', marginBottom: 8 }}
-              onClick={() => router.push(`/w/${workspace.id}/chat`)}
-            >
-              {workspace.name} <span className="muted">· {workspace.role}</span>
-            </button>
+            <div key={workspace.id} className="card">
+              <div className="row">
+                <span>
+                  <strong>{workspace.name}</strong> <span className="muted">· {workspace.role}</span>
+                </span>
+                <button type="button" onClick={() => router.push(`/w/${workspace.id}/agents`)}>
+                  Open
+                </button>
+              </div>
+            </div>
           ))}
         </>
       )}

@@ -15,6 +15,7 @@ import {
   type Database, type McpCapabilityDoc, type McpServerBindingDoc,
 } from '@salvations/db';
 import { firstPartyBindings } from './first-party';
+import { mcpServersById } from './mcp-servers';
 
 export interface SurfaceTool { readonly name: string; readonly description: string }
 
@@ -44,9 +45,8 @@ export async function assistantSurface(
     : await new ModelBindingRepository(database, workspaceId).forRole(agent.currentVersion.modelRole);
 
   const own = await scoped.collection<McpServerBindingDoc>('mcpServerBindings').find(ownedBy(agentId) as never);
-  const servers = await database.collection('mcpServers')
-    .find({ _id: { $in: own.map((b) => b.mcpServerId) } } as never).toArray();
-  const serverName = new Map(servers.map((s) => [String(s['_id']), String(s['name'] ?? '')]));
+  const servers = await mcpServersById(database, workspaceId, own.map((b) => b.mcpServerId));
+  const serverName = new Map([...servers].map(([id, s]) => [id, s.name]));
 
   const reachable = new Set([
     ...firstPartyBindings(workspaceId).map((b) => b.binding.id),

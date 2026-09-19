@@ -22,9 +22,12 @@ export const AGENT_COLORS = [
 ] as const;
 
 /** A run in any of these states is the agent doing something now. */
-const LIVE = new Set(['queued', 'running', 'suspended', 'waiting_input', 'waiting_approval', 'waiting_tool']);
+/** A run that is being worked on right now, or is about to be. */
+const WORKING = new Set(['queued', 'running', 'waiting_tool']);
+/** A run stopped until a person answers it. */
+const WAITING = new Set(['suspended', 'waiting_input', 'waiting_approval']);
 
-export type AgentStatus = 'running' | 'failed' | 'idle';
+export type AgentStatus = 'working' | 'waiting' | 'failed' | 'idle';
 
 export function presentAgents(
   agents: readonly AgentDoc[],
@@ -44,7 +47,12 @@ export function presentAgents(
   const statusByAgent = new Map<string, AgentStatus>();
   for (const run of runs) {
     if (statusByAgent.has(run.agentId)) continue;
-    statusByAgent.set(run.agentId, LIVE.has(run.status) ? 'running' : run.status === 'failed' ? 'failed' : 'idle');
+    statusByAgent.set(
+      run.agentId,
+      WORKING.has(run.status) ? 'working'
+        : WAITING.has(run.status) ? 'waiting'
+          : run.status === 'failed' ? 'failed' : 'idle',
+    );
   }
 
   // The main assistant is the first one made. Nothing is stored for it, so

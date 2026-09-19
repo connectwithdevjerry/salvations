@@ -6,21 +6,11 @@
  * platform catalog entries alongside workspace-owned ones — so a catalog read
  * is an explicit platform read rather than a widened tenant query.
  */
-import { PlatformDb, ScopedDb, type Database, type McpServerBindingDoc } from '@salvations/db';
+import { ScopedDb, type Database, type McpServerBindingDoc } from '@salvations/db';
+import { mcpServerById, type McpServerRow } from './mcp-servers';
 import type { BindingRecord, BindingSource, ServerRecord } from '@salvations/mcp';
 import { firstPartyBindings } from './first-party';
 
-interface McpServerRow {
-  _id: string;
-  workspaceId?: string | null;
-  slug: string;
-  name: string;
-  transport: string;
-  url?: string | null;
-  authMode: string;
-  trustTier: string;
-  protocolVersionPin?: string | null;
-}
 
 export function bindingSource(
   database: Database,
@@ -31,17 +21,8 @@ export function bindingSource(
   const scoped = new ScopedDb(database, workspaceId);
   const bindings = scoped.collection<McpServerBindingDoc>('mcpServerBindings');
 
-  // The catalogue half of this mixed collection has no workspace, so the read
-  // cannot be workspace-constrained. It says so, rather than being reported as
-  // an unscoped read on every call.
-  const catalog = new PlatformDb(database, 'catalog-read');
-  const serverFor = async (id: string): Promise<McpServerRow | null> =>
-    catalog.collection<McpServerRow>('mcpServers').findOne({
-      _id: id,
-      // Either the platform catalog, or this workspace's own entry. Never
-      // another tenant's.
-      $or: [{ workspaceId: null }, { workspaceId }],
-    } as never, { comment: catalog.comment });
+  const serverFor = (id: string): Promise<McpServerRow | null> =>
+    mcpServerById(database, workspaceId, id);
 
   const toRecords = async (doc: McpServerBindingDoc) => {
     const server = await serverFor(doc.mcpServerId);

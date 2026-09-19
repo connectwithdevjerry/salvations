@@ -93,7 +93,12 @@ export function BrandMark({ wordmark = true }: { wordmark?: boolean }) {
             stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" opacity="0.55" />
         </svg>
       </span>
-      {wordmark && <span className="wordmark">HIVE</span>}
+      {wordmark && (
+        <span className="wordmark">
+          HIVE
+          <span className="byline">by Yashayah</span>
+        </span>
+      )}
     </span>
   );
 }

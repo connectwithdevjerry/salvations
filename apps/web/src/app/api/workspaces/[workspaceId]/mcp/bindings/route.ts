@@ -15,6 +15,7 @@
 import { installMcpServerSchema } from '@salvations/contracts';
 import { catalogEntry } from '@salvations/catalog';
 import { AgentRepository, ScopedDb, type McpServerBindingDoc } from '@salvations/db';
+import { mcpServersById } from '@/lib/mcp-servers';
 import { IdPrefix, newId } from '@salvations/core';
 import { errorResponse, jsonBody, ok } from '@/lib/http';
 import { workspaceRoute } from '@/lib/route';
@@ -34,11 +35,7 @@ export const GET = workspaceRoute('mcp:read', async (ctx) => {
       ? {}
       : { $or: [{ agentId: agent }, { agentId: null }, { agentId: { $exists: false } }] }) as never);
 
-  const servers = await ctx.database
-    .collection('mcpServers')
-    .find({ _id: { $in: bindings.map((b) => b.mcpServerId) } } as never)
-    .toArray();
-  const byId = new Map(servers.map((s) => [String(s['_id']), s]));
+  const byId = await mcpServersById(ctx.database, ctx.workspaceId, bindings.map((b) => b.mcpServerId));
 
   return ok({
     items: bindings.map((b) => {
@@ -47,7 +44,7 @@ export const GET = workspaceRoute('mcp:read', async (ctx) => {
         id: b._id,
         agentId: b.agentId ?? undefined,
         alias: b.alias,
-        catalogId: typeof server?.['catalogId'] === 'string' ? server['catalogId'] : undefined,
+        catalogId: typeof server?.catalogId === 'string' ? server.catalogId : undefined,
         serverName: String(server?.['name'] ?? b.alias),
         url: server?.['url'] ?? undefined,
         trustTier: String(server?.['trustTier'] ?? 'untrusted'),

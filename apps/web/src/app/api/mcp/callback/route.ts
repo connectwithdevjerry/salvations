@@ -13,6 +13,7 @@
 import { completeAuthorization, userScope, workspaceScope } from '@salvations/mcp';
 import { clearCookie, readCookie } from '@salvations/auth';
 import { ScopedDb, type McpServerBindingDoc } from '@salvations/db';
+import { mcpServerById } from '@/lib/mcp-servers';
 import { db } from '@/lib/db';
 import { readCaller, secureCookies } from '@/lib/session';
 import { oauthProviderFor, oauthStore } from '@/lib/mcp-auth';
@@ -88,8 +89,8 @@ export async function GET(request: Request): Promise<Response> {
   const binding = await bindings.findOne({ _id: pending.bindingId } as never);
   if (binding === null) return back(pending.workspaceId, { error: 'mcp_gone' });
 
-  const server = await database.collection('mcpServers').findOne({ _id: binding.mcpServerId } as never);
-  const serverUrl = server?.['url'];
+  const server = await mcpServerById(database, pending.workspaceId, binding.mcpServerId);
+  const serverUrl = server?.url;
   if (typeof serverUrl !== 'string') return back(pending.workspaceId, { error: 'mcp_gone' }, binding.agentId);
 
   const scope = pending.userId === undefined
@@ -117,7 +118,7 @@ export async function GET(request: Request): Promise<Response> {
       bindingId: binding._id, serverId: binding.mcpServerId, alias: binding.alias,
       transport: 'streamable_http', url: serverUrl,
     },
-    autoApprove: typeof server?.['catalogId'] === 'string',
+    autoApprove: typeof server?.catalogId === 'string',
     ...(pending.userId !== undefined ? { userId: pending.userId } : {}),
     refresh: true,
   });

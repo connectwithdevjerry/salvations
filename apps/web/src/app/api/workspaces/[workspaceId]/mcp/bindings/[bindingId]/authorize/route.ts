@@ -9,6 +9,7 @@
 import { AuthorizationRequiredError, beginAuthorization, userScope, workspaceScope } from '@salvations/mcp';
 import { sessionCookie } from '@salvations/auth';
 import { ScopedDb, type McpServerBindingDoc } from '@salvations/db';
+import { mcpServerById } from '@/lib/mcp-servers';
 import { errorResponse, ok } from '@/lib/http';
 import { workspaceRoute } from '@/lib/route';
 import { actorIdOf } from '@/lib/principal';
@@ -32,9 +33,8 @@ export const POST = workspaceRoute<{ bindingId: string }>('mcp:install', async (
   const binding = await bindings.findOne({ _id: params.bindingId } as never);
   if (binding === null) return errorResponse(404, 'not_found', 'Server not found.');
 
-  const server = await ctx.database.collection('mcpServers')
-    .findOne({ _id: binding.mcpServerId } as never);
-  const url = server?.['url'];
+  const server = await mcpServerById(ctx.database, ctx.workspaceId, binding.mcpServerId);
+  const url = server?.url;
   if (typeof url !== 'string' || url === '') {
     return errorResponse(422, 'unsupported', 'This server has no URL to authorise against.');
   }
@@ -55,7 +55,7 @@ export const POST = workspaceRoute<{ bindingId: string }>('mcp:install', async (
         database: ctx.database,
         workspaceId: ctx.workspaceId,
         definition: { bindingId: binding._id, serverId: binding.mcpServerId, alias: binding.alias, transport: 'streamable_http', url },
-        autoApprove: typeof server?.['catalogId'] === 'string',
+        autoApprove: typeof server?.catalogId === 'string',
         ...(userId !== undefined ? { userId } : {}),
         refresh: true,
       });

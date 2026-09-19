@@ -38,7 +38,7 @@ const TABS: readonly { id: Tab; label: string; icon: 'chat' | 'mic' | 'book' | '
 
 interface Conversation { id: string; agentId: string; title: string; updatedAt: string }
 
-const STATUS_LABEL = { running: 'Running', failed: 'Failed', idle: 'Idle' } as const;
+const STATUS_LABEL = { working: 'Working', waiting: 'Needs you', failed: 'Last reply failed', idle: 'Idle' } as const;
 
 export default function AgentPage({
   params,

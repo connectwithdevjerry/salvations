@@ -107,7 +107,7 @@ export function AgentSidebar({ workspaceId }: { workspaceId: string }) {
                   className="agent-row"
                   aria-current={agent.id === activeId ? 'page' : undefined}
                 >
-                  <AgentAvatar color={agent.color} size={44} />
+                  <AgentAvatar color={agent.color} size={44} status={agent.status} />
                   <span className="agent-row-body">
                     <span className="agent-row-top">
                       <span className="agent-row-name">
@@ -118,12 +118,8 @@ export function AgentSidebar({ workspaceId }: { workspaceId: string }) {
                         <span className="agent-row-time">{ago(agent.lastMessage.at)}</span>
                       )}
                     </span>
-                    <span className={`agent-row-preview${agent.status === 'failed' ? ' failed' : ''}`}>
-                      {agent.status === 'running'
-                        ? 'Running…'
-                        : agent.status === 'failed'
-                          ? 'Failed'
-                          : agent.lastMessage?.preview ?? 'No conversations yet'}
+                    <span className="agent-row-preview">
+                      {agent.lastMessage?.preview ?? 'No conversations yet'}
                     </span>
                   </span>
                 </Link>

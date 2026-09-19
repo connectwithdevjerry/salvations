@@ -10,7 +10,7 @@
  * Every failure lands the person back on the integrations page with a reason
  * they can act on, never on a JSON error they cannot.
  */
-import { completeAuthorization, userScope, workspaceScope } from '@salvations/mcp';
+import { completeAuthorization, scopeKeyString, userScope, workspaceScope, type ConnectionScopeKey } from '@salvations/mcp';
 import { clearCookie, readCookie } from '@salvations/auth';
 import { ScopedDb, type McpServerBindingDoc } from '@salvations/db';
 import { mcpServerById } from '@/lib/mcp-servers';
@@ -18,6 +18,8 @@ import { db } from '@/lib/db';
 import { readCaller, secureCookies } from '@/lib/session';
 import { oauthProviderFor, oauthStore } from '@/lib/mcp-auth';
 import { discoverAndRecord } from '@/lib/discovery-service';
+import { firstPartyOpener } from '@/lib/first-party-open';
+import { GOOGLE_ISSUER, exchangeGoogleCode, googleOAuthClient, googleStore } from '@/lib/google-workspace';
 import { OAUTH_CALLBACK_PATH, OAUTH_PENDING_COOKIE } from '@/lib/oauth-config';
 import { env } from '@/lib/env';
 import type { PendingConsent } from '@/app/api/workspaces/[workspaceId]/mcp/bindings/[bindingId]/authorize/route';
@@ -90,12 +92,16 @@ export async function GET(request: Request): Promise<Response> {
   if (binding === null) return back(pending.workspaceId, { error: 'mcp_gone' });
 
   const server = await mcpServerById(database, pending.workspaceId, binding.mcpServerId);
-  const serverUrl = server?.url;
-  if (typeof serverUrl !== 'string') return back(pending.workspaceId, { error: 'mcp_gone' }, binding.agentId);
-
   const scope = pending.userId === undefined
     ? workspaceScope(pending.workspaceId, binding._id)
     : userScope(pending.workspaceId, binding._id, pending.userId);
+
+  if (server?.transport === 'in_process' && server.catalogId === 'google_workspace') {
+    return finishGoogle(request, database, pending, binding, scope, { code, state });
+  }
+
+  const serverUrl = server?.url;
+  if (typeof serverUrl !== 'string') return back(pending.workspaceId, { error: 'mcp_gone' }, binding.agentId);
   const provider = oauthProviderFor(database, pending.workspaceId, scope);
 
   try {
@@ -123,6 +129,61 @@ export async function GET(request: Request): Promise<Response> {
     refresh: true,
   });
 
+  if (outcome.error !== undefined) {
+    return back(pending.workspaceId, { error: 'mcp_discovery', alias: binding.alias }, binding.agentId);
+  }
+  return back(pending.workspaceId, { connected: binding.alias, tools: String(outcome.total) }, binding.agentId);
+}
+
+/**
+ * Back from Google. The state must be the one filed when consent began, the
+ * code is exchanged with our client secret and the PKCE verifier, and the
+ * tokens go into the store under the binding's scope. Then the adapter is
+ * opened once to record what it offers, exactly as a remote server would be.
+ */
+async function finishGoogle(
+  request: Request,
+  database: Awaited<ReturnType<typeof db>>['db'],
+  pending: PendingConsent,
+  binding: McpServerBindingDoc,
+  scope: ConnectionScopeKey,
+  answer: { code: string; state: string },
+): Promise<Response> {
+  const store = googleStore(database, pending.workspaceId);
+  const key = scopeKeyString(scope);
+  const filed = await store.loadPending(key);
+  if (filed === undefined || filed.state !== answer.state) {
+    return back(pending.workspaceId, { error: 'mcp_failed' }, binding.agentId);
+  }
+  const client = googleOAuthClient();
+  if (client === undefined) return back(pending.workspaceId, { error: 'mcp_failed' }, binding.agentId);
+
+  try {
+    const tokens = await exchangeGoogleCode(client, answer.code, filed.codeVerifier);
+    await store.saveTokens(key, GOOGLE_ISSUER, tokens);
+    await store.clearPending(key);
+  } catch (caught) {
+    console.error('[google callback]', caught instanceof Error ? caught.message : caught);
+    return back(pending.workspaceId, { error: 'mcp_failed' }, binding.agentId);
+  }
+
+  const outcome = await discoverAndRecord({
+    database,
+    workspaceId: pending.workspaceId,
+    definition: { bindingId: binding._id, serverId: binding.mcpServerId, alias: binding.alias, transport: 'in_process' },
+    autoApprove: true,
+    ...(pending.userId !== undefined ? { userId: pending.userId } : {}),
+    connect: {
+      openInProcess: firstPartyOpener({
+        database,
+        context: { workspaceId: pending.workspaceId, conversationId: '', agentId: binding.agentId ?? '', runId: '' },
+        availableTools: async () => [],
+        ...(pending.userId !== undefined ? { createdBy: pending.userId } : {}),
+      }),
+    },
+    refresh: true,
+  });
+  void request;
   if (outcome.error !== undefined) {
     return back(pending.workspaceId, { error: 'mcp_discovery', alias: binding.alias }, binding.agentId);
   }

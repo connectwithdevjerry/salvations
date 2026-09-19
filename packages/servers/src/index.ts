@@ -18,4 +18,9 @@ export {
   createAssistantServer, SERVER_NAME as ASSISTANT_SERVER, MAX_ASK,
   type AssistantAnswer, type AssistantSource,
 } from './assistant';
+export {
+  createGoogleWorkspaceServer, SERVER_NAME as GOOGLE_WORKSPACE_SERVER, plainTextOfPayload, rawMessage,
+  type GoogleWorkspaceSource, type MailSummary, type MailMessage, type MailLabel,
+  type CalendarEvent, type DriveFile, type GmailPayload,
+} from './google-workspace';
 export { serveOverHttp, type HttpServerFactory } from './http';

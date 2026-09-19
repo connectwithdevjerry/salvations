@@ -75,11 +75,13 @@ export const POST = workspaceRoute('mcp:install', async (ctx) => {
   if (entry !== undefined && entry.unavailable !== undefined) {
     return errorResponse(422, 'unsupported', `${entry.name} cannot be connected yet. ${entry.unavailable}`);
   }
-  if (entry !== undefined && entry.mcp === undefined) {
+  if (entry !== undefined && entry.mcp === undefined && entry.native === undefined) {
     return errorResponse(422, 'unsupported', `${entry.name} is not reached over MCP.`);
   }
 
-  const alias = input.alias ?? entry?.id ?? '';
+  // A native entry is served by an adapter of ours in this process; its
+  // alias is fixed so the opener knows which adapter to build.
+  const alias = entry?.native?.alias ?? input.alias ?? entry?.id ?? '';
   const url = entry?.mcp?.url ?? input.url;
 
   const agent = await new AgentRepository(ctx.database, ctx.workspaceId).findById(input.agentId);
@@ -105,8 +107,8 @@ export const POST = workspaceRoute('mcp:install', async (ctx) => {
       workspaceId: ctx.workspaceId,
       slug: alias,
       name: entry?.name ?? input.name ?? alias,
-      transport: 'streamable_http',
-      url,
+      transport: entry?.native !== undefined ? 'in_process' : 'streamable_http',
+      url: entry?.native !== undefined ? null : url,
       authMode: 'oauth2',
       // A catalogue server is the vendor's own, at a URL we wrote down; a
       // pasted one is untrusted because nobody has vetted it and a trust tier

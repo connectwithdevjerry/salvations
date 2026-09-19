@@ -12,7 +12,7 @@
  * would let it ask.
  */
 import {
-  createConversationServer, createKnowledgeServer, createMemoryServer, linkedPair,
+  createConversationServer, createGoogleWorkspaceServer, createKnowledgeServer, createMemoryServer, linkedPair,
   type ConversationSource, type ServerContext,
 } from '@salvations/servers';
 import { ConversationRepository, toMessage } from '@salvations/db';
@@ -21,6 +21,7 @@ import type { InProcessOpener } from '@salvations/mcp';
 import { MEMORY_ALIAS, CONVERSATION_ALIAS, KNOWLEDGE_ALIAS } from './first-party';
 import { createMemorySource } from './memory-service';
 import { createKnowledgeSource } from './knowledge-service';
+import { GOOGLE_WORKSPACE_ALIAS, createGoogleSource } from './google-workspace';
 
 export interface OpenerInput {
   readonly database: Database;
@@ -32,7 +33,7 @@ export interface OpenerInput {
 
 export function firstPartyOpener(input: OpenerInput): InProcessOpener {
   return async (definition) => {
-    const server = build(definition.alias, input);
+    const server = build(definition.alias, input, definition.bindingId);
     if (server === undefined) {
       throw new Error(`No first-party server is registered as "${definition.alias}".`);
     }
@@ -49,8 +50,19 @@ export function firstPartyOpener(input: OpenerInput): InProcessOpener {
   };
 }
 
-function build(alias: string, input: OpenerInput) {
+function build(alias: string, input: OpenerInput, bindingId?: string) {
   const workspaceId = String(input.context.workspaceId);
+
+  if (alias === GOOGLE_WORKSPACE_ALIAS && bindingId !== undefined) {
+    // Not a first-party server in the synthesised sense: it has a binding
+    // row and a token, and the token decides whose mailbox this is.
+    return createGoogleWorkspaceServer(input.context, createGoogleSource({
+      database: input.database,
+      workspaceId,
+      bindingId,
+      userId: input.createdBy,
+    }));
+  }
 
   if (alias === MEMORY_ALIAS) {
     return createMemoryServer(input.context, createMemorySource({

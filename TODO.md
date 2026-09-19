@@ -275,8 +275,17 @@ platform exist beside the first three.
 - [ ] Vendor MCP URLs were written from memory — the docs hosts are blocked from this session.
       Verify `api.githubcopilot.com/mcp/`, `mcp.notion.com/mcp`, `mcp.linear.app/mcp` against each
       vendor's page before relying on them
-- [ ] Google Workspace: needs its own adapter (Gmail/Calendar/Drive over REST with our OAuth).
-      Shown as coming soon rather than as a button that cannot complete
+- [x] Google Workspace: our own adapter in `packages/servers` (Gmail search/read/send/label,
+      Calendar list/create, Drive search/read over Google's REST APIs), consent on Google's own
+      screen with the deployment's Google client (`access_type=offline`, PKCE), tokens in the
+      encrypted OAuth store per assistant binding, refreshed a minute before expiry. A catalogue
+      entry with `native` installs an `in_process` server row; the opener builds the adapter
+      for its alias. Google Cloud must list `<PUBLIC_BASE_URL>/api/mcp/callback` as a redirect
+      URI and have the Gmail, Calendar and Drive APIs enabled
+- [x] The assistant server is an OAuth 2.1 authorization server (RFC 9728/8414/7591/7636/8707):
+      Claude.ai and ChatGPT connect by URL, the person consents on `/oauth/authorize` with the
+      HIVE login, tokens are opaque and hashed (`oauthGrants`), refresh rotates with family
+      revocation on replay
 - [ ] Disconnecting an integration (no delete route yet) and token refresh on expiry sweep
 
 ### 1.5.6 Every assistant is an MCP server — done

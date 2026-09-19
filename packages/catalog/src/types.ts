@@ -70,6 +70,12 @@ export interface CatalogEntry {
    * agents' to call. Hard-coded so nobody has to find the URL in a docs page.
    */
   readonly mcp?: { readonly url: string };
+  /**
+   * Served by an adapter of ours, in this process, on the vendor's own REST
+   * APIs — for a vendor that publishes no MCP server. Consent is the vendor's
+   * consent screen; the tokens stay on our server, per assistant.
+   */
+  readonly native?: { readonly alias: string };
 }
 
 export const isChannel = (entry: CatalogEntry): boolean => entry.kind === 'channel';

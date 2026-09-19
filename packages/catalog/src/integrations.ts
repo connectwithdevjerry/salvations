@@ -17,15 +17,14 @@ const GOOGLE_WORKSPACE: CatalogEntry = {
   id: 'google_workspace',
   kind: 'integration',
   name: 'Google Workspace',
-  summary: 'Gmail, Calendar, Drive, Sheets, Docs and Contacts.',
+  summary: 'Gmail, Calendar and Drive. Group mail, draft replies, find the file, book the slot.',
   setup: 'oauth',
   accent: '#EA4335',
   docs: 'https://developers.google.com/workspace',
-  // Google publishes no hosted MCP server for Workspace, and the direct
-  // adapter — Gmail, Calendar, Drive over their REST APIs with our own OAuth —
-  // is not written yet. Offered as unavailable rather than as a button that
-  // cannot complete.
-  unavailable: 'Coming soon. Google Workspace needs its own adapter; the Google sign-in you may already use is separate from this.',
+  // Google publishes no hosted MCP server for Workspace, so this one is ours:
+  // Gmail, Calendar and Drive over their REST APIs, authorised on Google's own
+  // consent screen, tokens held encrypted per assistant.
+  native: { alias: 'google_workspace' },
   steps: [
     {
       title: 'Review what you are granting',
@@ -39,12 +38,9 @@ const GOOGLE_WORKSPACE: CatalogEntry = {
     },
   ],
   scopes: [
-    { label: 'Gmail — read, send and modify messages', scope: 'https://www.googleapis.com/auth/gmail.modify', writes: true },
-    { label: 'Calendar — read and manage events', scope: 'https://www.googleapis.com/auth/calendar', writes: true },
-    { label: 'Drive — read, upload and share files', scope: 'https://www.googleapis.com/auth/drive', writes: true },
-    { label: 'Sheets — read and edit spreadsheets', scope: 'https://www.googleapis.com/auth/spreadsheets', writes: true },
-    { label: 'Docs — read and edit documents', scope: 'https://www.googleapis.com/auth/documents', writes: true },
-    { label: 'Contacts — read your contacts', scope: 'https://www.googleapis.com/auth/contacts.readonly', writes: false },
+    { label: 'Gmail — read, label, and send messages', scope: 'https://www.googleapis.com/auth/gmail.modify', writes: true },
+    { label: 'Calendar — read and create events', scope: 'https://www.googleapis.com/auth/calendar', writes: true },
+    { label: 'Drive — find and read files', scope: 'https://www.googleapis.com/auth/drive.readonly', writes: false },
   ],
 };
 

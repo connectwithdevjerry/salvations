@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api, ws } from '@/lib/client/api';
 import { Icon, Tile } from '@/components/ui';
-import { Loader } from '@/components/loader';
+import { SkeletonRows } from '@/components/skeleton';
 
 /**
  * Knowledge.
@@ -106,7 +106,7 @@ export function KnowledgePanel({ workspaceId, embedded = false }: { workspaceId:
         </div>
       )}
 
-      {docs === undefined && <Loader inline label="Loading documents" />}
+      {docs === undefined && <SkeletonRows rows={3} avatar={false} />}
 
       {docs !== undefined && docs.length > 0 && (
         <>

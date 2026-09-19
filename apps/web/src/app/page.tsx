@@ -117,7 +117,7 @@ function Demo() {
     <div className="demo" aria-label="Example conversation">
       <div className="demo-bar">
         <span className="demo-dot" />
-        <span className="demo-title">Jarvis</span>
+        <span className="demo-title">Hive by Yashayah</span>
         <span className="faint">Telegram</span>
       </div>
       <div className="demo-msg you">group my unread mail by client and tell me who&apos;s waiting on me</div>
@@ -145,7 +145,7 @@ function Honeycomb() {
   const cells: readonly { x: number; y: number; label: string; sub: string; core?: boolean }[] = [
     // A hexagon 104 wide and 104 tall sits against its six neighbours at
     // (±82, ±56) and (0, ±110): touching, with a two-pixel breath between.
-    { x: 158, y: 118, label: 'Jarvis', sub: 'the assistant', core: true },
+    { x: 158, y: 118, label: 'Hive by Yashayah', sub: 'the assistant', core: true },
     { x: 158, y: 8, label: 'Knowledge', sub: 'what it has read' },
     { x: 240, y: 62, label: 'Integrations', sub: 'what it can touch' },
     { x: 240, y: 174, label: 'Model', sub: 'how it thinks' },

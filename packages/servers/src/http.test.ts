@@ -15,7 +15,7 @@ import type { ServerContext } from './port';
 const CONTEXT: ServerContext = { workspaceId: 'wks_1', conversationId: '', agentId: 'agt_1', runId: '' };
 
 const source: AssistantSource = {
-  name: 'Jarvis',
+  name: 'Hive by Yashayah',
   description: 'The main assistant.',
   async ask(text) { return { conversationId: 'cnv_1', runId: 'run_1', text: `You said: ${text}`, outcome: 'answered' }; },
   async surface() { return { model: 'm', memories: 0, documents: 0, integrations: [] }; },

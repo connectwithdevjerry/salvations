@@ -12,7 +12,7 @@ function source(over: Partial<AssistantSource> = {}): AssistantSource & { calls:
   const calls: { op: string; args: unknown[] }[] = [];
   return {
     calls,
-    name: 'Jarvis',
+    name: 'Hive by Yashayah',
     description: 'The main assistant.',
     async ask(...args) {
       calls.push({ op: 'ask', args });
@@ -49,7 +49,7 @@ describe('an assistant as an MCP server', () => {
       const { tools } = await client.listTools();
       expect(tools.map((t) => t.name).sort())
         .toEqual(['ask', 'conversations', 'describe', 'recall', 'remember', 'search_knowledge']);
-      expect(tools.find((t) => t.name === 'ask')?.title).toBe('Ask Jarvis');
+      expect(tools.find((t) => t.name === 'ask')?.title).toBe('Ask Hive by Yashayah');
       // No tool takes an assistant or workspace id: the server IS the assistant.
       for (const tool of tools) {
         const keys = Object.keys((tool.inputSchema as { properties?: object }).properties ?? {});

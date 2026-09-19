@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { api, ws } from '@/lib/client/api';
 import { Icon } from '@/components/ui';
 import { EmptyState } from '@/components/empty-state';
-import { Loader } from '@/components/loader';
+import { SkeletonRows } from '@/components/skeleton';
 import { usePoll } from '@/lib/client/use-poll';
 
 /**
@@ -111,7 +111,7 @@ export default function ActivityPage({
         ))}
       </div>
 
-      {runs === undefined && <Loader inline label="Loading activity" />}
+      {runs === undefined && <SkeletonRows rows={5} avatar={false} />}
       {runs?.length === 0 && (
         <EmptyState
           art="quiet"

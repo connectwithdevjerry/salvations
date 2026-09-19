@@ -32,6 +32,7 @@ export * from './repositories/schedules';
 export * from './repositories/memory';
 export * from './repositories/knowledge';
 export * from './repositories/oauth-store';
+export * from './repositories/oauth-server';
 export * from './validators';
 export * from './atlas-roles';
 export { seed, runSeed, SEED_WORKSPACE_ID, SEED_USER_ID } from './seed';

@@ -229,7 +229,9 @@ export type PlatformReason =
    */
   | 'schedule-tick'
   /** Resolving an API key by its prefix, before any workspace is known. */
-  | 'api-key-lookup';
+  | 'api-key-lookup'
+  /** Resolving a token our own authorization server issued, by its hash. */
+  | 'oauth-token-lookup';
 
 export class PlatformDb {
   readonly #db: Db;

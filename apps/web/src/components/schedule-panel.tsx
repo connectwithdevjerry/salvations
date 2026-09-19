@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { api, ws } from '@/lib/client/api';
 import { Icon, Tile } from '@/components/ui';
-import { Loader } from '@/components/loader';
+import { SkeletonRows } from '@/components/skeleton';
 
 /**
  * Schedule.
@@ -114,7 +114,7 @@ export function SchedulePanel({
         </>
       )}
 
-      {schedules === undefined && <Loader inline label="Loading schedules" />}
+      {schedules === undefined && <SkeletonRows rows={3} avatar={false} />}
 
       {schedules !== undefined && schedules.length > 0 && (
         <>

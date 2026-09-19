@@ -92,6 +92,8 @@ export const IdPrefix = {
   channelIdentity: 'cid',
   channelEvent: 'cev',
   apiKey: 'key',
+  oauthClient: 'oac',
+  oauthGrant: 'oag',
   lease: 'lse',
   auditEntry: 'aud',
   usageDay: 'usg',

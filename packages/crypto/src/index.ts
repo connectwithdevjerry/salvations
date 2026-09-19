@@ -9,3 +9,4 @@ export * from './envelope';
 export * from './redaction';
 export * from './api-key';
 export * from './hmac';
+export * from './oauth-tokens';

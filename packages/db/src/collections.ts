@@ -22,6 +22,12 @@ export const GLOBAL_COLLECTIONS = [
   'identities',
   /** Email verification and password reset challenges. */
   'authChallenges',
+  /**
+   * OAuth clients that registered with OUR authorization server — a Claude.ai
+   * or ChatGPT connecting to an assistant. A client belongs to no workspace:
+   * one registration is presented to any assistant a person signs into.
+   */
+  'oauthClients',
 ] as const;
 
 /** Every document belongs to exactly one workspace. */
@@ -30,6 +36,8 @@ export const TENANT_COLLECTIONS = [
   'apiKeys',
   'credentials',
   'oauthConnections',
+  /** Codes and tokens OUR authorization server issued, per workspace. */
+  'oauthGrants',
   'providerConfigs',
   'modelBindings',
   'agents',

@@ -149,6 +149,23 @@ export const VALIDATORS: Partial<Record<CollectionName, JsonSchema>> = {
     },
   },
 
+  oauthGrants: {
+    bsonType: 'object',
+    required: ['_id', 'workspaceId', 'kind', 'tokenHash', 'clientId', 'userId', 'agentId', 'familyId', 'expiresAt'],
+    properties: {
+      ...tenantBase,
+      kind: oneOfStrings('code', 'access', 'refresh'),
+      // The hash, never the token: a grant stored in the clear is a bearer
+      // credential for anyone who can read the database.
+      tokenHash: { bsonType: 'string', pattern: '^[0-9a-f]{64}$' },
+      clientId: str,
+      userId: str,
+      agentId: str,
+      familyId: str,
+      expiresAt: date,
+    },
+  },
+
   apiKeys: {
     bsonType: 'object',
     required: ['_id', 'workspaceId', 'prefix', 'keyHash', 'scopes'],

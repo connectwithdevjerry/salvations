@@ -14,7 +14,7 @@ import { IntegrationsTab } from '@/components/integrations-tab';
 import { ServerTab } from '@/components/server-tab';
 import { ago } from '@/components/agent-sidebar';
 import { useAgents } from '@/components/agents-context';
-import { Loader } from '@/components/loader';
+import { SkeletonPage } from '@/components/skeleton';
 
 /**
  * One assistant.
@@ -80,7 +80,7 @@ export default function AgentPage({
 
   if (agent === undefined) {
     return (
-      <div className="centered"><Loader label="Opening this assistant" /></div>
+      <div className="page"><SkeletonPage blocks={3} /></div>
     );
   }
 

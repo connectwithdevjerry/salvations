@@ -61,6 +61,21 @@ export const INDEXES: Readonly<Partial<Record<CollectionName, readonly IndexDef[
       rationale: 'an unused challenge should not outlive its window' },
   ],
 
+  oauthClients: [
+    { name: 'created', key: { createdAt: 1 }, rationale: 'housekeeping of abandoned registrations' },
+  ],
+
+  oauthGrants: [
+    { name: 'hash_unique', key: { tokenHash: 1 }, options: { unique: true },
+      rationale: 'a presented code or token is found by its hash and nothing else' },
+    { name: 'ws_family', key: { workspaceId: 1, familyId: 1 },
+      rationale: 'revoke a whole refresh chain when one link is replayed' },
+    { name: 'ws_user_client', key: { workspaceId: 1, userId: 1, clientId: 1 },
+      rationale: 'what a person has authorised, and revoking it' },
+    { name: 'expiry_ttl', key: { expiresAt: 1 }, options: { expireAfterSeconds: 0 },
+      rationale: 'an expired code or token is not worth a row' },
+  ],
+
   workspaces: [
     { name: 'slug_unique', key: { slug: 1 }, options: { unique: true },
       rationale: 'workspace lookup by URL slug' },

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Icon, Tile } from '@/components/ui';
 import { EmptyState } from '@/components/empty-state';
 import { useAgents } from '@/components/agents-context';
-import { Loader } from '@/components/loader';
+import { SkeletonPage } from '@/components/skeleton';
 
 /**
  * Nothing chosen yet.
@@ -21,7 +21,7 @@ export default function AgentsIndex({ params }: { params: Promise<{ workspaceId:
   const count = agents?.length;
 
   if (count === undefined) {
-    return <div className="centered"><Loader label="Loading your assistants" /></div>;
+    return <div className="page"><SkeletonPage blocks={2} /></div>;
   }
 
   if (count === 0) {

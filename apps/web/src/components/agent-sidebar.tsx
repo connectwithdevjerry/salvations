@@ -8,7 +8,7 @@ import { AgentsContext, type AgentRow } from '@/components/agents-context';
 import { api, ws } from '@/lib/client/api';
 import { Icon } from '@/components/ui';
 import { AgentAvatar } from '@/components/agent-avatar';
-import { Loader } from '@/components/loader';
+import { SkeletonRows } from '@/components/skeleton';
 
 /**
  * Every assistant, in groups.
@@ -86,7 +86,7 @@ export function AgentSidebar({ workspaceId }: { workspaceId: string }) {
       </div>
 
       <div className="agents-side-list">
-        {agents === undefined && <Loader inline />}
+        {agents === undefined && <SkeletonRows rows={4} />}
 
         {groups.map((group) => {
           const isCollapsed = collapsed.has(group.name) && query === '';

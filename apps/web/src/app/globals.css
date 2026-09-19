@@ -1316,3 +1316,48 @@ button.square {
 .vendor-card.selected .vendor-tick { opacity: 1; transform: scale(1); }
 .vendor-form { margin-top: 4px; }
 @media (max-width: 600px) { .vendor-grid { grid-template-columns: 1fr; } }
+
+/* --------------------------------------------------------------- consent -- */
+
+/* A client asking for an assistant. One question, two answers. */
+.consent { max-width: 440px; }
+.consent-who { display: flex; gap: 14px; align-items: center; margin-bottom: 6px; }
+.consent-who h2 strong { color: var(--accent); font-weight: 700; }
+.consent-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.centered .panel.consent { max-width: 440px; }
+
+/* -------------------------------------------------------------- skeleton -- */
+
+/*
+ * The shape of what is loading, shimmering. Rows for lists, blocks for
+ * pages. Each fades in a beat after the last so a long list arrives as a
+ * wave rather than a wall.
+ */
+.skeleton { display: grid; gap: 6px; }
+.skeleton.page { gap: 10px; }
+.skel {
+  display: block;
+  border-radius: 8px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--text) 6%, transparent) 0%,
+    color-mix(in srgb, var(--text) 11%, transparent) 40%,
+    color-mix(in srgb, var(--text) 6%, transparent) 80%
+  );
+  background-size: 220% 100%;
+  animation: skel-shimmer 1.4s ease-in-out infinite;
+}
+.skel-row { display: flex; gap: 11px; align-items: center; padding: 9px 8px; opacity: 0; animation: skel-in 240ms ease-out forwards; }
+.skel-avatar { width: 44px; height: 44px; border-radius: 13px; flex: none; }
+.skel-lines { flex: 1; display: grid; gap: 7px; }
+.skel-line { height: 12px; }
+.skel-line.thin { height: 9px; }
+.skel-line.title { height: 20px; border-radius: 6px; }
+.skel-block { height: 86px; border-radius: var(--radius); opacity: 0; animation: skel-shimmer 1.4s ease-in-out infinite, skel-in 240ms ease-out forwards; }
+@keyframes skel-shimmer { 0% { background-position: 120% 0; } 100% { background-position: -120% 0; } }
+@keyframes skel-in { to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .skel, .skel-block { animation: none; } .skel-row { opacity: 1; animation: none; } }
+
+/* Numbered steps inside a card: how to connect from a chat app. */
+.steps-list { margin: 0; padding-left: 20px; display: grid; gap: 6px; font-size: 14px; }
+.steps-list li::marker { color: var(--accent); font-weight: 600; }

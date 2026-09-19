@@ -147,7 +147,21 @@ export function ServerTab({ workspaceId, agentId, agentName }: { workspaceId: st
 
       {surface !== undefined && (
         <>
-          <p className="eyebrow" style={{ marginTop: 22 }}>Connect a client</p>
+          <p className="eyebrow" style={{ marginTop: 22 }}>Use it from Claude or ChatGPT</p>
+          <div className="card">
+            <p style={{ margin: '0 0 10px' }}>
+              No key needed. Paste the server URL where your chat app adds a custom
+              connector, and it will send you here to sign in and say yes. The model then runs
+              on <em>their</em> plan, with {agentName}’s memory, knowledge and tools.
+            </p>
+            <ol className="steps-list">
+              <li><strong>Claude.ai</strong>: Settings → Connectors → Add custom connector → paste the URL.</li>
+              <li><strong>ChatGPT</strong>: Settings → Apps &amp; connectors → Create (developer mode) → paste the URL, authentication OAuth.</li>
+              <li>Approve the request on the page that opens. That is all.</li>
+            </ol>
+          </div>
+
+          <p className="eyebrow" style={{ marginTop: 22 }}>Connect anything else</p>
           <div className="card">
             <p className="muted" style={{ margin: '0 0 8px' }}>
               Any MCP client that can send a bearer header. For Claude Desktop, through

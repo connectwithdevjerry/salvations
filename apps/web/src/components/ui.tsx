@@ -7,6 +7,7 @@
  * that fit in this file.
  */
 import type { ReactNode } from 'react';
+import { AntMark } from '@/components/ant-mark';
 
 export type IconName =
   | 'spark' | 'plug' | 'key' | 'agent' | 'server' | 'shield'
@@ -84,14 +85,8 @@ export function Tile({ name, large = false }: { name: IconName; large?: boolean 
 export function BrandMark({ wordmark = true }: { wordmark?: boolean }) {
   return (
     <span className="brand">
-      <span className="tile" aria-hidden>
-        {/* A honeycomb cell: one hexagon inside another. */}
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden focusable="false">
-          <path d="M12 2.5l8.2 4.75v9.5L12 21.5l-8.2-4.75v-9.5L12 2.5z"
-            stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
-          <path d="M12 8l3.9 2.25v4.5L12 17l-3.9-2.25v-4.5L12 8z"
-            stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" opacity="0.55" />
-        </svg>
+      <span className="tile brand-tile" aria-hidden>
+        <AntMark size={24} />
       </span>
       {wordmark && (
         <span className="wordmark">

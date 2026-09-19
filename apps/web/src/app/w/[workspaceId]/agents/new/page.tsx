@@ -8,7 +8,7 @@ import { BrandMark, Icon, Option, StepDots, Tile } from '@/components/ui';
 import { SetupSteps, Copyable } from '@/components/setup-steps';
 import { Qr } from '@/components/qr';
 import { GroupPicker } from '@/components/group-picker';
-import { VendorCards, vendorCopy } from '@/components/vendor-mark';
+import { VendorCards, keyStatesOf, vendorCopy } from '@/components/vendor-mark';
 
 /**
  * Creating an agent.
@@ -648,7 +648,7 @@ function Handshake({
 interface ProvidersResponse {
   knownTypes: string[];
   models: CatalogModel[];
-  items: { id: string; providerType: string; name: string }[];
+  items: { id: string; providerType: string; name: string; lastCheck?: { ok: boolean } }[];
 }
 
 /** Copy for the two vendors offered. The LIST comes from the server. */
@@ -672,7 +672,7 @@ function ModelStep({
 }) {
   const [types, setTypes] = useState<string[]>([]);
   const [models, setModels] = useState<CatalogModel[]>([]);
-  const [existing, setExisting] = useState<{ providerType: string; name: string }[]>([]);
+  const [existing, setExisting] = useState<ProvidersResponse['items']>([]);
   const [vendor, setVendor] = useState<string>();
   const [apiKey, setApiKey] = useState('');
   const [modelId, setModelId] = useState('');
@@ -727,7 +727,7 @@ function ModelStep({
       <VendorCards
         types={types}
         {...(vendor !== undefined ? { selected: vendor } : {})}
-        connected={existing.map((p) => p.providerType)}
+        keys={keyStatesOf(existing)}
         onSelect={(type) => { setVendor(type); setModelId(''); onError(''); }}
       />
 
@@ -746,7 +746,7 @@ function ModelStep({
               <p className="muted" style={{ margin: '5px 0 0' }}>
                 Make one at{' '}
                 <a href={copy.keysUrl} target="_blank" rel="noreferrer noopener">{copy.keysAt}</a>.
-                {already !== undefined && ` ${copy.label} is already connected; a new key replaces nothing until you bind it.`}
+                {already !== undefined && ` ${copy.label} already has a key on the Models page; connecting again adds a new one.`}
               </p>
             )}
           </div>
@@ -773,10 +773,10 @@ function ModelStep({
         </form>
       )}
 
-      {existing.length > 0 && (
+      {existing.some((p) => p.lastCheck?.ok === true) && (
         <div className="wizard-foot">
           <span className="faint">
-            {existing.map((p) => p.name).join(' and ')} {existing.length === 1 ? 'is' : 'are'} already connected.
+            {existing.filter((p) => p.lastCheck?.ok === true).map((p) => p.name).join(' and ')} already works.
           </span>
           <button type="button" onClick={onDone}>
             Use what is there <Icon name="arrow" size={15} />

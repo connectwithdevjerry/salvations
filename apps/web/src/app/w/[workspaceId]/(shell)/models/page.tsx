@@ -3,9 +3,12 @@
 import { use, useCallback, useEffect, useState } from 'react';
 import { api, ws } from '@/lib/client/api';
 import { rateHasExpired, type CatalogModel } from '@salvations/catalog';
-import { VendorCards, vendorCopy } from '@/components/vendor-mark';
+import { VendorCards, keyStatesOf, vendorCopy } from '@/components/vendor-mark';
 
-interface Provider { id: string; providerType: string; name: string; keyHint: string }
+interface Provider {
+  id: string; providerType: string; name: string; keyHint: string;
+  lastCheck?: { at: string; ok: boolean; message?: string };
+}
 interface Binding {
   id: string; name: string; providerType: string; modelId: string; role: string;
   cost: { inputPerMTok: number; outputPerMTok: number };
@@ -72,22 +75,23 @@ export default function ModelsPage({ params }: { params: Promise<{ workspaceId: 
       <ProviderForm
         workspaceId={workspaceId}
         knownTypes={knownTypes}
-        connected={providers.map((p) => p.providerType)}
+        keys={keyStatesOf(providers)}
         onDone={reload}
         onError={setError}
       />
 
       {providers.length > 0 && (
         <table style={{ marginBottom: 24 }}>
-          <thead><tr><th>Provider</th><th>Type</th><th>Key</th></tr></thead>
+          <thead><tr><th>Provider</th><th>Key</th><th>Status</th><th /></tr></thead>
           <tbody>
             {providers.map((provider) => (
-              <tr key={provider.id}>
-                <td>{provider.name}</td>
-                <td>{vendorCopy(provider.providerType).label}</td>
-                {/* The hint, never the key. Enough to tell two apart. */}
-                <td className="mono muted">{provider.keyHint}</td>
-              </tr>
+              <ProviderRow
+                key={provider.id}
+                workspaceId={workspaceId}
+                provider={provider}
+                onChange={reload}
+                onError={setError}
+              />
             ))}
           </tbody>
         </table>
@@ -142,12 +146,81 @@ export default function ModelsPage({ params }: { params: Promise<{ workspaceId: 
   );
 }
 
+/**
+ * One stored key. Its status is the vendor's last word on it, and the two
+ * things a person can do are ask again and take it away.
+ */
+function ProviderRow({
+  workspaceId, provider, onChange, onError,
+}: {
+  workspaceId: string;
+  provider: Provider;
+  onChange: () => void;
+  onError: (message: string) => void;
+}) {
+  const [busy, setBusy] = useState<'check' | 'remove'>();
+  const check = provider.lastCheck;
+
+  async function recheck() {
+    setBusy('check');
+    try {
+      await api.post(`${ws(workspaceId)}/providers/${provider.id}/check`, {});
+      onChange();
+    } catch (caught) {
+      onError(caught instanceof Error ? caught.message : 'Could not check that key.');
+    } finally {
+      setBusy(undefined);
+    }
+  }
+
+  async function remove() {
+    if (!window.confirm(`Remove ${provider.name} and every model bound to it?`)) return;
+    setBusy('remove');
+    try {
+      await api.del(`${ws(workspaceId)}/providers/${provider.id}`);
+      onChange();
+    } catch (caught) {
+      onError(caught instanceof Error ? caught.message : 'Could not remove that provider.');
+      setBusy(undefined);
+    }
+  }
+
+  return (
+    <tr>
+      <td>{vendorCopy(provider.providerType).label}</td>
+      {/* The hint, never the key. Enough to tell two apart. */}
+      <td className="mono muted">{provider.keyHint}</td>
+      <td>
+        {check === undefined ? (
+          <span className="badge" title="Stored before keys were checked with the vendor.">Not checked</span>
+        ) : check.ok ? (
+          <span className="badge ok" title={`Accepted ${new Date(check.at).toLocaleString()}`}>Connected</span>
+        ) : (
+          <span className="badge warn" title={check.message}>Key rejected</span>
+        )}
+        {check !== undefined && !check.ok && check.message !== undefined && (
+          <span className="muted" style={{ display: 'block', fontSize: 12, marginTop: 3 }}>{check.message}</span>
+        )}
+      </td>
+      <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+        <button type="button" className="ghost" disabled={busy !== undefined} onClick={() => void recheck()}>
+          {busy === 'check' ? 'Checking…' : 'Check key'}
+        </button>
+        {' '}
+        <button type="button" className="ghost danger" disabled={busy !== undefined} onClick={() => void remove()}>
+          {busy === 'remove' ? 'Removing…' : 'Remove'}
+        </button>
+      </td>
+    </tr>
+  );
+}
+
 function ProviderForm({
-  workspaceId, knownTypes, connected, onDone, onError,
+  workspaceId, knownTypes, keys, onDone, onError,
 }: {
   workspaceId: string;
   knownTypes: readonly string[];
-  connected: readonly string[];
+  keys: ReturnType<typeof keyStatesOf>;
   onDone: () => void;
   onError: (message: string) => void;
 }) {
@@ -167,7 +240,7 @@ function ProviderForm({
       <VendorCards
         types={knownTypes}
         {...(chosen !== undefined ? { selected: chosen } : {})}
-        connected={connected}
+        keys={keys}
         onSelect={(type) => { setVendor(type); onError(''); }}
       />
       {chosen !== undefined && copy !== undefined && (

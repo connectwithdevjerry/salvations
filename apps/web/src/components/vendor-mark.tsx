@@ -86,15 +86,47 @@ export function VendorMark({ type, size = 30 }: { type: string; size?: number })
 }
 
 /**
+ * What a page knows about a vendor's stored key.
+ *
+ * `ok` is the only state the word "connected" is allowed for: the vendor
+ * accepted the key when it was last asked. A key that was stored before keys
+ * were checked is `unknown`, and a key the vendor refused is `rejected`.
+ */
+export type KeyState = 'ok' | 'rejected' | 'unknown';
+
+export interface KeyStates { readonly [providerType: string]: KeyState | undefined }
+
+/** Reads the states off the provider list the server returns. */
+export function keyStatesOf(
+  items: readonly { providerType: string; lastCheck?: { ok: boolean } | undefined }[],
+): KeyStates {
+  const states: Record<string, KeyState> = {};
+  for (const item of items) {
+    const state: KeyState = item.lastCheck === undefined ? 'unknown' : item.lastCheck.ok ? 'ok' : 'rejected';
+    // Several rows for one vendor: the best verdict wins, so one good key is
+    // not hidden behind an older bad one.
+    const current = states[item.providerType];
+    if (current === undefined || current === 'unknown' || state === 'ok') states[item.providerType] = state;
+  }
+  return states;
+}
+
+const BADGE: Readonly<Record<KeyState, { text: string; className: string }>> = {
+  ok: { text: 'Connected', className: 'badge ok' },
+  rejected: { text: 'Key rejected', className: 'badge warn' },
+  unknown: { text: 'Key not checked', className: 'badge' },
+};
+
+/**
  * Pick a vendor. Selection only: the form for the key lives below the cards,
  * so choosing is one tap and the page never turns into two forms.
  */
 export function VendorCards({
-  types, selected, connected = [], onSelect,
+  types, selected, keys = {}, onSelect,
 }: {
   types: readonly string[];
   selected?: string;
-  connected?: readonly string[];
+  keys?: KeyStates;
   onSelect: (type: string) => void;
 }) {
   return (
@@ -102,7 +134,8 @@ export function VendorCards({
       {types.map((type) => {
         const copy = vendorCopy(type);
         const isSelected = selected === type;
-        const isConnected = connected.includes(type);
+        const state = keys[type];
+        const badge = state === undefined ? undefined : BADGE[state];
         return (
           <button
             key={type}
@@ -115,7 +148,7 @@ export function VendorCards({
             <span className="vendor-mark" aria-hidden><VendorMark type={type} size={30} /></span>
             <span className="vendor-name">
               {copy.label}
-              {isConnected && <span className="badge ok">Connected</span>}
+              {badge !== undefined && <span className={badge.className}>{badge.text}</span>}
             </span>
             <span className="vendor-blurb">{copy.blurb}</span>
             <span className="vendor-tick" aria-hidden>

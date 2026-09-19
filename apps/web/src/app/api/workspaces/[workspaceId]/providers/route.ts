@@ -43,6 +43,11 @@ export const GET = workspaceRoute('providers:read', async (ctx) => {
         : undefined) ?? '••••',
       enabled: p.enabled,
       createdAt: p.createdAt.toISOString(),
+      // The vendor's verdict, or nothing for a key stored before keys were
+      // checked. The UI must not read "nothing" as "connected".
+      lastCheck: p.lastCheck === null || p.lastCheck === undefined ? undefined : {
+        at: p.lastCheck.at.toISOString(), ok: p.lastCheck.ok, message: p.lastCheck.message ?? undefined,
+      },
     })),
   });
 });
@@ -116,6 +121,8 @@ export const POST = workspaceRoute('providers:write', async (ctx) => {
     enabled: true,
     createdBy: actorIdOf(ctx.principal),
     createdAt: new Date(),
+    // Checked a moment ago, above. An adapter with no check leaves it unknown.
+    lastCheck: check === undefined ? null : { at: new Date(), ok: true, message: null },
   });
 
   /*

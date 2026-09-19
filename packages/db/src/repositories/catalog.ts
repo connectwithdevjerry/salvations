@@ -19,6 +19,18 @@ export interface ProviderConfigDoc extends TenantDoc {
   enabled: boolean;
   createdBy: string;
   createdAt: Date;
+  /**
+   * The vendor's last verdict on the stored key. Absent for a key stored
+   * before keys were checked, which is exactly the case the UI must not call
+   * "connected".
+   */
+  lastCheck?: ProviderCheck | null;
+}
+
+export interface ProviderCheck {
+  at: Date;
+  ok: boolean;
+  message?: string | null;
 }
 
 export interface ModelBindingDoc extends TenantDoc {
@@ -186,6 +198,30 @@ export class ModelBindingRepository {
 
   async createProvider(input: Omit<ProviderConfigDoc, '_id' | 'workspaceId'>): Promise<ProviderConfigDoc> {
     return this.#providers.insertOne({ _id: newId(IdPrefix.providerConfig), ...input } as never);
+  }
+
+  findProvider(providerId: string): Promise<ProviderConfigDoc | null> {
+    return this.#providers.findOne({ _id: providerId } as never);
+  }
+
+  async recordCheck(providerId: string, check: ProviderCheck): Promise<void> {
+    await this.#providers.updateOne(
+      { _id: providerId } as never,
+      { $set: { lastCheck: check } } as never,
+    );
+  }
+
+  /**
+   * Removes a provider and every binding that pointed at it.
+   *
+   * The bindings go too: a binding whose provider is gone is a role that
+   * resolves and then fails at the first call, which is worse than a role
+   * that visibly has nothing bound.
+   */
+  async removeProvider(providerId: string): Promise<{ removed: boolean; bindings: number }> {
+    const bindings = await this.#bindings.deleteMany({ providerConfigId: providerId } as never);
+    const removed = await this.#providers.deleteOne({ _id: providerId } as never);
+    return { removed: removed.deletedCount === 1, bindings: bindings.deletedCount };
   }
 
   async createBinding(input: Omit<ModelBindingDoc, '_id' | 'workspaceId'>): Promise<ModelBindingDoc> {

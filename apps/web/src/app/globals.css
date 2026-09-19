@@ -971,23 +971,34 @@ button.square {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 12px;
+  gap: 14px;
   padding: 32px;
   color: var(--muted);
 }
 .loader.inline { flex-direction: row; justify-content: flex-start; padding: 12px; gap: 10px; }
-.loader-ring {
-  width: 28px;
-  height: 28px;
-  flex: none;
-  border-radius: 999px;
-  border: 3px solid color-mix(in srgb, var(--accent) 22%, transparent);
-  border-top-color: var(--accent);
-  animation: spin 800ms linear infinite;
+.loader-hive { width: 72px; height: 72px; flex: none; color: var(--accent); }
+.loader.inline .loader-hive { width: 24px; height: 24px; }
+.loader-cell {
+  fill: currentColor;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+  fill-opacity: 0.16;
+  stroke-opacity: 0.6;
+  animation: hive 1.5s ease-in-out infinite;
 }
-.loader.inline .loader-ring { width: 16px; height: 16px; border-width: 2px; }
+@keyframes hive {
+  0%, 55%, 100% { fill-opacity: 0.16; stroke-opacity: 0.6; }
+  18% { fill-opacity: 0.95; stroke-opacity: 1; }
+}
 .loader-label { font-size: 13.5px; }
-@media (prefers-reduced-motion: reduce) { .loader-ring { animation-duration: 3s; } }
+@media (prefers-reduced-motion: reduce) {
+  .loader-cell { animation: hive-breathe 3s ease-in-out infinite; animation-delay: 0s !important; }
+  @keyframes hive-breathe {
+    0%, 100% { fill-opacity: 0.12; }
+    50% { fill-opacity: 0.5; }
+  }
+}
 
 /* --------------------------------------------------------- empty states -- */
 

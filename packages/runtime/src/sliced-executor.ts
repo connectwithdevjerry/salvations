@@ -113,7 +113,21 @@ export class SlicedExecutor implements RunExecutor {
 
   async #drive(run: Run, token: LeaseToken, deadline: Deadline): Promise<ExecOutcome> {
     const id = run.id;
-    const session = await this.#deps.openSession(run, token);
+    let session: ExecutionSession;
+    try {
+      session = await this.#deps.openSession(run, token);
+    } catch (error) {
+      // A model binding that no longer exists, a provider with no adapter, a
+      // credential that will not decrypt: all of them used to escape here as
+      // a 500 with the lease still held, so the run sat in `running` until a
+      // sweep noticed and the person saw "working" for a reply that would
+      // never come. They are failures of THIS run, and are recorded as such.
+      if (isLeaseLost(error)) {
+        this.#deps.metrics?.leaseLost(String(id));
+        return { kind: 'lease_lost' };
+      }
+      return this.#fail(id, token, error);
+    }
     const signal = new AbortController().signal;
 
     let steps = 0;

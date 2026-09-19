@@ -129,7 +129,7 @@ export class ChangeStreamEventBus extends BaseEventBus {
     // by the stream rather than falling into the gap. Duplicates are filtered
     // by seq below; a gap could not be.
     const stream = this.collection().watch(
-      [{ $match: { operationType: 'insert', 'fullDocument.runId': runId } }],
+      [{ $match: { operationType: 'insert', 'fullDocument.workspaceId': workspaceId, 'fullDocument.runId': runId } }],
       { fullDocument: 'updateLookup' },
     );
 

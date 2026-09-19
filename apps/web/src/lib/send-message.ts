@@ -51,7 +51,7 @@ export async function sendUserMessage(
     await ctx.repos.conversations.setModelBinding(conversationId, input.modelBindingId);
   }
 
-  const modelBindingId = input.modelBindingId ?? conversation.modelBindingId;
+  const modelBindingId = await usableModel(ctx, conversationId, input.modelBindingId ?? conversation.modelBindingId, agent.currentVersion.modelRole);
 
   await ctx.repos.conversations.appendMessage({
     conversationId,
@@ -96,3 +96,31 @@ export async function sendUserMessage(
  * the person still has.
  */
 const delegated = (principal: Principal): Principal => principal;
+
+/**
+ * The model this turn runs on.
+ *
+ * A conversation remembers the binding it started on. When that binding has
+ * since been removed — a provider taken off the Models page takes its
+ * bindings with it — the conversation moves to whatever now serves the
+ * agent's role, and says so, rather than creating a run that fails before
+ * its first step and leaves the person watching a chat that never answers.
+ */
+async function usableModel(
+  ctx: Pick<WorkspaceContext, 'repos'>,
+  conversationId: string,
+  bindingId: string,
+  role: string,
+): Promise<string> {
+  const current = await ctx.repos.models.findById(bindingId);
+  if (current !== null && current.enabled) return bindingId;
+
+  const fallback = await ctx.repos.models.forRole(role);
+  if (fallback === null) {
+    throw Errors.conflict(
+      'No model is connected for this assistant. Connect Claude or OpenAI on the Models page and try again.',
+    );
+  }
+  await ctx.repos.conversations.setModelBinding(conversationId, fallback._id);
+  return fallback._id;
+}

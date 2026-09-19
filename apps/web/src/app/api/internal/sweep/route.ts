@@ -45,7 +45,24 @@ export async function POST(request: Request): Promise<Response> {
     },
   );
   if (!result.ok) return Response.json({ error: 'unauthorized' }, { status: 401 });
+  return sweep();
+}
 
+/**
+ * The platform's scheduler calls with a bearer it was given, not an HMAC it
+ * cannot compute. Without CRON_SECRET set there is no schedule and this
+ * answers 401 to everyone, so the endpoint is never open by accident.
+ */
+export async function GET(request: Request): Promise<Response> {
+  const expected = env().CRON_SECRET;
+  const presented = request.headers.get('authorization');
+  if (expected === undefined || presented !== `Bearer ${expected}`) {
+    return Response.json({ error: 'unauthorized' }, { status: 401 });
+  }
+  return sweep();
+}
+
+async function sweep(): Promise<Response> {
   const handle = await db();
   const queue = new MongoRunQueue(handle.db);
 

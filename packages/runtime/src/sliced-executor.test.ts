@@ -334,6 +334,22 @@ describe('a curtailed run', () => {
     });
   });
 
+  it('fails the run when its session cannot be opened, instead of throwing with the lease held', async () => {
+    // The production symptom: a conversation pointing at a deleted model
+    // binding. The resolver throws before the first step; the run must end
+    // as failed with that reason, and the lease must be gone.
+    const h = harness([], {
+      openSession: async () => { throw new Error('Model binding mbd_gone does not exist.'); },
+    });
+    const outcome = await h.executor.execute(RUN_ID, h.deadline(300_000));
+    expect(outcome).toMatchObject({
+      kind: 'finished', runId: RUN_ID, status: 'failed',
+      error: { code: 'executor_error', message: 'Model binding mbd_gone does not exist.' },
+    });
+    expect(h.queue.leaseToken).toBeUndefined();
+    expect(h.queue.releases[0]?.intent).toMatchObject({ kind: 'finish', status: 'failed' });
+  });
+
   it('finishes cleanly when a step throws, rather than leaving the run leased', async () => {
     const h = harness([]);
     const executor = new SlicedExecutor({

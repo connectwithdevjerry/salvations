@@ -26,6 +26,8 @@ const schema = z.object({
 
   CREDENTIAL_KEK: z.string().min(1, 'CREDENTIAL_KEK is required'),
   CREDENTIAL_KEK_VERSION: z.coerce.number().int().positive().default(1),
+  /** Set by Vercel for scheduled invocations; the sweep accepts it as an alternative to the HMAC. */
+  CRON_SECRET: z.string().min(16).optional(),
 
   INTERNAL_HMAC_SECRET: z.string().min(32, 'INTERNAL_HMAC_SECRET must be at least 32 characters'),
   PUBLIC_BASE_URL: z.string().url().default('http://localhost:3000'),

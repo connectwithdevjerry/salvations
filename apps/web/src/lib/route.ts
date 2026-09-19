@@ -17,7 +17,7 @@ import type { Permission, Principal } from '@salvations/core';
 import type { Database } from '@salvations/db';
 import { db } from './db';
 import { errorResponse } from './http';
-import { repositories } from './container';
+import { repositories } from './repositories';
 import { requirePermission, resolvePrincipal } from './principal';
 import { readCaller } from './session';
 

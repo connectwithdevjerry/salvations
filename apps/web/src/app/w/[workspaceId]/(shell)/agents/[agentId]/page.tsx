@@ -12,7 +12,8 @@ import { SchedulePanel } from '@/components/schedule-panel';
 import { SpeakTab } from '@/components/speak-tab';
 import { IntegrationsTab } from '@/components/integrations-tab';
 import { ServerTab } from '@/components/server-tab';
-import { ago, type AgentRow } from '@/components/agent-sidebar';
+import { ago } from '@/components/agent-sidebar';
+import { useAgents } from '@/components/agents-context';
 import { Loader } from '@/components/loader';
 
 /**
@@ -46,10 +47,10 @@ export default function AgentPage({
 }) {
   const { workspaceId, agentId } = use(params);
   const router = useRouter();
-  const [agent, setAgent] = useState<AgentRow>();
+  const { agents, reload: reloadAgent } = useAgents();
+  const agent = agents?.find((a) => a.id === agentId);
   const [tab, setTab] = useState<Tab>('chat');
   const [conversationId, setConversationId] = useState<string>();
-  const [error, setError] = useState<string>();
 
   // Tab and conversation come from the URL, read after mount so a link to a
   // specific chat opens it. useSearchParams would opt the page out of static
@@ -61,21 +62,11 @@ export default function AgentPage({
     setConversationId(query.get('c') ?? undefined);
   }, [agentId]);
 
-  const reloadAgent = useCallback(() => {
-    api.get<{ items: AgentRow[] }>(`${ws(workspaceId)}/agents`)
-      .then((r) => {
-        const found = r.items.find((a) => a.id === agentId);
-        if (found === undefined) router.replace(`/w/${workspaceId}/agents`);
-        else setAgent(found);
-      })
-      .catch((e: Error) => setError(e.message));
-  }, [workspaceId, agentId, router]);
-
+  // The list is loaded and polled once, by the sidebar. An id that is not in
+  // it once the list has arrived is not an assistant of this workspace.
   useEffect(() => {
-    reloadAgent();
-    const timer = setInterval(reloadAgent, 10_000);
-    return () => clearInterval(timer);
-  }, [reloadAgent]);
+    if (agents !== undefined && agent === undefined) router.replace(`/w/${workspaceId}/agents`);
+  }, [agents, agent, router, workspaceId]);
 
   const go = (next: Tab, c?: string) => {
     setTab(next);
@@ -89,11 +80,7 @@ export default function AgentPage({
 
   if (agent === undefined) {
     return (
-      <div className="centered">
-        {error !== undefined
-          ? <p className="error">{error}</p>
-          : <Loader label="Opening this assistant" />}
-      </div>
+      <div className="centered"><Loader label="Opening this assistant" /></div>
     );
   }
 

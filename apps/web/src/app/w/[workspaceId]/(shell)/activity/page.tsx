@@ -6,6 +6,7 @@ import { api, ws } from '@/lib/client/api';
 import { Icon } from '@/components/ui';
 import { EmptyState } from '@/components/empty-state';
 import { Loader } from '@/components/loader';
+import { usePoll } from '@/lib/client/use-poll';
 
 /**
  * Activity.
@@ -62,13 +63,9 @@ export default function ActivityPage({
       .catch((e: Error) => { setError(e.message); setRuns([]); });
   }, [workspaceId, filter]);
 
-  useEffect(() => {
-    reload();
-    // A run started from a chat platform finishes without anything in this
-    // browser knowing, so this page has to ask.
-    const timer = setInterval(reload, 8_000);
-    return () => clearInterval(timer);
-  }, [reload]);
+  // A run started from a chat platform finishes without anything in this
+  // browser knowing, so this page has to ask — while somebody is looking.
+  usePoll(reload, 8_000);
 
   return (
     <div className="page">

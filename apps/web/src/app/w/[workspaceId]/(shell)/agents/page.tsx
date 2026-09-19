@@ -1,9 +1,9 @@
 'use client';
 
-import { use, useEffect, useState } from 'react';
+import { use } from 'react';
 import Link from 'next/link';
-import { api, ws } from '@/lib/client/api';
 import { Icon, Tile } from '@/components/ui';
+import { useAgents } from '@/components/agents-context';
 import { Loader } from '@/components/loader';
 
 /**
@@ -16,13 +16,8 @@ import { Loader } from '@/components/loader';
  */
 export default function AgentsIndex({ params }: { params: Promise<{ workspaceId: string }> }) {
   const { workspaceId } = use(params);
-  const [count, setCount] = useState<number>();
-
-  useEffect(() => {
-    api.get<{ items: unknown[] }>(`${ws(workspaceId)}/agents`)
-      .then((r) => setCount(r.items.length))
-      .catch(() => setCount(0));
-  }, [workspaceId]);
+  const { agents } = useAgents();
+  const count = agents?.length;
 
   if (count === undefined) {
     return <div className="centered"><Loader label="Loading your assistants" /></div>;

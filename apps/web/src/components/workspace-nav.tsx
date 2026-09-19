@@ -54,8 +54,21 @@ export function WorkspaceNav({ workspaceId }: { workspaceId: string }) {
         .catch(() => undefined);
 
     void load();
-    const timer = setInterval(load, 10_000);
-    return () => clearInterval(timer);
+    let timer: ReturnType<typeof setInterval> | undefined;
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        if (timer === undefined) { void load(); timer = setInterval(load, 15_000); }
+      } else if (timer !== undefined) {
+        clearInterval(timer);
+        timer = undefined;
+      }
+    };
+    onVisibility();
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      if (timer !== undefined) clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
   }, [workspaceId]);
 
   const current = workspaces.find((w) => w.id === workspaceId);

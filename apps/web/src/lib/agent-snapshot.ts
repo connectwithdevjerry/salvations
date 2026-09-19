@@ -17,7 +17,7 @@
  * own memory was filtered out.
  */
 import type { Database } from '@salvations/db';
-import { bindingSource } from './container';
+import { bindingSource } from './binding-source';
 
 interface Attachment {
   readonly bindingId: string;

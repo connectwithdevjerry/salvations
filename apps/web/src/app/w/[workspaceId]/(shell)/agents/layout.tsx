@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { AgentSidebar } from '@/components/agent-sidebar';
+import { AgentSidebar, AgentsProvider } from '@/components/agent-sidebar';
 
 /**
  * The assistants area: the list on the left, the chosen one on the right.
@@ -16,9 +16,11 @@ export default async function AgentsLayout({
 }) {
   const { workspaceId } = await params;
   return (
-    <div className="agents-shell">
-      <AgentSidebar workspaceId={workspaceId} />
-      <div className="agents-main">{children}</div>
-    </div>
+    <AgentsProvider workspaceId={workspaceId}>
+      <div className="agents-shell">
+        <AgentSidebar workspaceId={workspaceId} />
+        <div className="agents-main">{children}</div>
+      </div>
+    </AgentsProvider>
   );
 }

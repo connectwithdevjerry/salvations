@@ -15,9 +15,7 @@ import { McpClientManager } from '@salvations/mcp';
 import { createRegistry } from '@salvations/provider-registry';
 import { createEventBus, type RunEventReader } from '@salvations/db';
 import { InMemoryMetrics } from '@salvations/observability';
-import { envKeyProvider } from '@salvations/crypto';
 import { db } from './db';
-import { env } from './env';
 
 interface Singletons {
   providers?: ReturnType<typeof createRegistry>;
@@ -48,9 +46,4 @@ export async function eventBus(): Promise<{ bus: RunEventReader; kind: string }>
   return (singletons().eventBus ??= createEventBus(handle.db));
 }
 
-export const keyProvider = () => {
-  // Validated first, so a missing KEK fails at startup rather than while
-  // decrypting a credential for a request that has already been accepted.
-  const e = env();
-  return envKeyProvider(process.env, e.CREDENTIAL_KEK_VERSION);
-};
+export { keyProvider } from './keys';

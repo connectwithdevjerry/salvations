@@ -2,7 +2,9 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { usePoll } from '@/lib/client/use-poll';
+import { AgentsContext, type AgentRow } from '@/components/agents-context';
 import { api, ws } from '@/lib/client/api';
 import { Icon } from '@/components/ui';
 import { AgentAvatar } from '@/components/agent-avatar';
@@ -22,34 +24,34 @@ import { Loader } from '@/components/loader';
  * to.
  */
 
-export interface AgentRow {
-  id: string; name: string; category?: string; color: string; main: boolean;
-  status: 'running' | 'failed' | 'idle';
-  lastMessage?: { preview: string; at: string };
-  createdAt: string;
-}
+export type { AgentRow } from '@/components/agents-context';
 
 const DEFAULT_GROUP = 'Assistants';
 const POLL_MS = 10_000;
 
-export function AgentSidebar({ workspaceId }: { workspaceId: string }) {
-  const pathname = usePathname();
-  const router = useRouter();
+/**
+ * Owns the assistants list for the whole area and shares it through context,
+ * so the chosen assistant's header does not fetch and poll it a second time.
+ */
+export function AgentsProvider({ workspaceId, children }: { workspaceId: string; children: ReactNode }) {
   const [agents, setAgents] = useState<AgentRow[]>();
-  const [query, setQuery] = useState('');
-  const [collapsed, setCollapsed] = useState<Set<string>>(() => readCollapsed(workspaceId));
-
   const reload = useCallback(() => {
     api.get<{ items: AgentRow[] }>(`${ws(workspaceId)}/agents`)
       .then((r) => setAgents(r.items))
       .catch(() => setAgents((current) => current ?? []));
   }, [workspaceId]);
 
-  useEffect(() => {
-    reload();
-    const timer = setInterval(reload, POLL_MS);
-    return () => clearInterval(timer);
-  }, [reload]);
+  usePoll(reload, POLL_MS);
+
+  return <AgentsContext.Provider value={{ agents, reload }}>{children}</AgentsContext.Provider>;
+}
+
+export function AgentSidebar({ workspaceId }: { workspaceId: string }) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const { agents, reload } = useContext(AgentsContext);
+  const [query, setQuery] = useState('');
+  const [collapsed, setCollapsed] = useState<Set<string>>(() => readCollapsed(workspaceId));
 
   // Re-read when the route changes: a rename or a new assistant should show
   // at once rather than on the next poll.

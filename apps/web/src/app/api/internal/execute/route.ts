@@ -79,9 +79,18 @@ export async function POST(request: Request): Promise<Response> {
   // `outcome.runId` and not the hint: the queue hands out whatever most
   // deserves to run, which is usually but not always the run we were told
   // about. Using the hint would deliver one person's answer to another.
-  if (outcome.kind === 'finished') {
-    await deliverFinishedRun(String(outcome.runId));
-  }
+  const delivery = outcome.kind === 'finished'
+    ? await deliverFinishedRun(String(outcome.runId))
+    : undefined;
+
+  // One line per slice, so the deployment's own logs say what happened to a
+  // run without anyone reading the database. Ids and enum-shaped fields only.
+  console.log(JSON.stringify({
+    at: 'execute',
+    hint: String(hint),
+    ...outcome,
+    ...(delivery !== undefined ? { delivery } : {}),
+  }));
 
   // 202 throughout: this endpoint reports what the slice did, not whether the
   // run succeeded. A caller that treated `finished: failed` as an HTTP error

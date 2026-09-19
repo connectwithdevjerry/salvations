@@ -323,7 +323,12 @@ describe('a curtailed run', () => {
     }]);
     const outcome = await h.executor.execute(RUN_ID, h.deadline(300_000));
 
-    expect(outcome).toEqual({ kind: 'finished', runId: RUN_ID, status: 'failed' });
+    // The outcome carries the reason too, so the caller can say it out loud
+    // without reading the run back.
+    expect(outcome).toEqual({
+      kind: 'finished', runId: RUN_ID, status: 'failed',
+      error: { code: 'budget', message: 'the cost budget was exhausted' },
+    });
     expect(h.queue.releases[0]?.intent).toMatchObject({
       kind: 'finish', status: 'failed', error: { code: 'budget' },
     });
@@ -342,7 +347,7 @@ describe('a curtailed run', () => {
     });
 
     expect(await executor.execute(RUN_ID, new WallClockDeadline(300_000, { now: () => 1_000_000 })))
-      .toEqual({ kind: 'finished', runId: RUN_ID, status: 'failed' });
+      .toMatchObject({ kind: 'finished', runId: RUN_ID, status: 'failed', error: { code: 'executor_error' } });
     expect(h.queue.leaseToken).toBeUndefined();
     expect(h.queue.releases[0]?.intent).toMatchObject({ error: { code: 'executor_error' } });
   });

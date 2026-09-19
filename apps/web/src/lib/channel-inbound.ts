@@ -153,6 +153,9 @@ export async function handleDelivery(
 
     const runId = await startRun(handle.db, row, heard, repos, channels);
     if (runId !== undefined) await channels.attachRun(row._id, message.messageRef, runId);
+    console.log(JSON.stringify({
+      at: 'channel-inbound', channel: row._id, ...(runId !== undefined ? { runId } : { started: false }),
+    }));
 
     return plain(200, 'ok');
   } catch (caught) {

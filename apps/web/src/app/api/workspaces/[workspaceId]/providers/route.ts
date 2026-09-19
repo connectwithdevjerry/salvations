@@ -11,6 +11,7 @@ import { CATALOG_MODELS, defaultBindings, modelsFor } from '@salvations/catalog'
 import { errorResponse, jsonBody, ok } from '@/lib/http';
 import { workspaceRoute } from '@/lib/route';
 import { actorIdOf } from '@/lib/principal';
+import { providers } from '@/lib/singletons';
 
 export const runtime = 'nodejs';
 
@@ -72,6 +73,30 @@ export const POST = workspaceRoute('providers:write', async (ctx) => {
     );
   }
 
+  /*
+   * The key is tried against the vendor BEFORE it is stored.
+   *
+   * A wrong key stored quietly becomes an assistant that never answers, on
+   * Telegram and in the browser, with nothing on any page saying why. Refusing
+   * it here puts the vendor's own verdict in front of the person while the key
+   * is still in the box.
+   */
+  const check = await providers().create(input.providerType as never, {
+    apiKey: input.apiKey,
+    ...(input.baseUrl !== undefined && input.baseUrl !== null ? { baseUrl: input.baseUrl } : {}),
+  }).verify?.();
+  if (check !== undefined && !check.ok) {
+    const vendor = input.name;
+    return check.kind === 'rejected'
+      ? errorResponse(
+        422, 'provider_rejected_key',
+        `${vendor} did not accept that key (${check.message}). Check it and try again.`,
+      )
+      : errorResponse(
+        502, 'provider_unreachable',
+        `${vendor} could not be reached to check the key (${check.message}). Try again in a moment.`,
+      );
+  }
 
   const credential = await ctx.repos.credentials.store({
     name: `${input.name} API key`,

@@ -27,6 +27,8 @@ export type ExecOutcome =
       readonly kind: 'finished';
       readonly runId: RunId;
       readonly status: Extract<RunStatus, 'succeeded' | 'failed' | 'cancelled'>;
+      /** Why a failed run failed, in the same words the run record carries. */
+      readonly error?: { readonly code: string; readonly message: string };
     }
   | { readonly kind: 'suspended'; readonly runId: RunId; readonly reason: 'approval' | 'input' | 'tool' }
   /** Slice exhausted. The run is back in `queued`, ready for continuation. */

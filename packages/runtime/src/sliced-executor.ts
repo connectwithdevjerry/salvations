@@ -214,7 +214,7 @@ export class SlicedExecutor implements RunExecutor {
       return { kind: 'lease_lost' };
     }
     this.#deps.metrics?.runFinished(String(runId), status, steps);
-    return { kind: 'finished', runId, status };
+    return { kind: 'finished', runId, status, ...(error !== undefined ? { error } : {}) };
   }
 
   async #fail(runId: RunId, token: LeaseToken, error: unknown): Promise<ExecOutcome> {

@@ -20,59 +20,67 @@ import { repositories } from './container';
 /** How far back to look for the answer. A turn is rarely more than a few. */
 const RECENT_MESSAGES = 10;
 
-export async function deliverFinishedRun(runId: string): Promise<'sent' | 'skipped'> {
+export type Delivery =
+  | { readonly result: 'sent' }
+  | { readonly result: 'skipped'; readonly reason: string };
+
+const skipped = (reason: string): Delivery => ({ result: 'skipped', reason });
+
+export async function deliverFinishedRun(runId: string): Promise<Delivery> {
   try {
     return await deliver(runId);
-  } catch {
-    return 'skipped';
+  } catch (caught) {
+    return skipped(`threw: ${caught instanceof Error ? caught.message : String(caught)}`);
   }
 }
 
-async function deliver(runId: string): Promise<'sent' | 'skipped'> {
+async function deliver(runId: string): Promise<Delivery> {
   const handle = await db();
 
   // The run id is all the executor has. Finding its workspace is the same
   // unscoped-by-necessity read the inbound path makes, and for the same reason.
   const platform = new PlatformDb(handle.db, 'channel-delivery');
   const run = await platform.collection<RunDoc>('runs').findOne({ _id: runId } as never);
-  if (run === null) return 'skipped';
+  if (run === null) return skipped('no such run');
 
   const conversations = new ConversationRepository(handle.db, run.workspaceId);
   const conversation = await conversations.findById(run.conversationId);
   // The overwhelmingly common case: a conversation somebody is watching in the
   // browser, which needs no delivery at all.
-  if (conversation?.channelId === null || conversation?.channelId === undefined) return 'skipped';
+  if (conversation?.channelId === null || conversation?.channelId === undefined) return skipped('not a channel conversation');
 
   const channels = new ChannelRepository(handle.db, run.workspaceId);
   const row = await channels.findById(conversation.channelId);
-  if (row === null || row.status !== 'connected') return 'skipped';
+  if (row === null) return skipped('channel row missing');
+  if (row.status !== 'connected') return skipped(`channel is ${row.status}`);
 
   const identity = await channels.findIdentityByConversation(conversation._id);
   // `externalRef` is the fallback: an identity row can be removed by a
   // disconnect while a run it started is still in flight.
   const chatRef = identity?.chatRef ?? conversation.externalRef;
-  if (chatRef === null || chatRef === undefined) return 'skipped';
+  if (chatRef === null || chatRef === undefined) return skipped('no chat to send to');
 
   const text = await answerOf(conversations, conversation._id, runId, run.status);
-  if (text === undefined) return 'skipped';
+  if (text === undefined) return skipped(`nothing to say (run ${run.status}, no assistant text for this run)`);
 
   const adapter = channelAdapter(row.type);
-  if (adapter === undefined) return 'skipped';
+  if (adapter === undefined) return skipped(`no adapter for ${row.type}`);
 
   const repos = repositories(handle.db, run.workspaceId);
   const token = await repos.credentials.resolve(row.tokenCredentialId);
-  if (token === null) return 'skipped';
+  if (token === null) return skipped('bot token missing or revoked');
 
   try {
     await adapter.send(token.expose(), chatRef, text);
     await channels.recordDelivery(row._id);
-    return 'sent';
+    return { result: 'sent' };
   } catch (caught) {
     // Recorded rather than retried. The person can see on the integrations page
     // that the connection is failing, which is more useful than a silent retry
     // against a bot token that has been revoked.
-    await channels.recordFailure(row._id, caught instanceof Error ? caught.message : String(caught));
-    return 'skipped';
+    const message = caught instanceof Error ? caught.message : String(caught);
+    await channels.recordFailure(row._id, message);
+    return skipped(`send failed: ${message}`);
   }
 }
 

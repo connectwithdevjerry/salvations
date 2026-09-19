@@ -29,7 +29,23 @@ export interface AgentProvider {
    * at the moment of use that this workspace's provider cannot hear.
    */
   transcribe?(req: TranscriptionRequest): Promise<TranscriptionResult>;
+
+  /**
+   * Asks the vendor whether these credentials work, before anything is stored.
+   *
+   * The cheapest authenticated call the vendor offers. A key that is wrong is
+   * refused HERE, in the form, rather than discovered as a silent failure in
+   * the first conversation hours later.
+   */
+  verify?(): Promise<CredentialCheck>;
 }
+
+export type CredentialCheck =
+  | { readonly ok: true }
+  /** The vendor answered and said no: a wrong, revoked or under-scoped key. */
+  | { readonly ok: false; readonly kind: 'rejected'; readonly message: string }
+  /** The vendor could not be asked. Says nothing about the key. */
+  | { readonly ok: false; readonly kind: 'unreachable'; readonly message: string };
 
 export interface ProviderCredentials {
   readonly apiKey?: string;

@@ -8,6 +8,7 @@ import { BrandMark, Icon, Option, StepDots, Tile } from '@/components/ui';
 import { SetupSteps, Copyable } from '@/components/setup-steps';
 import { Qr } from '@/components/qr';
 import { GroupPicker } from '@/components/group-picker';
+import { VendorCards, vendorCopy } from '@/components/vendor-mark';
 
 /**
  * Creating an agent.
@@ -651,22 +652,15 @@ interface ProvidersResponse {
 }
 
 /** Copy for the two vendors offered. The LIST comes from the server. */
-const PROVIDER_COPY: Readonly<Record<string, { label: string; keysAt: string; keysUrl: string }>> = {
-  anthropic: { label: 'Claude', keysAt: 'console.anthropic.com', keysUrl: 'https://console.anthropic.com/settings/keys' },
-  openai: { label: 'OpenAI', keysAt: 'platform.openai.com', keysUrl: 'https://platform.openai.com/api-keys' },
-};
-
-const copyFor = (type: string) =>
-  PROVIDER_COPY[type] ?? { label: type, keysAt: 'your provider', keysUrl: '' };
-
 /**
  * How the agent thinks.
  *
  * The person's own key, for the vendor of their choice. The vendor bills them
- * directly; we hold the key encrypted and never show it again. Models are
- * picked from the catalogue rather than typed, because an unrecognised id
- * still runs — on a fallback profile that truncates conversations for no
- * visible reason.
+ * directly; we hold the key encrypted and never show it again. The two vendors
+ * are cards, not a list: a mark is recognised faster than a name is read.
+ * Models are picked from the catalogue rather than typed, because an
+ * unrecognised id still runs — on a fallback profile that truncates
+ * conversations for no visible reason.
  */
 function ModelStep({
   workspaceId, agentName, onDone, onError,
@@ -679,7 +673,7 @@ function ModelStep({
   const [types, setTypes] = useState<string[]>([]);
   const [models, setModels] = useState<CatalogModel[]>([]);
   const [existing, setExisting] = useState<{ providerType: string; name: string }[]>([]);
-  const [open, setOpen] = useState<string>();
+  const [vendor, setVendor] = useState<string>();
   const [apiKey, setApiKey] = useState('');
   const [modelId, setModelId] = useState('');
   const [busy, setBusy] = useState(false);
@@ -690,7 +684,7 @@ function ModelStep({
         setTypes(result.knownTypes);
         setModels(result.models);
         setExisting(result.items);
-        setOpen(result.knownTypes[0]);
+        setVendor(result.knownTypes[0]);
       })
       .catch(() => onError('Could not load the available providers.'));
   }, [workspaceId, onError]);
@@ -702,12 +696,12 @@ function ModelStep({
     setBusy(true);
     try {
       const chosen = modelId !== '' ? modelId : chatModelsFor(providerType)[0]?.id;
-      // One call. The server binds the chat role to the chosen model and the
-      // cheap and summarizer roles to sensible defaults, so the agent can run
-      // the moment this returns.
+      // One call. The server checks the key with the vendor, then binds the
+      // chat role to the chosen model and the cheap and summarizer roles to
+      // sensible defaults, so the agent can run the moment this returns.
       await api.post(`${ws(workspaceId)}/providers`, {
         providerType,
-        name: copyFor(providerType).label,
+        name: vendorCopy(providerType).label,
         apiKey,
         ...(chosen !== undefined ? { chatModelId: chosen } : {}),
       });
@@ -718,71 +712,66 @@ function ModelStep({
     }
   }
 
+  const copy = vendor !== undefined ? vendorCopy(vendor) : undefined;
+  const options = vendor !== undefined ? chatModelsFor(vendor) : [];
+  const already = existing.find((p) => p.providerType === vendor);
+
   return (
     <>
       <Head
         icon="spark"
         title={`How should ${agentName} think?`}
-        lede="Connect your own Claude or OpenAI key. They bill you directly; we never see the invoice. The key is encrypted before it is stored and never shown again."
+        lede="Connect your own Claude or OpenAI key. They bill you directly; we never see the invoice. The key is checked with them, encrypted before it is stored, and never shown again."
       />
 
-      <p className="eyebrow">Provider</p>
+      <VendorCards
+        types={types}
+        {...(vendor !== undefined ? { selected: vendor } : {})}
+        connected={existing.map((p) => p.providerType)}
+        onSelect={(type) => { setVendor(type); setModelId(''); onError(''); }}
+      />
 
-      {types.map((type) => {
-        const copy = copyFor(type);
-        const options = chatModelsFor(type);
-        const already = existing.find((p) => p.providerType === type);
-        return (
-          <Option
-            key={type}
-            icon="key"
-            title={`${copy.label} API key`}
-            subtitle={`Pay per token, billed by ${copy.label} directly. Keys at ${copy.keysAt}.`}
-            {...(already !== undefined ? { badge: 'Connected' } : {})}
-            open={open === type}
-            onToggle={() => { setOpen(open === type ? undefined : type); setModelId(''); }}
-          >
-            <form
-              className="stack"
-              onSubmit={(event) => { event.preventDefault(); void connect(type); }}
+      {vendor !== undefined && copy !== undefined && (
+        <form
+          className="stack vendor-form"
+          onSubmit={(event) => { event.preventDefault(); void connect(vendor); }}
+        >
+          <div>
+            <label htmlFor="vendor-key">{copy.label} API key</label>
+            <input
+              id="vendor-key" type="password" required autoComplete="off"
+              placeholder={copy.keyPrefix} value={apiKey} onChange={(e) => setApiKey(e.target.value)}
+            />
+            {copy.keysUrl !== '' && (
+              <p className="muted" style={{ margin: '5px 0 0' }}>
+                Make one at{' '}
+                <a href={copy.keysUrl} target="_blank" rel="noreferrer noopener">{copy.keysAt}</a>.
+                {already !== undefined && ` ${copy.label} is already connected; a new key replaces nothing until you bind it.`}
+              </p>
+            )}
+          </div>
+          <div>
+            <label htmlFor="vendor-model">Model</label>
+            <select
+              id="vendor-model"
+              value={modelId !== '' ? modelId : (options[0]?.id ?? '')}
+              onChange={(e) => setModelId(e.target.value)}
             >
-              <div>
-                <label htmlFor={`key-${type}`}>API key</label>
-                <input
-                  id={`key-${type}`} type="password" required autoComplete="off"
-                  placeholder="sk-…" value={apiKey} onChange={(e) => setApiKey(e.target.value)}
-                />
-                {copy.keysUrl !== '' && (
-                  <p className="muted" style={{ margin: '5px 0 0' }}>
-                    Make one at{' '}
-                    <a href={copy.keysUrl} target="_blank" rel="noreferrer noopener">{copy.keysAt}</a>.
-                  </p>
-                )}
-              </div>
-              <div>
-                <label htmlFor={`model-${type}`}>Model</label>
-                <select
-                  id={`model-${type}`}
-                  value={modelId !== '' ? modelId : (options[0]?.id ?? '')}
-                  onChange={(e) => setModelId(e.target.value)}
-                >
-                  {options.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.displayName} — {m.summary}
-                    </option>
-                  ))}
-                </select>
-                <p className="muted" style={{ margin: '5px 0 0' }}>
-                  You can change this later on the Models page without touching the agent.
-                </p>
-              </div>
-              <button className="primary" type="submit" disabled={busy || options.length === 0}>
-                {busy ? 'Connecting…' : `Connect ${copy.label}`}
-              </button>
-            </form>
-          </Option>
-        );
-      })}
+              {options.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.displayName} — {m.summary}
+                </option>
+              ))}
+            </select>
+            <p className="muted" style={{ margin: '5px 0 0' }}>
+              You can change this later on the Models page without touching the agent.
+            </p>
+          </div>
+          <button className="primary" type="submit" disabled={busy || options.length === 0}>
+            {busy ? `Checking with ${copy.label}…` : `Connect ${copy.label}`}
+          </button>
+        </form>
+      )}
 
       {existing.length > 0 && (
         <div className="wizard-foot">

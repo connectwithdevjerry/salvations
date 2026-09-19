@@ -5,10 +5,10 @@
  * it absorbs — wire shapes, reasoning configuration, cache markers, tool name
  * limits, error taxonomy, artifact replay — is invisible to the runtime.
  */
-import Anthropic from '@anthropic-ai/sdk';
+import Anthropic, { APIConnectionError, APIError } from '@anthropic-ai/sdk';
 import {
   asProviderType, providerKey,
-  type AgentProvider, type GenerationRequest, type ModelCapabilities,
+  type AgentProvider, type CredentialCheck, type GenerationRequest, type ModelCapabilities,
   type ProviderCredentials, type ProviderEvent, type ProviderType, type TokenCount,
 } from '@salvations/core';
 import { capabilitiesFor, knownModels } from './capabilities';
@@ -80,6 +80,19 @@ class AnthropicProvider implements AgentProvider {
     }
   }
 
+  /**
+   * The cheapest authenticated call this vendor offers: one page of the models
+   * list. A 401 or 403 is the key's fault; a connection failure is not.
+   */
+  async verify(): Promise<CredentialCheck> {
+    try {
+      await this.#client.models.list({ limit: 1 });
+      return { ok: true };
+    } catch (error) {
+      return checkFailure(error);
+    }
+  }
+
   async countTokens(request: GenerationRequest): Promise<TokenCount> {
     const modelId = modelOf(request, this.#defaultModel);
     const capabilities = capabilitiesFor(modelId);
@@ -88,6 +101,19 @@ class AnthropicProvider implements AgentProvider {
     const result = await this.#client.messages.countTokens(countable as never);
     return { inputTokens: result.input_tokens };
   }
+}
+
+function checkFailure(error: unknown): CredentialCheck {
+  if (error instanceof APIConnectionError) {
+    return { ok: false, kind: 'unreachable', message: error.message };
+  }
+  if (error instanceof APIError) {
+    const status = error.status ?? 0;
+    // Anything the vendor answered with its own status is a verdict on the
+    // key or the account, not on the network.
+    return { ok: false, kind: 'rejected', message: `${status} ${error.message}`.trim() };
+  }
+  return { ok: false, kind: 'unreachable', message: error instanceof Error ? error.message : String(error) };
 }
 
 /**

@@ -3,6 +3,7 @@
 import { use, useCallback, useEffect, useState } from 'react';
 import { api, ws } from '@/lib/client/api';
 import { rateHasExpired, type CatalogModel } from '@salvations/catalog';
+import { VendorCards, vendorCopy } from '@/components/vendor-mark';
 
 interface Provider { id: string; providerType: string; name: string; keyHint: string }
 interface Binding {
@@ -66,11 +67,12 @@ export default function ModelsPage({ params }: { params: Promise<{ workspaceId: 
         </p>
       </header>
 
-      {error !== undefined && <p className="error">{error}</p>}
+      {error !== undefined && error !== '' && <p className="error">{error}</p>}
 
       <ProviderForm
         workspaceId={workspaceId}
         knownTypes={knownTypes}
+        connected={providers.map((p) => p.providerType)}
         onDone={reload}
         onError={setError}
       />
@@ -82,7 +84,7 @@ export default function ModelsPage({ params }: { params: Promise<{ workspaceId: 
             {providers.map((provider) => (
               <tr key={provider.id}>
                 <td>{provider.name}</td>
-                <td className="mono">{provider.providerType}</td>
+                <td>{vendorCopy(provider.providerType).label}</td>
                 {/* The hint, never the key. Enough to tell two apart. */}
                 <td className="mono muted">{provider.keyHint}</td>
               </tr>
@@ -141,67 +143,70 @@ export default function ModelsPage({ params }: { params: Promise<{ workspaceId: 
 }
 
 function ProviderForm({
-  workspaceId, knownTypes, onDone, onError,
+  workspaceId, knownTypes, connected, onDone, onError,
 }: {
   workspaceId: string;
   knownTypes: readonly string[];
+  connected: readonly string[];
   onDone: () => void;
   onError: (message: string) => void;
 }) {
-  const [providerType, setProviderType] = useState<string>();
-  const [name, setName] = useState('');
+  const [vendor, setVendor] = useState<string>();
   const [apiKey, setApiKey] = useState('');
   const [busy, setBusy] = useState(false);
+  const chosen = vendor ?? knownTypes[0];
+  const copy = chosen !== undefined ? vendorCopy(chosen) : undefined;
 
   return (
     <div className="card">
-      <strong>Add a provider</strong>
-      <form
-        className="stack"
-        style={{ marginTop: 10 }}
-        onSubmit={async (event) => {
-          event.preventDefault();
-          setBusy(true);
-          try {
-            await api.post(`${ws(workspaceId)}/providers`, {
-              providerType: providerType ?? knownTypes[0], name, apiKey,
-            });
-            setApiKey('');
-            setName('');
-            onDone();
-          } catch (caught) {
-            onError(caught instanceof Error ? caught.message : 'Could not add that provider.');
-          } finally {
-            setBusy(false);
-          }
-        }}
-      >
-        <div>
-          <label htmlFor="providerType">Type</label>
-          <select
-            id="providerType" value={providerType ?? knownTypes[0] ?? ''}
-            onChange={(e) => setProviderType(e.target.value)}
-          >
-            {knownTypes.length === 0 && <option value="">Loading…</option>}
-            {knownTypes.map((type) => <option key={type} value={type}>{type}</option>)}
-          </select>
-        </div>
-        <div>
-          <label htmlFor="providerName">Name</label>
-          <input id="providerName" required value={name} onChange={(e) => setName(e.target.value)} />
-        </div>
-        <div>
-          <label htmlFor="apiKey">API key</label>
-          <input
-            id="apiKey" type="password" required autoComplete="off"
-            value={apiKey} onChange={(e) => setApiKey(e.target.value)}
-          />
-          <p className="muted">
-            Encrypted with a per-credential key before it is stored, and never returned.
-          </p>
-        </div>
-        <button className="primary" type="submit" disabled={busy}>Add provider</button>
-      </form>
+      <strong>Connect a provider</strong>
+      <p className="muted" style={{ margin: '4px 0 12px' }}>
+        Your own key, billed by the vendor. It is checked with them before it is stored, then
+        encrypted and never shown again.
+      </p>
+      <VendorCards
+        types={knownTypes}
+        {...(chosen !== undefined ? { selected: chosen } : {})}
+        connected={connected}
+        onSelect={(type) => { setVendor(type); onError(''); }}
+      />
+      {chosen !== undefined && copy !== undefined && (
+        <form
+          className="stack vendor-form"
+          onSubmit={async (event) => {
+            event.preventDefault();
+            setBusy(true);
+            try {
+              await api.post(`${ws(workspaceId)}/providers`, {
+                providerType: chosen, name: copy.label, apiKey,
+              });
+              setApiKey('');
+              onDone();
+            } catch (caught) {
+              onError(caught instanceof Error ? caught.message : 'Could not add that provider.');
+            } finally {
+              setBusy(false);
+            }
+          }}
+        >
+          <div>
+            <label htmlFor="apiKey">{copy.label} API key</label>
+            <input
+              id="apiKey" type="password" required autoComplete="off" placeholder={copy.keyPrefix}
+              value={apiKey} onChange={(e) => setApiKey(e.target.value)}
+            />
+            {copy.keysUrl !== '' && (
+              <p className="muted">
+                Make one at{' '}
+                <a href={copy.keysUrl} target="_blank" rel="noreferrer noopener">{copy.keysAt}</a>.
+              </p>
+            )}
+          </div>
+          <button className="primary" type="submit" disabled={busy}>
+            {busy ? `Checking with ${copy.label}…` : `Connect ${copy.label}`}
+          </button>
+        </form>
+      )}
     </div>
   );
 }

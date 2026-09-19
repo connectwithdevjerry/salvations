@@ -4,10 +4,10 @@
  * The only place that knows this vendor's wire format, tool-argument encoding,
  * effort scale and error taxonomy.
  */
-import OpenAI from 'openai';
+import OpenAI, { APIConnectionError, APIError } from 'openai';
 import {
   asProviderType,
-  type AgentProvider, type GenerationRequest, type ModelCapabilities,
+  type AgentProvider, type CredentialCheck, type GenerationRequest, type ModelCapabilities,
   type ProviderCredentials, type ProviderEvent, type ProviderType,
   type EmbeddingRequest, type EmbeddingResult,
   type TranscriptionRequest, type TranscriptionResult,
@@ -97,6 +97,16 @@ class OpenAIProvider implements AgentProvider {
     }
   }
 
+  /** One page of the models list: the cheapest call that needs a valid key. */
+  async verify(): Promise<CredentialCheck> {
+    try {
+      await this.#client.models.list();
+      return { ok: true };
+    } catch (error) {
+      return checkFailure(error);
+    }
+  }
+
   /**
    * Text to vectors, for memory and knowledge search by meaning.
    *
@@ -129,6 +139,17 @@ class OpenAIProvider implements AgentProvider {
       throw mapError(error);
     }
   }
+}
+
+function checkFailure(error: unknown): CredentialCheck {
+  if (error instanceof APIConnectionError) {
+    return { ok: false, kind: 'unreachable', message: error.message };
+  }
+  if (error instanceof APIError) {
+    const status = error.status ?? 0;
+    return { ok: false, kind: 'rejected', message: `${status} ${error.message}`.trim() };
+  }
+  return { ok: false, kind: 'unreachable', message: error instanceof Error ? error.message : String(error) };
 }
 
 function modelOf(request: GenerationRequest, fallback: string): string {

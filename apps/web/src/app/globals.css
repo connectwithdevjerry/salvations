@@ -1223,3 +1223,68 @@ button.square {
 .picker-new { display: flex; align-items: center; gap: 8px; padding: 4px 6px 4px 10px; color: var(--faint); }
 .picker-new input { flex: 1; max-width: none; padding: 7px 9px; border-color: var(--border); }
 .picker-new button { padding: 6px 12px; font-size: 13px; }
+
+/* --------------------------------------------------------------- vendors -- */
+
+/*
+ * The two vendors somebody can bring a key for. Cards with a mark each, not a
+ * list of names: the choice is made by recognition, and the form for the key
+ * sits under the cards so choosing never opens a second form.
+ */
+.vendor-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 18px; }
+.vendor-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 12px;
+  row-gap: 4px;
+  align-items: center;
+  width: 100%;
+  padding: 16px 16px 15px;
+  text-align: left;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-elevated);
+  color: var(--text);
+  font-weight: 400;
+  transition: border-color 120ms ease, background 120ms ease, transform 120ms ease;
+}
+.vendor-card:hover { border-color: var(--border-strong); background: var(--bg-elevated); transform: translateY(-1px); }
+.vendor-card.selected {
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  background: color-mix(in srgb, var(--accent) 8%, var(--bg-elevated));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent);
+}
+.vendor-mark {
+  grid-row: 1 / span 2;
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+.vendor-name { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 15px; }
+.vendor-name .badge { font-size: 11px; }
+.vendor-blurb { font-size: 13px; color: var(--muted); line-height: 1.35; }
+.vendor-tick {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--accent);
+  color: var(--bg);
+  opacity: 0;
+  transform: scale(0.6);
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+.vendor-card.selected .vendor-tick { opacity: 1; transform: scale(1); }
+.vendor-form { margin-top: 4px; }
+@media (max-width: 600px) { .vendor-grid { grid-template-columns: 1fr; } }

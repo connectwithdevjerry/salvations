@@ -89,7 +89,9 @@ export default function AgentPage({
   if (agent === undefined) {
     return (
       <div className="centered">
-        {error !== undefined ? <p className="error">{error}</p> : null}
+        {error !== undefined
+          ? <p className="error">{error}</p>
+          : <p className="muted">Opening this assistant…</p>}
       </div>
     );
   }

@@ -4,16 +4,17 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/client/api';
-import { Icon, type IconName } from '@/components/ui';
+import { BrandMark, Icon, type IconName } from '@/components/ui';
 
 interface Workspace { id: string; name: string; role: string }
 
 /**
- * The rail.
+ * The top bar.
  *
- * Icons with their labels under them rather than icons alone: an icon-only rail
- * saves forty pixels and costs everyone who has not memorised which glyph means
- * "approvals". The label is small, and it is always there.
+ * Docked along the top so the whole width below is the work: the assistants
+ * on the left and the chosen one on the right, with nothing squeezed beside
+ * them. Icons keep their labels — an icon-only bar saves an inch and costs
+ * everyone who has not memorised which glyph means "approvals".
  *
  * Only sections that exist appear. A rail advertising a section before it is
  * built teaches people that half the product is broken.
@@ -62,15 +63,7 @@ export function WorkspaceNav({ workspaceId }: { workspaceId: string }) {
 
   return (
     <nav className="rail" aria-label="Workspace">
-      <button
-        type="button"
-        className="rail-avatar"
-        title={current?.name ?? 'Workspace'}
-        aria-label={`Workspace: ${current?.name ?? 'loading'}`}
-        onClick={() => router.push(`/w/${workspaceId}/settings`)}
-      >
-        {initial}
-      </button>
+      <BrandMark />
 
       <div className="rail-items">
         {SECTIONS.map((section) => {
@@ -97,6 +90,17 @@ export function WorkspaceNav({ workspaceId }: { workspaceId: string }) {
           );
         })}
       </div>
+
+      <button
+        type="button"
+        className="rail-avatar"
+        title={current?.name ?? 'Workspace'}
+        aria-label={`Workspace: ${current?.name ?? 'loading'} — settings`}
+        onClick={() => router.push(`/w/${workspaceId}/settings`)}
+      >
+        <span aria-hidden>{initial}</span>
+        <span className="rail-workspace">{current?.name ?? ''}</span>
+      </button>
     </nav>
   );
 }

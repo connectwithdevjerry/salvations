@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api, ws } from '@/lib/client/api';
-import { Icon, Option, Tile } from '@/components/ui';
+import { Icon, Tile } from '@/components/ui';
 import { Loader } from '@/components/loader';
 
 /**
@@ -38,7 +38,6 @@ const ACCEPT = '.txt,.md,.markdown,.html,.htm,.csv,.tsv,.json,text/plain,text/ma
 export function KnowledgePanel({ workspaceId, embedded = false }: { workspaceId: string; embedded?: boolean }) {
   const [docs, setDocs] = useState<Doc[]>();
   const [embedding, setEmbedding] = useState<boolean>();
-  const [open, setOpen] = useState<'file' | 'text' | undefined>('file');
   const [error, setError] = useState<string>();
 
   const reload = useCallback(() => {
@@ -70,25 +69,31 @@ export function KnowledgePanel({ workspaceId, embedded = false }: { workspaceId:
 
       {error !== undefined && <p className="error">{error}</p>}
 
-      <Option
-        icon="book"
-        title="Upload a document"
-        subtitle="Plain text, Markdown, HTML, CSV or JSON. Export a PDF or Word file as one of those first."
-        open={open === 'file'}
-        onToggle={() => setOpen(open === 'file' ? undefined : 'file')}
-      >
-        <UploadForm workspaceId={workspaceId} onDone={reload} onError={setError} />
-      </Option>
+      <div className="two-up">
+        <div className="card">
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 10 }}>
+            <Tile name="book" />
+            <div>
+              <strong>Upload a document</strong>
+              <p className="muted" style={{ margin: '2px 0 0' }}>
+                Text, Markdown, HTML, CSV or JSON. Export a PDF or Word file as one of those first.
+              </p>
+            </div>
+          </div>
+          <UploadForm workspaceId={workspaceId} onDone={reload} onError={setError} />
+        </div>
 
-      <Option
-        icon="chat"
-        title="Write it in"
-        subtitle="A paragraph or a page, typed straight in."
-        open={open === 'text'}
-        onToggle={() => setOpen(open === 'text' ? undefined : 'text')}
-      >
-        <TextForm workspaceId={workspaceId} onDone={reload} onError={setError} />
-      </Option>
+        <div className="card">
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 10 }}>
+            <Tile name="chat" />
+            <div>
+              <strong>Write it in</strong>
+              <p className="muted" style={{ margin: '2px 0 0' }}>A paragraph or a page, typed straight in.</p>
+            </div>
+          </div>
+          <TextForm workspaceId={workspaceId} onDone={reload} onError={setError} />
+        </div>
+      </div>
 
       {embedding === false && (docs?.length ?? 0) > 0 && (
         <div className="note" style={{ marginTop: 14 }}>
@@ -273,7 +278,7 @@ function TextForm({
       <div>
         <label htmlFor="noteText">Text</label>
         <textarea
-          id="noteText" required rows={8}
+          id="noteText" required rows={5}
           placeholder="Full refund within 30 days of purchase. After that, store credit…"
           value={text} onChange={(e) => setText(e.target.value)}
         />

@@ -191,7 +191,7 @@ h1, h2, h3 { letter-spacing: -0.018em; }
 
 .main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 
-.page { padding: 28px 32px; max-width: 1080px; width: 100%; }
+.page { padding: 28px 32px; max-width: 960px; width: 100%; margin: 0 auto; }
 .page > header { margin-bottom: 22px; }
 .page h2 { margin: 0 0 5px; font-size: 21px; }
 .page .lede { margin: 0; color: var(--muted); font-size: 14px; max-width: 70ch; }
@@ -239,6 +239,12 @@ h1, h2, h3 { letter-spacing: -0.018em; }
 
 .row { display: flex; gap: 12px; align-items: center; justify-content: space-between; }
 .stack { display: flex; flex-direction: column; gap: 12px; }
+/* A button in a column keeps its own width. Stretched to the column it reads
+   as a bar, not a button. */
+.stack > button { align-self: flex-start; }
+.two-up { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: start; }
+.two-up .card { margin-bottom: 0; }
+@media (max-width: 860px) { .two-up { grid-template-columns: 1fr; } }
 .muted { color: var(--muted); font-size: 13px; }
 .faint { color: var(--faint); font-size: 12px; }
 .mono { font-family: var(--mono); font-size: 12.5px; }

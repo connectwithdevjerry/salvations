@@ -3,6 +3,18 @@ import type { Db } from 'mongodb';
 import { LeaseLostError, MongoRunQueue, backoffMs } from './run-queue';
 import { analyzeCommand } from './guard';
 
+/** A run as the collection stores it, complete enough to map to the domain. */
+const RUN_DOC = {
+  _id: 'run_1', workspaceId: 'wks_1', conversationId: 'cnv_1', agentId: 'agt_1', agentVersionId: 'agv_1',
+  agentSnapshot: { systemPrompt: '', modelRole: 'chat', capabilityBindings: [], guardrails: { maxToolCallsPerTurn: 5 } },
+  modelBindingId: 'mbd_1', trigger: { type: 'user' }, principal: { type: 'system', reason: 'sweeper' },
+  status: 'running', priority: 0, scheduledFor: new Date('2026-01-01T00:00:00Z'), attempts: 1,
+  budget: { maxSteps: 1, maxToolCalls: 1, maxTotalTokens: 1, maxWallClockMs: 1, maxCostUsd: 1, maxMrtrRounds: 1, maxSubagentDepth: 1 },
+  consumed: { steps: 0, toolCalls: 0, tokens: 0, wallClockMs: 0, costUsd: 0 },
+  usage: { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 },
+  nextStepSeq: 0, depth: 0, queuedAt: new Date('2026-01-01T00:00:00Z'), lease: null, error: null, startedAt: null,
+};
+
 interface Call { op: string; filter?: unknown; update?: unknown; options?: Record<string, unknown> }
 
 /**
@@ -63,8 +75,19 @@ describe('claim', () => {
     expect(pipeline[0]?.$set['attempts']).toEqual({ $add: [{ $ifNull: ['$attempts', 0] }, 1] });
   });
 
+  it('hands back the run as the domain sees it, with `id`, not the raw document', async () => {
+    // The executor heartbeats and releases by `run.id`. A document has `_id`,
+    // and a claim that returned the document made every one of those writes
+    // look up run "undefined": lease lost, one second into every run.
+    const { db } = fakeDb({ findOneAndUpdate: RUN_DOC });
+    const claimed = await new MongoRunQueue(db, opts).claim('worker-1', 60_000);
+    expect(claimed?.run.id).toBe('run_1');
+    expect((claimed?.run as unknown as { _id?: string })._id).toBeUndefined();
+    expect(claimed?.run.lease).toBeUndefined();
+  });
+
   it('issues a fresh lease token per claim', async () => {
-    const { db, calls } = fakeDb({ findOneAndUpdate: { _id: 'run_1' } });
+    const { db, calls } = fakeDb({ findOneAndUpdate: RUN_DOC });
     const q = new MongoRunQueue(db, opts);
     const a = await q.claim('worker-1', 60_000);
     const b = await q.claim('worker-2', 60_000);

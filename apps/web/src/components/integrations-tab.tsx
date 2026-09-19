@@ -377,6 +377,7 @@ function IntegrationSetup({
       <p className="muted" style={{ marginTop: 0 }}>Connecting grants this assistant these permissions:</p>
       <ScopeList scopes={entry.scopes} />
       <SetupSteps steps={entry.steps} />
+      {entry.native !== undefined && <NativeSetupNote entry={entry} />}
       {binding?.health.lastError !== undefined && (
         <p className="error" style={{ margin: '10px 0 0' }}>{binding.health.lastError}</p>
       )}
@@ -821,5 +822,38 @@ function InstallForm({
         {busy ? 'Connecting…' : 'Connect'}
       </button>
     </form>
+  );
+}
+
+/**
+ * What the vendor's console needs before consent can succeed.
+ *
+ * Google answers "Access blocked: this app's request is invalid" when the
+ * redirect URI is not on the OAuth client, and its own page does not say
+ * which URI it wanted. So the URI is here, with the two other things Google
+ * checks, in front of the button rather than behind the error.
+ */
+function NativeSetupNote({ entry }: { entry: CatalogEntry }) {
+  const [origin, setOrigin] = useState('');
+  useEffect(() => { setOrigin(window.location.origin); }, []);
+  if (entry.id !== 'google_workspace') return null;
+  return (
+    <div className="card" style={{ marginTop: 14 }}>
+      <strong>Before the first connection, in Google Cloud</strong>
+      <ol className="steps-list" style={{ margin: '8px 0 0' }}>
+        <li>
+          On the OAuth client used for “Sign in with Google”, add this authorised redirect URI:
+          <div style={{ marginTop: 6 }}><Copyable label="Redirect URI" value={`${origin}/api/mcp/callback`} /></div>
+        </li>
+        <li>Enable the Gmail API, Google Calendar API and Google Drive API for the project.</li>
+        <li>
+          On the consent screen, add the three scopes above. While the app is in testing, add
+          yourself as a test user.
+        </li>
+      </ol>
+      <p className="muted" style={{ margin: '8px 0 0' }}>
+        Google says “Access blocked: this app’s request is invalid” when the redirect URI is missing.
+      </p>
+    </div>
   );
 }

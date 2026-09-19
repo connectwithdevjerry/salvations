@@ -16,15 +16,26 @@
  *      a slow executor may still be mid-step when its lease lapses.
  */
 import type { Collection, Db } from 'mongodb';
+import type { Run } from '@salvations/core';
 import type { RunDoc } from './documents';
 import { PlatformDb, type PlatformReason } from './scoped';
+import { toRun } from './repositories/run-mapper';
 
 export type RunStatusLike =
   | 'queued' | 'running' | 'waiting_approval' | 'waiting_input' | 'waiting_tool'
   | 'succeeded' | 'failed' | 'cancelled' | 'expired';
 
+/**
+ * What a claim hands back: the run as the DOMAIN sees it, not the document.
+ *
+ * The executor reads `run.id`; the document calls it `_id`. Handing the
+ * document across (behind a cast) meant every lease-guarded write looked up
+ * run "undefined", found nothing, and reported the lease lost one second
+ * into every run. No run ever finished. The mapping is the fix, and the type
+ * is what stops the cast coming back.
+ */
 export interface ClaimedRunDoc {
-  readonly run: RunDoc;
+  readonly run: Run;
   readonly leaseToken: string;
   readonly leaseUntil: Date;
 }
@@ -158,7 +169,7 @@ export class MongoRunQueue {
     );
 
     if (doc === null) return null;
-    return { run: doc, leaseToken: token, leaseUntil };
+    return { run: toRun(doc), leaseToken: token, leaseUntil };
   }
 
   /**

@@ -5,7 +5,9 @@ import Link from 'next/link';
 import { api, ws } from '@/lib/client/api';
 import { useRunStream } from '@/lib/client/use-run-stream';
 import { ApprovalPrompt } from '@/components/approval-prompt';
-import { Tile } from '@/components/ui';
+import { Icon, Tile } from '@/components/ui';
+import { AgentAvatar } from '@/components/agent-avatar';
+import { RichText } from '@/components/rich-text';
 
 interface Block { type: string; text?: string; name?: string; isError?: boolean }
 interface Message {
@@ -25,10 +27,12 @@ const textOf = (content: Block[]): string =>
  * walked away from.
  */
 export function ConversationView({
-  workspaceId, agentId, conversationId, onCreated,
+  workspaceId, agentId, agent, conversationId, onCreated,
 }: {
   workspaceId: string;
   agentId: string;
+  /** For the avatar beside its turns. Absent, a neutral one is drawn. */
+  agent?: { name: string; color: string };
   conversationId: string | undefined;
   onCreated?: (conversationId: string) => void;
 }) {
@@ -122,132 +126,210 @@ export function ConversationView({
   }
 
   const busy = runId !== undefined && stream.status !== 'finished';
+  const who = { name: agent?.name ?? 'Assistant', color: agent?.color ?? '#3b82f6' };
+  const turns = fold(messages);
 
   return (
     <div className="chat">
       <div className="chat-log" ref={logRef}>
-        <div className="row" style={{ marginBottom: 16, justifyContent: 'flex-end' }}>
-          <label style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span className="muted">Model</span>
-            <select
-              value={modelBindingId}
-              onChange={(e) => setModelBindingId(e.target.value)}
-              disabled={busy}
-              style={{ width: 'auto' }}
-            >
-              {modelBindingId === '' && <option value="">Assistant&apos;s default</option>}
-              {models.map((m) => (
-                <option key={m.id} value={m.id}>{m.name} · {m.modelId}</option>
-              ))}
-            </select>
-          </label>
-        </div>
+        <div className="thread">
+          {messages.length === 0 && runId === undefined && (
+            <EmptyState onPick={(text) => void submit(text)} />
+          )}
 
-        {messages.length === 0 && runId === undefined && (
-          <EmptyState onPick={(text) => void submit(text)} />
-        )}
+          {turns.map((turn) => (
+            <Turn key={turn.id} turn={turn} who={who} workspaceId={workspaceId} />
+          ))}
 
-        {messages.map((message) => (
-          <MessageView key={message.id} message={message} workspaceId={workspaceId} />
-        ))}
-
-        {runId !== undefined && (
-          <div className="msg assistant">
-            <div className="who">Assistant</div>
-            {stream.toolCalls.length > 0 && (
-              <div style={{ marginBottom: 6 }}>
-                {stream.toolCalls.map((call) => (
-                  <span key={call.id} className={`tool-chip${call.isError === true ? ' err' : ''}`}>
-                    {call.finished ? (call.isError === true ? '✕' : '✓') : '…'} {call.name}
-                  </span>
-                ))}
+          {runId !== undefined && (
+            <div className="turn assistant live">
+              <AgentAvatar color={who.color} size={30} />
+              <div className="turn-body">
+                {stream.toolCalls.length > 0 && (
+                  <div className="turn-tools">
+                    {stream.toolCalls.map((call) => (
+                      <span key={call.id} className={`tool-chip${call.isError === true ? ' err' : ''}`}>
+                        {call.finished ? (call.isError === true ? '✕' : '✓') : <span className="tool-spin" />}
+                        {pretty(call.name)}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <div className="bubble">
+                  {stream.text === '' && stream.status !== 'error'
+                    ? <span className="typing" aria-label="Thinking"><i /><i /><i /></span>
+                    : <RichText text={stream.text} />}
+                  {stream.status === 'streaming' && stream.text !== '' && <span className="caret" aria-hidden />}
+                </div>
+                {stream.status === 'error' && (
+                  <p className="turn-note">Connection interrupted — reconnecting.</p>
+                )}
+                {stream.suspension?.approvalId !== undefined && (
+                  <ApprovalPrompt
+                    workspaceId={workspaceId}
+                    approvalId={stream.suspension.approvalId}
+                    onDecided={() => { void reload(); setRunId(undefined); }}
+                  />
+                )}
+                {stream.finish?.message !== undefined && (
+                  <p className="turn-note">Stopped: {stream.finish.message}</p>
+                )}
               </div>
-            )}
-            <div className="body">
-              {stream.text}
-              {stream.status === 'streaming' && <span aria-hidden>▌</span>}
             </div>
-            {stream.status === 'error' && (
-              <p className="muted">Connection interrupted — reconnecting.</p>
-            )}
-            {stream.suspension?.approvalId !== undefined && (
-              <ApprovalPrompt
-                workspaceId={workspaceId}
-                approvalId={stream.suspension.approvalId}
-                onDecided={() => { void reload(); setRunId(undefined); }}
-              />
-            )}
-            {stream.finish?.message !== undefined && (
-              <p className="muted">Stopped: {stream.finish.message}</p>
-            )}
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       <div className="chat-form">
-        {error !== undefined && <p className="error" style={{ marginBottom: 8 }}>{error}</p>}
-        <form onSubmit={send}>
-          <textarea
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            placeholder={busy ? 'Waiting for the agent…' : 'Say something…'}
-            disabled={busy}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                void send(e);
-              }
-            }}
-          />
-          <button className="primary" type="submit" disabled={busy || draft.trim() === ''}>
-            Send
-          </button>
-        </form>
+        <div className="composer">
+          {error !== undefined && <p className="error" style={{ margin: '0 0 8px' }}>{error}</p>}
+          <form onSubmit={send}>
+            <textarea
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              placeholder={busy ? `${who.name} is working…` : `Message ${who.name}`}
+              disabled={busy}
+              rows={1}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  void send(e);
+                }
+              }}
+            />
+            <button
+              className="send" type="submit" disabled={busy || draft.trim() === ''}
+              aria-label="Send"
+            >
+              <Icon name="arrow" size={17} />
+            </button>
+          </form>
+          <div className="composer-foot">
+            <label>
+              <span className="faint">Model</span>
+              <select
+                value={modelBindingId}
+                onChange={(e) => setModelBindingId(e.target.value)}
+                disabled={busy}
+              >
+                {modelBindingId === '' && <option value="">Assistant&apos;s default</option>}
+                {models.map((m) => (
+                  <option key={m.id} value={m.id}>{m.name} · {m.modelId}</option>
+                ))}
+              </select>
+            </label>
+            <span className="faint">Enter to send · Shift+Enter for a new line</span>
+          </div>
+        </div>
       </div>
     </div>
   );
 }
 
-function MessageView({ message, workspaceId }: { message: Message; workspaceId: string }) {
-  if (message.role === 'tool') {
-    const failed = message.content.filter((b) => b.isError === true).length;
+/**
+ * A turn as it is shown, which is not quite a message as it is stored.
+ *
+ * Tool results are their own messages in the record — that is what makes a
+ * run replayable — but nobody reading a conversation wants a row saying "2
+ * tool results" between two sentences. They are folded into the assistant
+ * turn that asked for them, as a count.
+ */
+interface ShownTurn {
+  id: string;
+  role: 'user' | 'assistant' | 'system';
+  text: string;
+  tools: string[];
+  toolResults: { count: number; failed: number };
+  runId?: string;
+  createdAt: string;
+}
+
+function fold(messages: readonly Message[]): ShownTurn[] {
+  const out: ShownTurn[] = [];
+  for (const m of messages) {
+    if (m.role === 'tool') {
+      const previous = out[out.length - 1];
+      if (previous !== undefined && previous.role === 'assistant') {
+        previous.toolResults.count += m.content.length;
+        previous.toolResults.failed += m.content.filter((b) => b.isError === true).length;
+      }
+      continue;
+    }
+    const text = textOf(m.content);
+    const tools = m.content.filter((b) => b.type === 'tool_use').map((b) => b.name ?? 'tool');
+    const previous = out[out.length - 1];
+
+    // Consecutive assistant messages from one run are one answer: the model
+    // asked for tools, got them, then spoke. Shown as one turn, tools above.
+    if (m.role === 'assistant' && previous?.role === 'assistant' && previous.runId !== undefined && previous.runId === m.runId) {
+      previous.tools.push(...tools);
+      previous.text = previous.text === '' ? text : text === '' ? previous.text : `${previous.text}\n\n${text}`;
+      previous.createdAt = m.createdAt;
+      continue;
+    }
+
+    out.push({
+      id: m.id,
+      role: m.role as ShownTurn['role'],
+      text,
+      tools,
+      toolResults: { count: 0, failed: 0 },
+      ...(m.runId !== undefined ? { runId: m.runId } : {}),
+      createdAt: m.createdAt,
+    });
+  }
+  return out;
+}
+
+function Turn({ turn, who, workspaceId }: { turn: ShownTurn; who: { name: string; color: string }; workspaceId: string }) {
+  if (turn.role === 'system') {
     return (
-      <div className="msg tool">
-        <div className="body">
-          {message.content.length} tool result{message.content.length === 1 ? '' : 's'}
-          {failed > 0 && ` · ${failed} failed`}
+      <div className="turn system">
+        <span className="turn-system">Earlier conversation summarised</span>
+      </div>
+    );
+  }
+
+  if (turn.role === 'user') {
+    return (
+      <div className="turn user">
+        <div className="turn-body">
+          <div className="bubble"><RichText text={turn.text} /></div>
+          <span className="turn-time">{clock(turn.createdAt)}</span>
         </div>
       </div>
     );
   }
 
-  const text = textOf(message.content);
-  const tools = message.content.filter((b) => b.type === 'tool_use');
-
   return (
-    <div className={`msg ${message.role}`}>
-      <div className="who">
-        {message.role === 'user' ? 'You' : message.role === 'system' ? 'Summary' : 'Assistant'}
-        {message.runId !== undefined && (
-          <>
-            {' · '}
-            <Link href={`/w/${workspaceId}/runs/${message.runId}`} className="muted">
-              run
-            </Link>
-          </>
+    <div className="turn assistant">
+      <AgentAvatar color={who.color} size={30} />
+      <div className="turn-body">
+        {turn.tools.length > 0 && (
+          <div className="turn-tools">
+            {turn.tools.map((name, i) => <span key={i} className="tool-chip">✓ {pretty(name)}</span>)}
+            {turn.toolResults.failed > 0 && (
+              <span className="tool-chip err">{turn.toolResults.failed} failed</span>
+            )}
+          </div>
         )}
+        {turn.text !== '' && <div className="bubble"><RichText text={turn.text} /></div>}
+        <span className="turn-time">
+          {clock(turn.createdAt)}
+          {turn.runId !== undefined && (
+            <> · <Link href={`/w/${workspaceId}/runs/${turn.runId}`}>run</Link></>
+          )}
+        </span>
       </div>
-      {tools.length > 0 && (
-        <div style={{ marginBottom: 6 }}>
-          {tools.map((tool, index) => (
-            <span key={index} className="tool-chip">{tool.name}</span>
-          ))}
-        </div>
-      )}
-      {text !== '' && <div className="body">{text}</div>}
     </div>
   );
 }
+
+/** `github__list_issues` → `github · list issues`. */
+const pretty = (name: string): string => name.replace('__', ' · ').replace(/_/g, ' ');
+
+const clock = (iso: string): string =>
+  new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
 
 /**
  * What an empty conversation says.

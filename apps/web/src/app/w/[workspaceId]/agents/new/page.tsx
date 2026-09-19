@@ -7,6 +7,7 @@ import { api, ws } from '@/lib/client/api';
 import { BrandMark, Icon, Option, StepDots, Tile } from '@/components/ui';
 import { SetupSteps, Copyable } from '@/components/setup-steps';
 import { Qr } from '@/components/qr';
+import { GroupPicker } from '@/components/group-picker';
 
 /**
  * Creating an agent.
@@ -195,13 +196,7 @@ function AgentStep({
 
         <div>
           <label htmlFor="agentGroup">Group <span className="faint">(optional)</span></label>
-          <input
-            id="agentGroup" list="wizard-groups" placeholder="Assistants"
-            value={category} onChange={(e) => setCategory(e.target.value)}
-          />
-          <datalist id="wizard-groups">
-            {groups.map((g) => <option key={g} value={g} />)}
-          </datalist>
+          <GroupPicker id="agentGroup" value={category} groups={groups} onChange={setCategory} />
           <p className="muted" style={{ margin: '6px 0 0' }}>
             Where it sits in the list — a client, a team, a project. Leave it blank to keep
             things simple.

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { api, ws } from '@/lib/client/api';
 import { DEFAULT_SYSTEM_PROMPT } from '@salvations/catalog';
+import { GroupPicker } from '@/components/group-picker';
 
 export interface AgentDetail {
   id: string; name: string; description?: string; category?: string; color?: string;
@@ -94,13 +95,7 @@ export function AgentEditor({
         <div className="row" style={{ gap: 12, alignItems: 'flex-end' }}>
           <div style={{ flex: 1 }}>
             <label htmlFor="agentCategory">Group</label>
-            <input
-              id="agentCategory" list="agent-groups" placeholder="Assistants"
-              value={category} onChange={(e) => setCategory(e.target.value)}
-            />
-            <datalist id="agent-groups">
-              {groups.map((g) => <option key={g} value={g} />)}
-            </datalist>
+            <GroupPicker id="agentCategory" value={category} groups={groups} onChange={setCategory} />
           </div>
           <div>
             <label>Colour</label>

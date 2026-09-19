@@ -3,6 +3,7 @@
 import { use } from 'react';
 import Link from 'next/link';
 import { Icon, Tile } from '@/components/ui';
+import { EmptyState } from '@/components/empty-state';
 import { useAgents } from '@/components/agents-context';
 import { Loader } from '@/components/loader';
 
@@ -45,21 +46,16 @@ export default function AgentsIndex({ params }: { params: Promise<{ workspaceId:
 
   return (
     <div className="centered">
-      <div className="panel" style={{ textAlign: 'center' }}>
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14 }}>
-          <Tile name="chat" large />
-        </div>
-        <h3 style={{ margin: '0 0 6px', fontSize: 18 }}>Pick an assistant</h3>
-        <p className="muted" style={{ margin: '0 0 18px' }}>
-          You have {count} {count === 1 ? 'assistant' : 'assistants'}. Choose one on the left to
-          chat, speak, or see what it knows — or make another.
-        </p>
-        <Link href={`/w/${workspaceId}/agents/new`}>
-          <button type="button">
-            <Icon name="plus" size={15} /> New assistant
-          </button>
-        </Link>
-      </div>
+      <EmptyState
+        art="select"
+        title="Select an assistant"
+        body={`You have ${count} ${count === 1 ? 'assistant' : 'assistants'}. Choose one on the left to chat, speak, or see what it knows — or make another.`}
+        action={(
+          <Link href={`/w/${workspaceId}/agents/new`}>
+            <button type="button"><Icon name="plus" size={15} /> New assistant</button>
+          </Link>
+        )}
+      />
     </div>
   );
 }

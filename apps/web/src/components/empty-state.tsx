@@ -10,7 +10,7 @@ import type { ReactNode } from 'react';
 export function EmptyState({
   art, title, body, action,
 }: {
-  art: 'clear' | 'quiet';
+  art: 'clear' | 'quiet' | 'select';
   title: string;
   body?: string;
   action?: ReactNode;
@@ -25,7 +25,7 @@ export function EmptyState({
   );
 }
 
-const ART: Readonly<Record<'clear' | 'quiet', ReactNode>> = {
+const ART: Readonly<Record<'clear' | 'quiet' | 'select', ReactNode>> = {
   /* A shield with a tick: nothing is waiting on anyone. */
   clear: (
     <svg width="132" height="132" viewBox="0 0 132 132" fill="none">
@@ -38,6 +38,24 @@ const ART: Readonly<Record<'clear' | 'quiet', ReactNode>> = {
       <path d="M53 66l9 9 18-20" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
       <circle cx="104" cy="38" r="3" fill="currentColor" fillOpacity="0.5" />
       <circle cx="26" cy="92" r="2.5" fill="currentColor" fillOpacity="0.4" />
+    </svg>
+  ),
+  /*
+   * A list with a highlight that moves down the rows, and an arrow that nudges
+   * toward the real list on the left. Animated in CSS (see .art-select); with
+   * reduced motion the highlight simply rests on the first row.
+   */
+  select: (
+    <svg className="art-select" width="200" height="132" viewBox="0 0 200 132" fill="none">
+      <rect className="art-highlight" x="46" y="14" width="140" height="30" rx="9" fill="currentColor" fillOpacity="0.14" />
+      {[0, 1, 2].map((row) => (
+        <g key={row} transform={`translate(0 ${row * 38})`}>
+          <circle cx="66" cy="29" r="10" fill="currentColor" fillOpacity={row === 0 ? 0.7 : 0.35} />
+          <rect x="84" y="21" width="62" height="6" rx="3" fill="currentColor" fillOpacity="0.55" />
+          <rect x="84" y="32" width="90" height="5" rx="2.5" fill="currentColor" fillOpacity="0.22" />
+        </g>
+      ))}
+      <path className="art-arrow" d="M30 29H12M20 21l-8 8 8 8" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   ),
   /* An empty tray: nothing has happened yet. */

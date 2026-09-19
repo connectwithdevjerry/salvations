@@ -526,30 +526,96 @@ button.lg { padding: 12px 20px; font-size: 15px; border-radius: var(--radius); }
 .chat-form form { display: flex; gap: 10px; align-items: flex-end; }
 .chat-form textarea { min-height: 54px; }
 
-.msg { margin-bottom: 18px; max-width: 760px; }
-.msg .who { font-size: 11.5px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--faint); margin-bottom: 4px; }
-.msg .body { white-space: pre-wrap; overflow-wrap: anywhere; }
-.msg.user .body {
-  background: var(--accent-soft);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 20%, transparent);
-  border-radius: var(--radius);
-  padding: 10px 13px;
+/*
+ * The thread.
+ *
+ * Yours on the right in the accent, the assistant's on the left beside its
+ * avatar, no shouting labels: the shapes say who is speaking. Tools appear as
+ * small chips above the answer that used them, and the time sits under a
+ * bubble, faint, where it can be read and ignored.
+ */
+.thread { max-width: 820px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }
+.turn { display: flex; gap: 10px; align-items: flex-end; }
+.turn.user { justify-content: flex-end; }
+.turn.assistant { justify-content: flex-start; }
+.turn.assistant .agent-avatar { margin-bottom: 20px; }
+.turn-body { display: flex; flex-direction: column; max-width: min(80%, 640px); min-width: 0; }
+.turn.user .turn-body { align-items: flex-end; }
+.bubble {
+  padding: 10px 14px;
+  border-radius: 18px;
+  line-height: 1.55;
+  font-size: 14.5px;
+  overflow-wrap: anywhere;
 }
-.msg.tool .body { font-family: var(--mono); font-size: 12.5px; color: var(--muted); }
+.turn.user .bubble { background: var(--accent); color: var(--accent-ink); border-bottom-right-radius: 6px; }
+.turn.assistant .bubble { background: var(--surface-raised); border: 1px solid var(--border); border-bottom-left-radius: 6px; }
+.turn-time { font-size: 11px; color: var(--faint); margin: 5px 6px 0; }
+.turn-time a { color: inherit; }
+.turn-tools { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 4px 6px; }
+.turn-note { margin: 6px 6px 0; font-size: 12.5px; color: var(--muted); }
+.turn.system { justify-content: center; }
+.turn-system { font-size: 11.5px; color: var(--faint); padding: 3px 10px; border-radius: 999px; border: 1px dashed var(--border-strong); }
+
+.bubble .rt-p { margin: 0 0 8px; }
+.bubble .rt-p:last-child { margin-bottom: 0; }
+.bubble .rt-list { margin: 0 0 8px; padding-left: 20px; }
+.bubble .rt-list:last-child { margin-bottom: 0; }
+.bubble .rt-list li { margin: 2px 0; }
+.rt-code { margin: 6px 0; padding: 10px 12px; border-radius: 10px; background: var(--bg); border: 1px solid var(--border); font-family: var(--mono); font-size: 12.5px; overflow-x: auto; white-space: pre; }
+.turn.user .rt-code { background: color-mix(in srgb, black 25%, transparent); border-color: transparent; }
+.rt-inline { font-family: var(--mono); font-size: 12.5px; padding: 1px 5px; border-radius: 5px; background: color-mix(in srgb, currentColor 12%, transparent); }
+
+.typing { display: inline-flex; gap: 4px; align-items: center; height: 18px; }
+.typing i { width: 6px; height: 6px; border-radius: 999px; background: var(--muted); animation: typing 1.2s ease-in-out infinite; }
+.typing i:nth-child(2) { animation-delay: 0.15s; }
+.typing i:nth-child(3) { animation-delay: 0.3s; }
+@keyframes typing { 0%, 60%, 100% { opacity: 0.3; transform: translateY(0); } 30% { opacity: 1; transform: translateY(-3px); } }
+.caret { display: inline-block; width: 2px; height: 1em; background: var(--accent); margin-left: 2px; vertical-align: text-bottom; animation: blink 1s steps(2) infinite; }
+@keyframes blink { to { visibility: hidden; } }
 
 .tool-chip {
   display: inline-flex;
   gap: 6px;
   align-items: center;
-  border: 1px solid var(--border-strong);
-  background: var(--surface);
+  padding: 3px 9px;
   border-radius: 999px;
-  padding: 3px 11px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
   font-size: 12px;
-  font-family: var(--mono);
-  margin: 2px 4px 2px 0;
 }
 .tool-chip.err { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 40%, transparent); }
+.tool-spin { width: 10px; height: 10px; border-radius: 999px; border: 2px solid color-mix(in srgb, var(--accent) 30%, transparent); border-top-color: var(--accent); animation: spin 800ms linear infinite; }
+
+/* The composer: one rounded field with the send button inside its corner. */
+.chat-form { border-top: 0; background: transparent; padding: 10px 32px 18px; }
+.composer { max-width: 820px; margin: 0 auto; }
+.composer form {
+  display: flex; align-items: flex-end; gap: 8px;
+  padding: 8px 8px 8px 16px;
+  border-radius: 22px;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow);
+}
+.composer form:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent); }
+.composer textarea {
+  flex: 1; min-height: 24px; max-height: 200px; max-width: none;
+  padding: 6px 0; border: 0; background: transparent; box-shadow: none;
+  font-family: var(--sans); font-size: 14.5px; resize: none;
+}
+.composer textarea:focus-visible { outline: none; box-shadow: none; }
+.composer .send {
+  width: 36px; height: 36px; padding: 0; border-radius: 999px; flex: none;
+  display: grid; place-items: center;
+  background: var(--accent); border-color: var(--accent); color: var(--accent-ink);
+}
+.composer .send:disabled { background: var(--surface-raised); border-color: var(--border); color: var(--faint); opacity: 1; }
+.composer-foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 8px 12px 0; }
+.composer-foot label { display: flex; align-items: center; gap: 6px; margin: 0; font-weight: 400; }
+.composer-foot select { width: auto; max-width: 280px; padding: 3px 8px; font-size: 12px; border-color: transparent; background: transparent; color: var(--muted); }
+.composer-foot select:hover { border-color: var(--border-strong); }
 
 /* ----------------------------------------------------------------- diff -- */
 
@@ -1103,3 +1169,57 @@ button.square {
   .hero-split h1 br { display: none; }
   .how-steps { grid-template-columns: 1fr; }
 }
+
+/* The "select one" illustration: the highlight walks the rows, the arrow nudges left. */
+.art-select .art-highlight { animation: walk-rows 3.6s ease-in-out infinite; }
+@keyframes walk-rows {
+  0%, 26% { transform: translateY(0); }
+  33%, 59% { transform: translateY(38px); }
+  66%, 92% { transform: translateY(76px); }
+  100% { transform: translateY(0); }
+}
+.art-select .art-arrow { animation: nudge 1.4s ease-in-out infinite; }
+@keyframes nudge { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(-5px); } }
+@media (prefers-reduced-motion: reduce) {
+  .art-select .art-highlight, .art-select .art-arrow { animation: none; }
+}
+
+/* --------------------------------------------------------------- picker --- */
+
+.picker { position: relative; max-width: 440px; }
+.picker-field {
+  width: 100%;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 9px 11px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  font-size: 14px; text-align: left;
+}
+.picker-field .picker-value { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.picker-field svg { color: var(--faint); transition: transform 160ms ease; }
+.picker-field.open { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); }
+.picker-field.open svg { transform: rotate(180deg); }
+.picker-menu {
+  position: absolute; z-index: 20; top: calc(100% + 6px); left: 0; right: 0;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 6px;
+  max-height: 320px; overflow-y: auto;
+  animation: picker-in 120ms ease-out;
+}
+@keyframes picker-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+.picker-option {
+  width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 8px 10px; border: 0; border-radius: var(--radius-sm); background: transparent;
+  font-size: 14px; text-align: left; color: var(--text);
+}
+.picker-option:hover:not(:disabled) { background: var(--surface-raised); border-color: transparent; }
+.picker-option.on { color: var(--accent); background: var(--accent-soft); }
+.picker-option svg { color: var(--accent); flex: none; }
+.picker-rule { height: 1px; background: var(--border); margin: 6px 4px; }
+.picker-new { display: flex; align-items: center; gap: 8px; padding: 4px 6px 4px 10px; color: var(--faint); }
+.picker-new input { flex: 1; max-width: none; padding: 7px 9px; border-color: var(--border); }
+.picker-new button { padding: 6px 12px; font-size: 13px; }

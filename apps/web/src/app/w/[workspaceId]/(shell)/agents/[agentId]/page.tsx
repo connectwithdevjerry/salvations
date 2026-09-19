@@ -113,6 +113,7 @@ export default function AgentPage({
         <ChatTab
           workspaceId={workspaceId}
           agentId={agentId}
+          agent={{ name: agent.name, color: agent.color }}
           conversationId={conversationId}
           onPick={(c) => go('chat', c)}
         />
@@ -151,10 +152,11 @@ export default function AgentPage({
  * never fills with empty chats somebody opened and left.
  */
 function ChatTab({
-  workspaceId, agentId, conversationId, onPick,
+  workspaceId, agentId, agent, conversationId, onPick,
 }: {
   workspaceId: string;
   agentId: string;
+  agent: { name: string; color: string };
   conversationId: string | undefined;
   onPick: (conversationId: string | undefined) => void;
 }) {
@@ -214,6 +216,7 @@ function ChatTab({
         key={conversationId ?? 'new'}
         workspaceId={workspaceId}
         agentId={agentId}
+        agent={agent}
         conversationId={conversationId}
         onCreated={(id) => { onPick(id); reload(); }}
       />

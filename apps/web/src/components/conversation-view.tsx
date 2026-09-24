@@ -382,24 +382,28 @@ function EmptyState({ onPick }: { onPick: (text: string) => void }) {
  * next reply lands, and the common ones come with the thing to do about it.
  */
 function RunFailure({ run, workspaceId }: { run: LastRun; workspaceId: string }) {
-  const message = run.error?.message ?? 'The reply failed.';
-  const hint = /no credits|insufficient_quota|billing|quota/i.test(message)
-    ? { text: 'Your model provider has no credit left. Top up on their billing page, then send again.' }
-    : /401|invalid api key|authentication|incorrect api key/i.test(message)
-      ? { text: 'The provider rejected the key. Check it on the Models page.', href: `/w/${workspaceId}/models` }
-      : /model binding|no model/i.test(message)
-        ? { text: 'No model is connected for this assistant. Connect one on the Models page.', href: `/w/${workspaceId}/models` }
-        : undefined;
+  const message = tidy(run.error?.message ?? 'The reply failed.');
+  const link = /401|invalid api key|authentication|incorrect api key|model binding|no model/i.test(message)
+    ? { text: 'Open Models', href: `/w/${workspaceId}/models` }
+    : undefined;
   return (
     <div className="run-failure" role="alert">
-      <strong>The reply failed.</strong>
-      <span className="run-failure-message">{message}</span>
-      {hint !== undefined && (
-        <span className="run-failure-hint">
-          {hint.text}{' '}
-          {hint.href !== undefined && <a href={hint.href}>Open Models</a>}
-        </span>
-      )}
+      <span className="run-failure-mark" aria-hidden>!</span>
+      <span className="run-failure-message">
+        {message}
+        {link !== undefined && <>{' '}<a href={link.href}>{link.text}</a></>}
+      </span>
     </div>
   );
+}
+
+/** A message that is already a sentence stays; one that is a dump becomes one. */
+function tidy(raw: string): string {
+  const body = raw.replace(/^\d{3}\s+/, '');
+  try {
+    const parsed = JSON.parse(body) as { error?: { message?: string; error?: { message?: string } }; message?: string };
+    const inner = parsed.error?.error?.message ?? parsed.error?.message ?? parsed.message;
+    if (typeof inner === 'string' && inner !== '') return inner;
+  } catch { /* plain text */ }
+  return body;
 }

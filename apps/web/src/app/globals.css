@@ -1362,19 +1362,32 @@ button.square {
 .steps-list { margin: 0; padding-left: 20px; display: grid; gap: 6px; font-size: 14px; }
 .steps-list li::marker { color: var(--accent); font-weight: 600; }
 
-/* A reply that failed, kept on the page with the vendor's own words. */
+/* A reply that failed: the vendor's sentence, one line, nothing else. */
 .run-failure {
-  display: grid;
-  gap: 4px;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
   margin: 4px 0 8px 40px;
-  padding: 10px 12px;
+  padding: 9px 12px;
   border-radius: var(--radius);
-  border: 1px solid color-mix(in srgb, var(--danger) 35%, transparent);
-  background: color-mix(in srgb, var(--danger) 8%, var(--bg-elevated));
+  border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent);
+  background: color-mix(in srgb, var(--danger) 7%, var(--bg-elevated));
   font-size: 13px;
   max-width: 560px;
+  color: var(--text);
 }
-.run-failure strong { color: var(--danger); }
-.run-failure-message { color: var(--text); word-break: break-word; }
-.run-failure-hint { color: var(--muted); }
-.run-failure-hint a { color: var(--accent); }
+.run-failure-mark {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--danger);
+  color: var(--bg);
+  font-size: 12px;
+  font-weight: 700;
+  margin-top: 1px;
+}
+.run-failure-message { word-break: break-word; line-height: 1.4; }
+.run-failure-message a { color: var(--accent); }

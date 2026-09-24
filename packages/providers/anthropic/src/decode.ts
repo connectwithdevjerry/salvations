@@ -235,7 +235,7 @@ function parseToolInput(partialJson: string): unknown {
 export function mapError(error: unknown): ProviderError {
   const status = (error as { status?: number } | undefined)?.status;
   const name = (error as { name?: string } | undefined)?.name ?? '';
-  const message = (error as { message?: string } | undefined)?.message ?? 'Provider request failed';
+  const message = humanMessage(error);
   const raw = (error as { error?: unknown } | undefined)?.error ?? error;
 
   const base = { message, providerRaw: raw };
@@ -271,4 +271,25 @@ export function mapError(error: unknown): ProviderError {
     return { ...base, kind: 'transport', retryable: true };
   }
   return { ...base, kind: 'unknown', retryable: false };
+}
+
+/**
+ * The vendor's sentence, not the SDK's dump.
+ *
+ * The SDK's `message` is "<status> <json body>", which is the right thing
+ * for a log and the wrong thing for a person. The body carries the sentence
+ * the vendor wrote for them; that is what is shown.
+ */
+export function humanMessage(error: unknown): string {
+  const e = error as { message?: string; error?: { message?: string; error?: { message?: string } } } | undefined;
+  const nested = e?.error?.error?.message ?? e?.error?.message;
+  if (typeof nested === 'string' && nested !== '') return nested;
+  const raw = e?.message ?? 'The model provider refused the request.';
+  const body = raw.replace(/^\d{3}\s+/, '');
+  try {
+    const parsed = JSON.parse(body) as { error?: { message?: string }; message?: string };
+    const fromBody = parsed.error?.message ?? parsed.message;
+    if (typeof fromBody === 'string' && fromBody !== '') return fromBody;
+  } catch { /* not JSON: the message is already a sentence */ }
+  return body;
 }

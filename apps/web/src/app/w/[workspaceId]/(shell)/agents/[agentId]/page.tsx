@@ -93,6 +93,21 @@ export default function AgentPage({
         <span className="agent-head-name">
           {agent.name}
           {agent.main && <span className="badge main">MAIN</span>}
+          <button
+            type="button" className="ghost rename" aria-label="Rename this assistant" title="Rename"
+            onClick={async () => {
+              const name = window.prompt('Name this assistant', agent.name)?.trim();
+              if (name === undefined || name === '' || name === agent.name) return;
+              try {
+                await api.patch(`${ws(workspaceId)}/agents/${agentId}/meta`, { name });
+                reloadAgent();
+              } catch (caught) {
+                window.alert(caught instanceof Error ? caught.message : 'Could not rename.');
+              }
+            }}
+          >
+            <Icon name="pencil" size={13} />
+          </button>
         </span>
         <span className={`agent-status ${agent.status}`}>
           <span className="agent-status-dot" aria-hidden />

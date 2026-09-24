@@ -16,6 +16,7 @@ import { ModelTab } from '@/components/model-tab';
 import { ago } from '@/components/agent-sidebar';
 import { useAgents } from '@/components/agents-context';
 import { SkeletonPage } from '@/components/skeleton';
+import { useDialog } from '@/components/dialog';
 
 /**
  * One assistant.
@@ -50,6 +51,7 @@ export default function AgentPage({
   const { workspaceId, agentId } = use(params);
   const router = useRouter();
   const { agents, reload: reloadAgent } = useAgents();
+  const dialog = useDialog();
   const agent = agents?.find((a) => a.id === agentId);
   const [tab, setTab] = useState<Tab>('chat');
   const [conversationId, setConversationId] = useState<string>();
@@ -96,13 +98,13 @@ export default function AgentPage({
           <button
             type="button" className="ghost rename" aria-label="Rename this assistant" title="Rename"
             onClick={async () => {
-              const name = window.prompt('Name this assistant', agent.name)?.trim();
-              if (name === undefined || name === '' || name === agent.name) return;
+              const name = await dialog.prompt({ title: 'Rename this assistant', label: 'Name', initial: agent.name });
+              if (name === undefined || name === agent.name) return;
               try {
                 await api.patch(`${ws(workspaceId)}/agents/${agentId}/meta`, { name });
                 reloadAgent();
               } catch (caught) {
-                window.alert(caught instanceof Error ? caught.message : 'Could not rename.');
+                await dialog.notice({ title: 'Could not rename', body: caught instanceof Error ? caught.message : undefined });
               }
             }}
           >
@@ -181,6 +183,7 @@ function ChatTab({
   onPick: (conversationId: string | undefined) => void;
 }) {
   const [conversations, setConversations] = useState<Conversation[]>();
+  const dialog = useDialog();
   const [autoOpened, setAutoOpened] = useState(false);
 
   const reload = useCallback(() => {
@@ -236,13 +239,13 @@ function ChatTab({
             style={{ marginLeft: 'auto' }}
             onClick={async () => {
               const current = conversations?.find((c) => c.id === conversationId)?.title ?? '';
-              const title = window.prompt('Name this chat', current)?.trim();
-              if (title === undefined || title === '' || title === current) return;
+              const title = await dialog.prompt({ title: 'Rename this chat', label: 'Name', initial: current });
+              if (title === undefined || title === current) return;
               try {
                 await api.patch(`${ws(workspaceId)}/conversations/${conversationId}`, { title });
                 reload();
               } catch (caught) {
-                window.alert(caught instanceof Error ? caught.message : 'Could not rename that chat.');
+                await dialog.notice({ title: 'Could not rename that chat', body: caught instanceof Error ? caught.message : undefined });
               }
             }}
           >
@@ -253,13 +256,19 @@ function ChatTab({
           <button
             type="button" className="chip square danger" aria-label="Delete this chat" title="Delete this chat"
             onClick={async () => {
-              if (!window.confirm('Delete this chat and its messages?')) return;
+              const yes = await dialog.confirm({
+                title: 'Delete this chat?',
+                body: 'Its messages go with it. What the assistant did stays in Activity.',
+                confirmLabel: 'Delete',
+                danger: true,
+              });
+              if (!yes) return;
               try {
                 await api.del(`${ws(workspaceId)}/conversations/${conversationId}`);
                 onPick(undefined);
                 reload();
               } catch (caught) {
-                window.alert(caught instanceof Error ? caught.message : 'Could not delete that chat.');
+                await dialog.notice({ title: 'Could not delete that chat', body: caught instanceof Error ? caught.message : undefined });
               }
             }}
           >

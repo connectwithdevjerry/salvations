@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import './globals.css';
+import { DialogProvider } from '@/components/dialog';
 
 export const metadata = {
   title: 'HIVE — agents that actually do the work',
@@ -35,7 +36,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <head>
         <script dangerouslySetInnerHTML={{ __html: APPLY_THEME }} />
       </head>
-      <body>{children}</body>
+      <body><DialogProvider>{children}</DialogProvider></body>
     </html>
   );
 }

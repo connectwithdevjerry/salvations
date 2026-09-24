@@ -4,6 +4,7 @@ import { use, useCallback, useEffect, useState } from 'react';
 import { api, ws } from '@/lib/client/api';
 import { rateHasExpired, type CatalogModel } from '@salvations/catalog';
 import { VendorCards, keyStatesOf, vendorCopy } from '@/components/vendor-mark';
+import { useDialog } from '@/components/dialog';
 
 interface Provider {
   id: string; providerType: string; name: string; keyHint: string;
@@ -159,6 +160,7 @@ function ProviderRow({
   onError: (message: string) => void;
 }) {
   const [busy, setBusy] = useState<'check' | 'remove'>();
+  const dialog = useDialog();
   const check = provider.lastCheck;
 
   async function recheck() {
@@ -174,7 +176,13 @@ function ProviderRow({
   }
 
   async function remove() {
-    if (!window.confirm(`Remove ${provider.name} and every model bound to it?`)) return;
+    const yes = await dialog.confirm({
+      title: `Remove ${provider.name}?`,
+      body: 'The key is revoked and every model bound to it is removed. Assistants using one move to the workspace default.',
+      confirmLabel: 'Remove',
+      danger: true,
+    });
+    if (!yes) return;
     setBusy('remove');
     try {
       await api.del(`${ws(workspaceId)}/providers/${provider.id}`);

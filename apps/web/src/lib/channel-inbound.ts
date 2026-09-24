@@ -21,7 +21,7 @@
 import { ChannelRepository, ConversationRepository, AgentRepository, PlatformDb } from '@salvations/db';
 import type { ChannelDoc } from '@salvations/db';
 import { channelAdapter, type InboundMessage, type VerifyContext } from '@salvations/channels';
-import { transcribeAudio } from './transcribe';
+import { NO_EAR, transcribeAudio } from './transcribe';
 import {
   DEFAULT_BUDGET, asId, type RunId, type UserId, type WorkspaceId,
 } from '@salvations/core';
@@ -359,17 +359,12 @@ async function hear(
   const outcome = await transcribeAudio(database, row.workspaceId, message.audio, bytes);
 
   if (outcome.kind === 'unconfigured') {
-    await reply(
-      row, message.chatRef,
-      'I got your voice note, but no model is set up to listen to audio yet. '
-      + 'Bind one to the transcription role on the Models page.',
-      repos,
-    );
+    await reply(row, message.chatRef, NO_EAR, repos);
     return undefined;
   }
 
   if (outcome.kind === 'failed') {
-    console.log(JSON.stringify({ at: 'channel-inbound', channel: row._id, transcription: 'failed', message: outcome.message }));
+    console.log(JSON.stringify({ at: 'channel-inbound', channel: row._id, transcription: 'failed', detail: outcome.detail ?? outcome.message }));
     await reply(row, message.chatRef, outcome.message, repos);
     return undefined;
   }

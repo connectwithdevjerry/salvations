@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fileNameFor } from './transcribe';
+import { fileNameFor, plainFailure } from './transcribe';
 
 /**
  * The filename is load-bearing, not cosmetic.
@@ -32,5 +32,29 @@ describe('naming the audio file', () => {
     // outright by more vendors than one with a plausible wrong guess.
     expect(fileNameFor('audio/something-new')).toBe('audio.ogg');
     expect(fileNameFor('')).toBe('audio.ogg');
+  });
+});
+
+/**
+ * The person hears one sentence, never the vendor's paragraph with its status
+ * code and billing link.
+ */
+describe('what a failed transcription says', () => {
+  it('names running out of credit, the one cause the person can fix', () => {
+    const vendor = '429 You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.';
+    const said = plainFailure(vendor);
+    expect(said).toContain('out of credit');
+    expect(said).not.toContain('http');
+    expect(said.split('. ').length).toBeLessThanOrEqual(2);
+  });
+
+  it('names a key that no longer works', () => {
+    expect(plainFailure('401 Incorrect API key provided: sk-abc.')).toContain('key on the Models page');
+  });
+
+  it('asks for another try for anything else, without repeating the vendor', () => {
+    const said = plainFailure('500 The server had an error while processing your request.');
+    expect(said).toContain('send it again');
+    expect(said).not.toContain('500');
   });
 });

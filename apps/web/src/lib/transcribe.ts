@@ -24,8 +24,12 @@ export const TRANSCRIPTION_ROLE = 'transcription';
 
 export type TranscriptionOutcome =
   | { readonly kind: 'transcribed'; readonly text: string }
-  /** Configured, attempted, and it did not work. Carries what to say. */
-  | { readonly kind: 'failed'; readonly message: string }
+  /**
+   * Configured, attempted, and it did not work. `message` is the one plain
+   * sentence to say to the person; `detail` is the vendor's own text, for the
+   * log only, since it tends to carry links and status codes.
+   */
+  | { readonly kind: 'failed'; readonly message: string; readonly detail?: string }
   /** Nothing is bound to the role. Not a failure — a deployment choice. */
   | { readonly kind: 'unconfigured' };
 
@@ -61,10 +65,7 @@ export async function transcribeAudio(
   // than called-and-caught, so a workspace bound to a text-only provider gets
   // a sentence explaining that rather than a stack trace's worth of nothing.
   if (provider.transcribe === undefined) {
-    return {
-      kind: 'failed',
-      message: 'The model bound for transcription cannot process audio.',
-    };
+    return { kind: 'failed', message: NO_EAR, detail: 'The model bound for transcription cannot process audio.' };
   }
 
   try {
@@ -84,17 +85,37 @@ export async function transcribeAudio(
     return { kind: 'transcribed', text };
   } catch (caught) {
     // The adapter throws its own error shape, a plain object with the
-    // vendor's sentence in `message`, not an Error. Read it either way: the
-    // sentence is the diagnosis ("You have no credits remaining"), and
-    // dropping it left the person with "Transcription failed." and nothing
-    // to act on.
-    const message = caught instanceof Error
+    // vendor's sentence in `message`, not an Error. Read it either way: it
+    // is the diagnosis, and it goes to the log. The person gets one sentence.
+    const detail = caught instanceof Error
       ? caught.message
       : typeof caught === 'object' && caught !== null && typeof (caught as { message?: unknown }).message === 'string'
         ? (caught as { message: string }).message
-        : 'Transcription failed.';
-    return { kind: 'failed', message: `I could not transcribe that: ${message}` };
+        : 'unknown error';
+    return { kind: 'failed', message: plainFailure(detail), detail };
   }
+}
+
+/** Said when nothing can hear: no OpenAI key, or a text-only model bound. */
+export const NO_EAR = 'I can’t listen to voice notes yet: add an OpenAI key on the Models page and I will.';
+
+/**
+ * One sentence for the person, whatever the vendor said.
+ *
+ * A vendor's error carries a status code, a billing link and a sentence
+ * written for a developer, none of which belongs in a chat with someone who
+ * just spoke into their phone. Out of credit is the one cause they can fix
+ * and is named; everything else is "try again", with the vendor's text kept
+ * for the log.
+ */
+export function plainFailure(detail: string): string {
+  if (/credit|billing|quota|insufficient_quota|\b429\b/i.test(detail)) {
+    return 'Your OpenAI account is out of credit, so I can’t listen to voice notes until it is topped up.';
+  }
+  if (/401|invalid.?api.?key|incorrect api key|authentication/i.test(detail)) {
+    return 'The OpenAI key on the Models page is not working, so I can’t listen to voice notes right now.';
+  }
+  return 'I couldn’t make out that voice note; could you send it again or type it?';
 }
 
 /**

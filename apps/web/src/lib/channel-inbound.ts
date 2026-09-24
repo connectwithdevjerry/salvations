@@ -152,6 +152,10 @@ export async function handleDelivery(
     const heard = await hear(handle.db, row, message, repos);
     if (heard === undefined) return plain(200, 'ok');
 
+    // "typing…" from the moment the message lands, so the wait for the
+    // executor to pick the run up is not a silence. The executor keeps it up.
+    await indicateTyping(row, message.chatRef, repos);
+
     const runId = await startRun(handle.db, row, heard, repos, channels);
     if (runId !== undefined) await channels.attachRun(row._id, message.messageRef, runId);
     console.log(JSON.stringify({
@@ -413,4 +417,14 @@ async function reply(
 export function offeredCode(text: string): string {
   const words = text.trim().split(/\s+/);
   return (words[words.length - 1] ?? '').toUpperCase();
+}
+
+
+async function indicateTyping(row: ChannelDoc, chatRef: string, repos: Repos): Promise<void> {
+  const adapter = channelAdapter(row.type);
+  if (adapter?.indicate === undefined) return;
+  try {
+    const token = await repos.credentials.resolve(row.tokenCredentialId);
+    if (token !== null) await adapter.indicate(token.expose(), chatRef);
+  } catch { /* a missing indicator is not a lost message */ }
 }

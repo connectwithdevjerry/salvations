@@ -15,6 +15,7 @@ import { asId, type RunId } from '@salvations/core';
 import { env } from '@/lib/env';
 import { executor } from '@/lib/container';
 import { deliverFinishedRun } from '@/lib/channel-delivery';
+import { openLiveReply } from '@/lib/channel-live';
 
 export const runtime = 'nodejs';
 
@@ -66,9 +67,15 @@ export async function POST(request: Request): Promise<Response> {
   // queued for the next push or sweep.
   const hint = asId<RunId>(parsed.runId ?? '');
 
+  // Beside the run, not after it: the person on the chat platform sees
+  // typing and the first words while the model is still writing.
+  const live = await openLiveReply(String(hint));
+
   const outcome = await (await executor()).execute(
     hint, new WallClockDeadline(SLICE_MS),
   );
+
+  const draft = await live?.close();
 
   // A run that came from a chat platform has to have its answer carried back.
   // Here, because this is the only moment anything knows the answer is
@@ -80,7 +87,9 @@ export async function POST(request: Request): Promise<Response> {
   // deserves to run, which is usually but not always the run we were told
   // about. Using the hint would deliver one person's answer to another.
   const delivery = outcome.kind === 'finished'
-    ? await deliverFinishedRun(String(outcome.runId))
+    // The draft belongs to the hinted run; it is rewritten only if that is
+    // the run that finished, never with another run's answer.
+    ? await deliverFinishedRun(String(outcome.runId), String(outcome.runId) === String(hint) ? draft : undefined)
     : undefined;
 
   // One line per slice, so the deployment's own logs say what happened to a

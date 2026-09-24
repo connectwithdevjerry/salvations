@@ -34,6 +34,30 @@ describe('the registry', () => {
   });
 });
 
+describe('telegram presence and drafts', () => {
+  it('shows typing with a chat action', async () => {
+    const { impl, calls } = stubFetch({ ok: true, result: true });
+    await telegramAdapter.indicate?.('tok', '42', impl);
+    expect(calls[0]?.url).toContain('/sendChatAction');
+    expect(JSON.parse(String(calls[0]?.init.body))).toEqual({ chat_id: '42', action: 'typing' });
+  });
+
+  it('posts a draft and hands back the message to edit', async () => {
+    const { impl } = stubFetch({ ok: true, result: { message_id: 77 } });
+    expect(await telegramAdapter.sendDraft?.('tok', '42', 'Thinking', impl)).toBe('77');
+  });
+
+  it('edits the draft in place, and does not mind being told the text is unchanged', async () => {
+    const { impl, calls } = stubFetch({ ok: true, result: {} });
+    await telegramAdapter.editDraft?.('tok', '42', '77', 'Done.', impl);
+    expect(calls[0]?.url).toContain('/editMessageText');
+    expect(JSON.parse(String(calls[0]?.init.body))).toEqual({ chat_id: '42', message_id: 77, text: 'Done.' });
+
+    const unchanged = stubFetch({ ok: false, description: 'Bad Request: message is not modified' }, 400);
+    await expect(telegramAdapter.editDraft?.('tok', '42', '77', 'Done.', unchanged.impl)).resolves.toBeUndefined();
+  });
+});
+
 describe('telegram', () => {
   it('identifies a bot and does not put the token in the body', async () => {
     const { impl, calls } = stubFetch({ ok: true, result: { id: 7, is_bot: true, username: 'hive_bot' } });

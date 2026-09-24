@@ -12,8 +12,8 @@
  * left to do.
  */
 import { ChannelRepository, ConversationRepository, PlatformDb, toMessage } from '@salvations/db';
-import type { RunDoc } from '@salvations/db';
-import { channelAdapter } from '@salvations/channels';
+import type { ChannelDoc, RunDoc } from '@salvations/db';
+import { channelAdapter, chunk, type ChannelAdapter } from '@salvations/channels';
 import { db } from './db';
 import { repositories } from './container';
 
@@ -26,52 +26,91 @@ export type Delivery =
 
 const skipped = (reason: string): Delivery => ({ result: 'skipped', reason });
 
-export async function deliverFinishedRun(runId: string): Promise<Delivery> {
-  try {
-    return await deliver(runId);
-  } catch (caught) {
-    return skipped(`threw: ${caught instanceof Error ? caught.message : String(caught)}`);
-  }
+/** Where a run's answer goes: the chat it came from, with what is needed to reach it. */
+export interface ChannelTarget {
+  readonly run: RunDoc;
+  readonly conversationId: string;
+  readonly row: ChannelDoc;
+  readonly chatRef: string;
+  readonly adapter: ChannelAdapter;
+  readonly token: string;
+  readonly channels: ChannelRepository;
+  readonly conversations: ConversationRepository;
 }
 
-async function deliver(runId: string): Promise<Delivery> {
+/**
+ * Resolves a run to the chat it should answer in, or says why it has none.
+ *
+ * Shared by the live reply (typing, the draft) and the final delivery, so the
+ * two cannot disagree about which chat a run belongs to.
+ */
+export async function channelTargetOf(runId: string): Promise<ChannelTarget | { readonly reason: string }> {
   const handle = await db();
 
   // The run id is all the executor has. Finding its workspace is the same
   // unscoped-by-necessity read the inbound path makes, and for the same reason.
   const platform = new PlatformDb(handle.db, 'channel-delivery');
   const run = await platform.collection<RunDoc>('runs').findOne({ _id: runId } as never, { comment: platform.comment });
-  if (run === null) return skipped('no such run');
+  if (run === null) return { reason: 'no such run' };
 
   const conversations = new ConversationRepository(handle.db, run.workspaceId);
   const conversation = await conversations.findById(run.conversationId);
   // The overwhelmingly common case: a conversation somebody is watching in the
   // browser, which needs no delivery at all.
-  if (conversation?.channelId === null || conversation?.channelId === undefined) return skipped('not a channel conversation');
+  if (conversation?.channelId === null || conversation?.channelId === undefined) return { reason: 'not a channel conversation' };
 
   const channels = new ChannelRepository(handle.db, run.workspaceId);
   const row = await channels.findById(conversation.channelId);
-  if (row === null) return skipped('channel row missing');
-  if (row.status !== 'connected') return skipped(`channel is ${row.status}`);
+  if (row === null) return { reason: 'channel row missing' };
+  if (row.status !== 'connected') return { reason: `channel is ${row.status}` };
 
   const identity = await channels.findIdentityByConversation(conversation._id);
   // `externalRef` is the fallback: an identity row can be removed by a
   // disconnect while a run it started is still in flight.
   const chatRef = identity?.chatRef ?? conversation.externalRef;
-  if (chatRef === null || chatRef === undefined) return skipped('no chat to send to');
-
-  const text = await answerOf(conversations, conversation._id, runId, run.status, run.error?.message ?? undefined);
-  if (text === undefined) return skipped(`nothing to say (run ${run.status}, no assistant text for this run)`);
+  if (chatRef === null || chatRef === undefined) return { reason: 'no chat to send to' };
 
   const adapter = channelAdapter(row.type);
-  if (adapter === undefined) return skipped(`no adapter for ${row.type}`);
+  if (adapter === undefined) return { reason: `no adapter for ${row.type}` };
 
   const repos = repositories(handle.db, run.workspaceId);
   const token = await repos.credentials.resolve(row.tokenCredentialId);
-  if (token === null) return skipped('bot token missing or revoked');
+  if (token === null) return { reason: 'bot token missing or revoked' };
+
+  return { run, conversationId: conversation._id, row, chatRef, adapter, token: token.expose(), channels, conversations };
+}
+
+export const isTarget = (value: ChannelTarget | { reason: string }): value is ChannelTarget => 'run' in value;
+
+/** A draft the live reply left in the chat, to be rewritten with the answer. */
+export interface Draft { readonly messageRef: string }
+
+export async function deliverFinishedRun(runId: string, draft?: Draft): Promise<Delivery> {
+  try {
+    return await deliver(runId, draft);
+  } catch (caught) {
+    return skipped(`threw: ${caught instanceof Error ? caught.message : String(caught)}`);
+  }
+}
+
+async function deliver(runId: string, draft: Draft | undefined): Promise<Delivery> {
+  const target = await channelTargetOf(runId);
+  if (!isTarget(target)) return skipped(target.reason);
+  const { run, conversationId, row, chatRef, adapter, token, channels, conversations } = target;
+
+  const text = await answerOf(conversations, conversationId, runId, run.status, run.error?.message ?? undefined);
+  if (text === undefined) return skipped(`nothing to say (run ${run.status}, no assistant text for this run)`);
 
   try {
-    await adapter.send(token.expose(), chatRef, text);
+    if (draft !== undefined && adapter.editDraft !== undefined) {
+      // The draft becomes the answer's first part; anything beyond one
+      // message follows it, as it would have without a draft.
+      await adapter.editDraft(token, chatRef, draft.messageRef, text);
+      const rest = remainderBeyondFirst(text);
+      if (rest !== undefined) await adapter.send(token, chatRef, rest);
+    } else {
+      await adapter.send(token, chatRef, text);
+    }
     await channels.recordDelivery(row._id);
     return { result: 'sent' };
   } catch (caught) {
@@ -82,6 +121,13 @@ async function deliver(runId: string): Promise<Delivery> {
     await channels.recordFailure(row._id, message);
     return skipped(`send failed: ${message}`);
   }
+}
+
+/** What did not fit in the draft's one message. */
+function remainderBeyondFirst(text: string): string | undefined {
+  const [first, ...rest] = chunk(text);
+  if (first === undefined || rest.length === 0) return undefined;
+  return rest.join('\n');
 }
 
 /**

@@ -130,6 +130,24 @@ export interface ChannelAdapter {
   send(token: string, chatRef: string, text: string, fetchImpl?: typeof fetch): Promise<void>;
 
   /**
+   * Shows the person that something is happening — "typing…" on a platform
+   * that has it. Short-lived by the platform's design, so it is repeated while
+   * the work goes on. Absent where the platform has no such thing.
+   */
+  indicate?(token: string, chatRef: string, fetchImpl?: typeof fetch): Promise<void>;
+
+  /**
+   * A message that will be rewritten as the answer arrives.
+   *
+   * `sendDraft` posts the first words and returns a handle; `editDraft`
+   * replaces the text under that handle. Together they let an answer appear
+   * progressively rather than land whole after a silence. Absent on a
+   * platform that cannot edit a sent message.
+   */
+  sendDraft?(token: string, chatRef: string, text: string, fetchImpl?: typeof fetch): Promise<string>;
+  editDraft?(token: string, chatRef: string, messageRef: string, text: string, fetchImpl?: typeof fetch): Promise<void>;
+
+  /**
    * Fetches audio the adapter previously referenced.
    *
    * Absent on a platform whose files we cannot reach. Bytes, not a URL: on

@@ -203,6 +203,30 @@ export const telegramAdapter: ChannelAdapter = {
     }
   },
 
+  /** "typing…" under the bot's name. Telegram shows it for about five seconds. */
+  async indicate(token, chatRef, fetchImpl = globalThis.fetch): Promise<void> {
+    await call(token, 'sendChatAction', { chat_id: chatRef, action: 'typing' }, fetchImpl);
+  },
+
+  async sendDraft(token, chatRef, text, fetchImpl = globalThis.fetch): Promise<string> {
+    const sent = await call<{ message_id: number }>(
+      token, 'sendMessage', { chat_id: chatRef, text: chunk(text)[0] ?? text }, fetchImpl,
+    );
+    return String(sent.message_id);
+  },
+
+  async editDraft(token, chatRef, messageRef, text, fetchImpl = globalThis.fetch): Promise<void> {
+    try {
+      await call(token, 'editMessageText', {
+        chat_id: chatRef, message_id: Number(messageRef), text: chunk(text)[0] ?? text,
+      }, fetchImpl);
+    } catch (caught) {
+      // The same text twice is not a failure; Telegram just says so.
+      if (caught instanceof ChannelError && /not modified/i.test(caught.message)) return;
+      throw caught;
+    }
+  },
+
   /**
    * Fetches a voice note.
    *

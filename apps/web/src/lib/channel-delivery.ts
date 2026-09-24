@@ -60,7 +60,7 @@ async function deliver(runId: string): Promise<Delivery> {
   const chatRef = identity?.chatRef ?? conversation.externalRef;
   if (chatRef === null || chatRef === undefined) return skipped('no chat to send to');
 
-  const text = await answerOf(conversations, conversation._id, runId, run.status);
+  const text = await answerOf(conversations, conversation._id, runId, run.status, run.error?.message ?? undefined);
   if (text === undefined) return skipped(`nothing to say (run ${run.status}, no assistant text for this run)`);
 
   const adapter = channelAdapter(row.type);
@@ -96,6 +96,7 @@ async function answerOf(
   conversationId: string,
   runId: string,
   status: string,
+  failure?: string,
 ): Promise<string | undefined> {
   const recent = await conversations.recentMessages(conversationId, RECENT_MESSAGES);
 
@@ -114,5 +115,19 @@ async function answerOf(
 
   if (status === 'succeeded') return undefined;
   if (status === 'cancelled') return 'That was cancelled before it finished.';
+  // The vendor's own sentence when there is one — "your credit balance is
+  // too low" tells the person what to do; "something went wrong" does not.
+  if (failure !== undefined && failure.trim() !== '') return `I could not answer that: ${sentence(failure)}`;
   return 'Something went wrong on my end and I could not finish that. Try again?';
+}
+
+/** A message that is already a sentence stays; a status-and-JSON dump becomes one. */
+function sentence(raw: string): string {
+  const body = raw.replace(/^\d{3}\s+/, '');
+  try {
+    const parsed = JSON.parse(body) as { error?: { message?: string; error?: { message?: string } }; message?: string };
+    const inner = parsed.error?.error?.message ?? parsed.error?.message ?? parsed.message;
+    if (typeof inner === 'string' && inner !== '') return inner;
+  } catch { /* plain text */ }
+  return body;
 }

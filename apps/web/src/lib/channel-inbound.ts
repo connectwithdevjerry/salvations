@@ -369,6 +369,7 @@ async function hear(
   }
 
   if (outcome.kind === 'failed') {
+    console.log(JSON.stringify({ at: 'channel-inbound', channel: row._id, transcription: 'failed', message: outcome.message }));
     await reply(row, message.chatRef, outcome.message, repos);
     return undefined;
   }

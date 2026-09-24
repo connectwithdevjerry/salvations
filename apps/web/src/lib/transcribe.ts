@@ -83,10 +83,17 @@ export async function transcribeAudio(
     }
     return { kind: 'transcribed', text };
   } catch (caught) {
-    return {
-      kind: 'failed',
-      message: caught instanceof Error ? caught.message : 'Transcription failed.',
-    };
+    // The adapter throws its own error shape, a plain object with the
+    // vendor's sentence in `message`, not an Error. Read it either way: the
+    // sentence is the diagnosis ("You have no credits remaining"), and
+    // dropping it left the person with "Transcription failed." and nothing
+    // to act on.
+    const message = caught instanceof Error
+      ? caught.message
+      : typeof caught === 'object' && caught !== null && typeof (caught as { message?: unknown }).message === 'string'
+        ? (caught as { message: string }).message
+        : 'Transcription failed.';
+    return { kind: 'failed', message: `I could not transcribe that: ${message}` };
   }
 }
 

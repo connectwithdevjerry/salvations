@@ -1361,3 +1361,20 @@ button.square {
 /* Numbered steps inside a card: how to connect from a chat app. */
 .steps-list { margin: 0; padding-left: 20px; display: grid; gap: 6px; font-size: 14px; }
 .steps-list li::marker { color: var(--accent); font-weight: 600; }
+
+/* A reply that failed, kept on the page with the vendor's own words. */
+.run-failure {
+  display: grid;
+  gap: 4px;
+  margin: 4px 0 8px 40px;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  border: 1px solid color-mix(in srgb, var(--danger) 35%, transparent);
+  background: color-mix(in srgb, var(--danger) 8%, var(--bg-elevated));
+  font-size: 13px;
+  max-width: 560px;
+}
+.run-failure strong { color: var(--danger); }
+.run-failure-message { color: var(--text); word-break: break-word; }
+.run-failure-hint { color: var(--muted); }
+.run-failure-hint a { color: var(--accent); }

@@ -14,6 +14,7 @@ interface Message {
   id: string; seq: number; role: string; content: Block[]; runId?: string; createdAt: string;
 }
 interface ModelBinding { id: string; name: string; providerType: string; modelId: string }
+interface LastRun { id: string; status: string; error?: { code: string; message: string }; finishedAt?: string }
 
 const textOf = (content: Block[]): string =>
   content.filter((b) => b.type === 'text').map((b) => b.text ?? '').join('\n');
@@ -44,6 +45,7 @@ export function ConversationView({
   const [draft, setDraft] = useState('');
   const [runId, setRunId] = useState<string>();
   const [error, setError] = useState<string>();
+  const [lastRun, setLastRun] = useState<LastRun>();
   const logRef = useRef<HTMLDivElement>(null);
 
   const reload = useCallback(async () => {
@@ -52,10 +54,11 @@ export function ConversationView({
       return;
     }
     const result = await api.get<{
-      conversation: { modelBindingId: string }; items: Message[];
+      conversation: { modelBindingId: string }; items: Message[]; lastRun?: LastRun;
     }>(`${base}/messages`);
     setMessages(result.items);
     setModelBindingId(result.conversation.modelBindingId);
+    setLastRun(result.lastRun);
   }, [base]);
 
   useEffect(() => {
@@ -140,6 +143,10 @@ export function ConversationView({
           {turns.map((turn) => (
             <Turn key={turn.id} turn={turn} who={who} workspaceId={workspaceId} />
           ))}
+
+          {runId === undefined && lastRun?.status === 'failed' && (
+            <RunFailure run={lastRun} workspaceId={workspaceId} />
+          )}
 
           {runId !== undefined && (
             <div className="turn assistant live">
@@ -362,6 +369,37 @@ function EmptyState({ onPick }: { onPick: (text: string) => void }) {
           </button>
         ))}
       </div>
+    </div>
+  );
+}
+
+/**
+ * A reply that did not come, with the reason, kept on the page.
+ *
+ * The live stream shows a failure for a second and is then replaced by the
+ * persisted thread, which has no failure in it. This reads the run record
+ * instead, so the vendor's own words stay in front of the person until the
+ * next reply lands, and the common ones come with the thing to do about it.
+ */
+function RunFailure({ run, workspaceId }: { run: LastRun; workspaceId: string }) {
+  const message = run.error?.message ?? 'The reply failed.';
+  const hint = /no credits|insufficient_quota|billing|quota/i.test(message)
+    ? { text: 'Your model provider has no credit left. Top up on their billing page, then send again.' }
+    : /401|invalid api key|authentication|incorrect api key/i.test(message)
+      ? { text: 'The provider rejected the key. Check it on the Models page.', href: `/w/${workspaceId}/models` }
+      : /model binding|no model/i.test(message)
+        ? { text: 'No model is connected for this assistant. Connect one on the Models page.', href: `/w/${workspaceId}/models` }
+        : undefined;
+  return (
+    <div className="run-failure" role="alert">
+      <strong>The reply failed.</strong>
+      <span className="run-failure-message">{message}</span>
+      {hint !== undefined && (
+        <span className="run-failure-hint">
+          {hint.text}{' '}
+          {hint.href !== undefined && <a href={hint.href}>Open Models</a>}
+        </span>
+      )}
     </div>
   );
 }

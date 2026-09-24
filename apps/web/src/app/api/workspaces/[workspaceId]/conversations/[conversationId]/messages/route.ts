@@ -23,12 +23,23 @@ export const GET = workspaceRoute<{ conversationId: string }>(
       ? await ctx.repos.conversations.messagesSince(params.conversationId, after)
       : await ctx.repos.conversations.recentMessages(params.conversationId, 200);
 
+    // The most recent run, so a failure stays on the page after the live
+    // stream is gone. Without it a person sees the vendor's refusal for the
+    // second between the run ending and the thread reloading, and then nothing.
+    const [latest] = await ctx.repos.runs.listForConversation(params.conversationId, 1);
+
     return ok({
       conversation: {
         id: conversation._id,
         agentId: conversation.agentId,
         modelBindingId: conversation.modelBindingId,
         title: conversation.title ?? 'Untitled',
+      },
+      lastRun: latest === undefined ? undefined : {
+        id: latest._id,
+        status: latest.status,
+        error: latest.error ?? undefined,
+        finishedAt: latest.finishedAt?.toISOString(),
       },
       items: docs.map(toMessage).map((m) => ({
         id: m.id,

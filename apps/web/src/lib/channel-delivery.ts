@@ -40,7 +40,7 @@ async function deliver(runId: string): Promise<Delivery> {
   // The run id is all the executor has. Finding its workspace is the same
   // unscoped-by-necessity read the inbound path makes, and for the same reason.
   const platform = new PlatformDb(handle.db, 'channel-delivery');
-  const run = await platform.collection<RunDoc>('runs').findOne({ _id: runId } as never);
+  const run = await platform.collection<RunDoc>('runs').findOne({ _id: runId } as never, { comment: platform.comment });
   if (run === null) return skipped('no such run');
 
   const conversations = new ConversationRepository(handle.db, run.workspaceId);

@@ -12,12 +12,18 @@ import { AntMark } from '@/components/ant-mark';
 export type IconName =
   | 'spark' | 'plug' | 'key' | 'agent' | 'server' | 'shield'
   | 'chat' | 'check' | 'chevron' | 'arrow' | 'exit' | 'gear' | 'pulse' | 'clock'
-  | 'book' | 'search' | 'plus' | 'mic' | 'trash' | 'pencil';
+  | 'book' | 'search' | 'plus' | 'mic' | 'trash' | 'pencil' | 'help';
 
 const PATHS: Readonly<Record<IconName, ReactNode>> = {
   spark: <path d="M12 3l1.9 5.3L19 10l-5.1 1.7L12 17l-1.9-5.3L5 10l5.1-1.7L12 3z" />,
   trash: <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" />,
   pencil: <path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17v3zM13.5 6.5l3 3" />,
+  help: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .8-1 1.5V14M12 17h.01" />
+    </>
+  ),
   plug: <path d="M9 3v6M15 3v6M6 9h12v3a6 6 0 0 1-6 6 6 6 0 0 1-6-6V9zM12 18v3" />,
   key: (
     <>

@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { Icon, Tile } from '@/components/ui';
 import { ThemePicker } from '@/components/theme-picker';
 import { GoogleButton } from '@/components/google-button';
+import { useWalkthrough } from '@/components/walkthrough';
 
 interface Workspace { id: string; name: string; role: string }
 
@@ -29,6 +30,7 @@ export default function SettingsPage({
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [billing, setBilling] = useState<{ configured: boolean; active: boolean; planId?: string }>();
   const [busy, setBusy] = useState(false);
+  const walkthrough = useWalkthrough();
 
   useEffect(() => {
     void auth.session().then((r) => setUser(r.user)).catch(() => setUser(null));
@@ -91,6 +93,21 @@ export default function SettingsPage({
         <p className="muted" style={{ margin: '10px 0 0' }}>
           Kept on this device, so your laptop and your office monitor can differ.
         </p>
+      </div>
+
+      <p className="eyebrow" style={{ marginTop: 26 }}>Getting around</p>
+      <div className="card">
+        <div className="row">
+          <span>
+            <strong>Walkthrough</strong>
+            <p className="muted" style={{ margin: '4px 0 0' }}>
+              A one-minute tour of the assistants, their tabs and the workspace pages.
+            </p>
+          </span>
+          <button type="button" onClick={() => walkthrough.start()}>
+            <Icon name="help" size={15} /> Show it again
+          </button>
+        </div>
       </div>
 
       <p className="eyebrow" style={{ marginTop: 26 }}>Workspace</p>

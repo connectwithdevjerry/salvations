@@ -120,6 +120,7 @@ export default function AgentPage({
             <button
               key={t.id} type="button"
               className={tab === t.id ? 'agent-tab on' : 'agent-tab'}
+              data-tour={`tab-${t.id}`}
               onClick={() => go(t.id, t.id === 'chat' ? conversationId : undefined)}
             >
               <Icon name={t.icon} size={15} /> {t.label}

@@ -29,6 +29,7 @@ export async function GET(request: Request): Promise<Response> {
         name: user.name ?? undefined,
         imageUrl: user.imageUrl ?? undefined,
         emailVerified: user.emailVerifiedAt != null,
+        walkthroughSeen: user.walkthroughSeenAt != null,
       },
     });
   } catch (error) {

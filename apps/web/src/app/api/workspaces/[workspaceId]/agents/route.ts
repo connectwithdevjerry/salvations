@@ -8,7 +8,7 @@
  * stale.
  */
 import { upsertAgentSchema } from '@salvations/contracts';
-import { defaultSystemPrompt, isDefaultSystemPrompt } from '@salvations/catalog';
+import { defaultSystemPrompt, isCurrentDefaultSystemPrompt, isDefaultSystemPrompt } from '@salvations/catalog';
 import { WorkspaceRepository, AgentRepository, type AgentDoc, type ConversationDoc, type RunDoc } from '@salvations/db';
 import { jsonBody, ok } from '@/lib/http';
 import { workspaceRoute, type WorkspaceContext } from '@/lib/route';
@@ -77,7 +77,7 @@ export function presentAgents(
 
 export const GET = workspaceRoute('agents:read', async (ctx) => {
   const repo = new AgentRepository(ctx.database, ctx.workspaceId);
-  const agents = await upgradeNamelessDefaults(ctx, repo, await repo.list());
+  const agents = await upgradeStaleDefaults(ctx, repo, await repo.list());
   const [conversations, runs] = await Promise.all([
     ctx.repos.conversations.list(200),
     ctx.repos.runs.listRecent(200),
@@ -115,18 +115,17 @@ const slugOf = (name: string): string =>
   name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'agent';
 
 /**
- * Assistants made before the default introduced them by name still carry
- * the nameless one. The first listing after this change gives each of them
- * the named default, once, as a new version. A prompt somebody edited is
- * not a default and is left alone.
+ * An assistant still on a default — nameless, or an earlier wording — gets
+ * today's default, once, as a new version, the first time it is listed. A
+ * prompt somebody edited is not a default and is left alone.
  */
-async function upgradeNamelessDefaults(
+async function upgradeStaleDefaults(
   ctx: Pick<WorkspaceContext, 'database' | 'workspaceId' | 'principal'>,
   repo: AgentRepository,
   agents: AgentDoc[],
 ): Promise<AgentDoc[]> {
   const stale = agents.filter((a) =>
-    isDefaultSystemPrompt(a.currentVersion.systemPrompt) && !a.currentVersion.systemPrompt.startsWith(`You are ${a.name},`));
+    isDefaultSystemPrompt(a.currentVersion.systemPrompt) && !isCurrentDefaultSystemPrompt(a.currentVersion.systemPrompt, a.name));
   if (stale.length === 0) return agents;
 
   const businessName = (await new WorkspaceRepository(ctx.database).findById(ctx.workspaceId))?.name;
@@ -134,7 +133,7 @@ async function upgradeNamelessDefaults(
     await repo.publishVersion(
       ctx.database, ctx.workspaceId, agent._id,
       { ...agent.currentVersion, systemPrompt: defaultSystemPrompt({ assistantName: agent.name, businessName }) },
-      'Default instructions now introduce the assistant by name',
+      'Default instructions updated',
       actorIdOf(ctx.principal),
     );
   }

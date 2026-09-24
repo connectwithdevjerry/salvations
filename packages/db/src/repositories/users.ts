@@ -118,6 +118,17 @@ export class UserRepository {
     );
   }
 
+  /**
+   * The walkthrough was finished or skipped. Either counts: a tour that comes
+   * back every visit until it is watched to the end is a nag, not a guide.
+   */
+  async markWalkthroughSeen(userId: string): Promise<void> {
+    await this.#users().updateOne(
+      { _id: userId },
+      { $set: { walkthroughSeenAt: new Date(), updatedAt: new Date() } },
+    );
+  }
+
   async recordSignIn(userId: string): Promise<void> {
     await this.#users().updateOne({ _id: userId }, { $set: { lastSignedInAt: new Date() } });
   }

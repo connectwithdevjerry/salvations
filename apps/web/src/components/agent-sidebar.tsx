@@ -68,7 +68,7 @@ export function AgentSidebar({ workspaceId }: { workspaceId: string }) {
   };
 
   return (
-    <aside className="agents-side" aria-label="Assistants">
+    <aside className="agents-side" aria-label="Assistants" data-tour="assistants">
       <div className="agents-side-top">
         <label className="search">
           <Icon name="search" size={15} />

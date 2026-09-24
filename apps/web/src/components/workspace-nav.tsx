@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/client/api';
 import { BrandMark, Icon, type IconName } from '@/components/ui';
+import { useWalkthrough } from '@/components/walkthrough';
 
 interface Workspace { id: string; name: string; role: string }
 
@@ -37,6 +38,7 @@ export function WorkspaceNav({ workspaceId }: { workspaceId: string }) {
   const router = useRouter();
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [pending, setPending] = useState(0);
+  const walkthrough = useWalkthrough();
 
   useEffect(() => {
     api.get<{ items: Workspace[] }>('/api/workspaces')
@@ -88,6 +90,7 @@ export function WorkspaceNav({ workspaceId }: { workspaceId: string }) {
               href={href}
               className="rail-link"
               aria-current={active ? 'page' : undefined}
+              data-tour={`nav-${section.href}`}
             >
               <span className="rail-icon">
                 <Icon name={section.icon} size={19} />
@@ -103,6 +106,17 @@ export function WorkspaceNav({ workspaceId }: { workspaceId: string }) {
           );
         })}
       </div>
+
+      <button
+        type="button"
+        className="rail-help"
+        aria-label="Show the walkthrough"
+        title="Show the walkthrough"
+        data-tour="help"
+        onClick={() => walkthrough.start()}
+      >
+        <Icon name="help" size={18} />
+      </button>
 
       <button
         type="button"

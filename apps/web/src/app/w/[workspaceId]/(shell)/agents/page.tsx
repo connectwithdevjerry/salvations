@@ -37,7 +37,7 @@ export default function AgentsIndex({ params }: { params: Promise<{ workspaceId:
             with everything this workspace already knows.
           </p>
           <Link href={`/w/${workspaceId}/agents/new`}>
-            <button className="primary lg" type="button">Create an assistant</button>
+            <button className="primary lg" type="button" data-tour="create-assistant">Create an assistant</button>
           </Link>
         </div>
       </div>

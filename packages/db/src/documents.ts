@@ -640,6 +640,8 @@ export interface UserDoc extends BaseDoc {
   /** Bumped to revoke every session at once — a password change, a compromise. */
   sessionEpoch: number;
   disabledAt?: Date | null;
+  /** When they finished or skipped the product walkthrough. Absent: not yet shown. */
+  walkthroughSeenAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
   lastSignedInAt?: Date | null;

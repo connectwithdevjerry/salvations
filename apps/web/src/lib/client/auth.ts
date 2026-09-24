@@ -15,6 +15,8 @@ export interface SignedInUser {
   readonly name?: string;
   readonly imageUrl?: string;
   readonly emailVerified: boolean;
+  /** Whether the product walkthrough has been finished or skipped. */
+  readonly walkthroughSeen: boolean;
 }
 
 export const auth = {
@@ -27,6 +29,9 @@ export const auth = {
   signOut: () => api.post<{ signedOut: boolean }>('/api/auth/signout'),
 
   session: () => api.get<{ user: SignedInUser | null }>('/api/auth/session'),
+
+  /** Remembers, on the account, that the walkthrough was seen. */
+  markWalkthroughSeen: () => api.post<{ seen: boolean }>('/api/auth/session/walkthrough'),
 
   /**
    * A full navigation, not a fetch.

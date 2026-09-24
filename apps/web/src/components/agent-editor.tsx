@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { api, ws } from '@/lib/client/api';
-import { defaultSystemPrompt, isDefaultSystemPrompt } from '@salvations/catalog';
+import { defaultSystemPrompt, isCurrentDefaultSystemPrompt } from '@salvations/catalog';
 import { GroupPicker } from '@/components/group-picker';
 
 export interface AgentDetail {
@@ -121,7 +121,7 @@ export function AgentEditor({
               Part of the cacheable prefix, so it stays identical between steps and the cache
               keeps hitting.
             </p>
-            {!(isDefaultSystemPrompt(systemPrompt) && systemPrompt.startsWith(`You are ${name.trim()},`)) && (
+            {!isCurrentDefaultSystemPrompt(systemPrompt, name) && (
               <button
                 type="button" className="ghost"
                 onClick={() => setSystemPrompt(defaultSystemPrompt({ assistantName: name.trim() || 'Assistant' }))}

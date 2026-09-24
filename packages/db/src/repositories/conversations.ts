@@ -36,6 +36,28 @@ export class ConversationRepository {
     return this.#conversations.findOne({ _id: conversationId } as never);
   }
 
+  /**
+   * Deletes a conversation and every message in it.
+   *
+   * Runs are left as they are: they are the audit record of what the
+   * assistant did and what it cost, which a deleted chat does not undo.
+   */
+  async remove(conversationId: string): Promise<boolean> {
+    await this.#messages.deleteMany({ conversationId } as never);
+    const result = await this.#conversations.deleteOne({ _id: conversationId } as never);
+    return result.deletedCount === 1;
+  }
+
+  /** Empties a conversation but keeps it, with its model and its channel link. */
+  async clear(conversationId: string): Promise<number> {
+    const result = await this.#messages.deleteMany({ conversationId } as never);
+    await this.#conversations.updateOne(
+      { _id: conversationId } as never,
+      { $set: { lastMessage: null, updatedAt: new Date() } } as never,
+    );
+    return result.deletedCount;
+  }
+
   async create(input: {
     agentId: string;
     modelBindingId: string;

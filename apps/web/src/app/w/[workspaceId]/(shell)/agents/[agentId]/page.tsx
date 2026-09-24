@@ -215,6 +215,23 @@ function ChatTab({
             {c.title.length > 28 ? `${c.title.slice(0, 27)}…` : c.title}
           </button>
         ))}
+        {conversationId !== undefined && (
+          <button
+            type="button" className="chip square danger" aria-label="Delete this chat" title="Delete this chat"
+            onClick={async () => {
+              if (!window.confirm('Delete this chat and its messages?')) return;
+              try {
+                await api.del(`${ws(workspaceId)}/conversations/${conversationId}`);
+                onPick(undefined);
+                reload();
+              } catch (caught) {
+                window.alert(caught instanceof Error ? caught.message : 'Could not delete that chat.');
+              }
+            }}
+          >
+            <Icon name="trash" size={14} />
+          </button>
+        )}
       </div>
 
       <ConversationView

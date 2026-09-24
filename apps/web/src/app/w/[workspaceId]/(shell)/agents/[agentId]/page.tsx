@@ -217,6 +217,25 @@ function ChatTab({
         ))}
         {conversationId !== undefined && (
           <button
+            type="button" className="chip square" aria-label="Rename this chat" title="Rename this chat"
+            style={{ marginLeft: 'auto' }}
+            onClick={async () => {
+              const current = conversations?.find((c) => c.id === conversationId)?.title ?? '';
+              const title = window.prompt('Name this chat', current)?.trim();
+              if (title === undefined || title === '' || title === current) return;
+              try {
+                await api.patch(`${ws(workspaceId)}/conversations/${conversationId}`, { title });
+                reload();
+              } catch (caught) {
+                window.alert(caught instanceof Error ? caught.message : 'Could not rename that chat.');
+              }
+            }}
+          >
+            <Icon name="pencil" size={14} />
+          </button>
+        )}
+        {conversationId !== undefined && (
+          <button
             type="button" className="chip square danger" aria-label="Delete this chat" title="Delete this chat"
             onClick={async () => {
               if (!window.confirm('Delete this chat and its messages?')) return;

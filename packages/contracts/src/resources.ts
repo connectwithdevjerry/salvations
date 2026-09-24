@@ -480,3 +480,7 @@ export const chooseAgentModelSchema = z.object({
   providerConfigId: idSchema,
   modelId: z.string().trim().min(1).max(80),
 });
+
+export const renameConversationSchema = z.object({
+  title: z.string().trim().min(1).max(120),
+});

@@ -48,6 +48,14 @@ export class ConversationRepository {
     return result.deletedCount === 1;
   }
 
+  async rename(conversationId: string, title: string): Promise<boolean> {
+    const result = await this.#conversations.updateOne(
+      { _id: conversationId } as never,
+      { $set: { title, updatedAt: new Date() } } as never,
+    );
+    return result.matchedCount === 1;
+  }
+
   /** Empties a conversation but keeps it, with its model and its channel link. */
   async clear(conversationId: string): Promise<number> {
     const result = await this.#messages.deleteMany({ conversationId } as never);

@@ -1005,7 +1005,6 @@ button.square {
 .chip:hover { color: var(--text); border-color: var(--border-strong); }
 .chip.on { color: var(--text); background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
 .chip.square { width: 34px; height: 34px; padding: 0; display: inline-grid; place-items: center; }
-.chip.square.danger { margin-left: auto; }
 .chip.square.danger:hover { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 45%, transparent); }
 
 .agent-view .chat { height: auto; flex: 1; min-height: 0; }

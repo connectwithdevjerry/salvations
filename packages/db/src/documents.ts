@@ -64,6 +64,12 @@ export interface AgentDoc extends TenantDoc {
   category?: string | null;
   /** The avatar tint, a hex colour. Assigned at creation, changeable. */
   color?: string | null;
+  /**
+   * The model this assistant thinks with, chosen on its Model tab. Null or
+   * absent means "whatever serves my role", which is ambiguous the moment two
+   * providers are connected — so the tab exists to make it a choice.
+   */
+  modelBindingId?: string | null;
   currentVersion: {
     versionId: string;
     version: number;

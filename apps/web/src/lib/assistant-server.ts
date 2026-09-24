@@ -16,6 +16,7 @@ import { assistantSurface } from './assistant-surface';
 import { createMemorySource } from './memory-service';
 import { searchKnowledge } from './knowledge-service';
 import { sendUserMessage } from './send-message';
+import { modelForAgent } from './agent-model';
 
 /** How long `ask` waits for an answer before handing back "still working". */
 export const ASK_TIMEOUT_MS = 90_000;
@@ -90,7 +91,7 @@ export function createAssistantSource(options: {
 
   async function modelBindingFor(): Promise<string> {
     const agent = await new AgentRepository(database, workspaceId).findById(agentId);
-    const binding = agent === null ? null : await repos.models.forRole(agent.currentVersion.modelRole);
+    const binding = agent === null ? null : await modelForAgent(repos.models, agent);
     if (binding === null) {
       throw new Error('This assistant has no model to think with yet. Connect one in HIVE.');
     }

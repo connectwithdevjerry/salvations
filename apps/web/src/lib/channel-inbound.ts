@@ -30,6 +30,7 @@ import { repositories } from './container';
 import { VercelBackgroundTrigger } from './trigger';
 import { env } from './env';
 import { agentSnapshotFor } from '@/lib/agent-snapshot';
+import { modelForAgent } from './agent-model';
 
 /** How long a connect code is worth trying. Long enough to find the app. */
 export const CONNECT_CODE_TTL_MS = 30 * 60 * 1000;
@@ -237,7 +238,7 @@ async function startRun(
    */
   const binding = row.modelBindingId !== null && row.modelBindingId !== undefined
     ? await repos.models.findById(row.modelBindingId)
-    : await repos.models.forRole(agent.currentVersion.modelRole);
+    : await modelForAgent(repos.models, agent);
 
   if (binding === null) {
     await reply(

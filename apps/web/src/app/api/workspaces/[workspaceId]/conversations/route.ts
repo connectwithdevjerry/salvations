@@ -2,6 +2,7 @@ import { createConversationSchema } from '@salvations/contracts';
 import { AgentRepository } from '@salvations/db';
 import { errorResponse, jsonBody, ok } from '@/lib/http';
 import { workspaceRoute } from '@/lib/route';
+import { modelForAgent } from '@/lib/agent-model';
 
 export const runtime = 'nodejs';
 
@@ -31,7 +32,7 @@ export const POST = workspaceRoute('conversations:write', async (ctx) => {
   // move an existing conversation onto a different model.
   const binding = input.modelBindingId !== undefined
     ? await ctx.repos.models.findById(input.modelBindingId)
-    : await ctx.repos.models.forRole(agent.currentVersion.modelRole);
+    : await modelForAgent(ctx.repos.models, agent);
 
   if (binding === null) {
     return errorResponse(

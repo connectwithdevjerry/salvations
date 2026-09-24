@@ -16,6 +16,7 @@ import {
 } from '@salvations/db';
 import { firstPartyBindings } from './first-party';
 import { mcpServersById } from './mcp-servers';
+import { modelForAgent } from './agent-model';
 
 export interface SurfaceTool { readonly name: string; readonly description: string }
 
@@ -42,7 +43,7 @@ export async function assistantSurface(
   const agent = await new AgentRepository(database, workspaceId).findById(agentId);
   const binding = agent === null
     ? null
-    : await new ModelBindingRepository(database, workspaceId).forRole(agent.currentVersion.modelRole);
+    : await modelForAgent(new ModelBindingRepository(database, workspaceId), agent);
 
   const own = await scoped.collection<McpServerBindingDoc>('mcpServerBindings').find(ownedBy(agentId) as never);
   const servers = await mcpServersById(database, workspaceId, own.map((b) => b.mcpServerId));

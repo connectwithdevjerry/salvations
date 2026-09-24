@@ -8,7 +8,7 @@
  * connection for the length of an agent loop and lose the answer when it
  * timed out.
  */
-import { AgentRepository } from '@salvations/db';
+import { AgentRepository, type AgentDoc } from '@salvations/db';
 import {
   DEFAULT_BUDGET, Errors, asId, clampBudget, type Principal, type RunId,
 } from '@salvations/core';
@@ -51,7 +51,7 @@ export async function sendUserMessage(
     await ctx.repos.conversations.setModelBinding(conversationId, input.modelBindingId);
   }
 
-  const modelBindingId = await usableModel(ctx, conversationId, input.modelBindingId ?? conversation.modelBindingId, agent.currentVersion.modelRole);
+  const modelBindingId = await usableModel(ctx, conversationId, input.modelBindingId, conversation.modelBindingId, agent);
 
   await ctx.repos.conversations.appendMessage({
     conversationId,
@@ -100,27 +100,36 @@ const delegated = (principal: Principal): Principal => principal;
 /**
  * The model this turn runs on.
  *
- * A conversation remembers the binding it started on. When that binding has
- * since been removed — a provider taken off the Models page takes its
- * bindings with it — the conversation moves to whatever now serves the
- * agent's role, and says so, rather than creating a run that fails before
- * its first step and leaves the person watching a chat that never answers.
+ * In order: a model the person picked for this conversation in the composer;
+ * the model the assistant was given on its Model tab; the binding the
+ * conversation started on; and last, whatever serves the assistant's role.
+ * Each is checked to still exist and be enabled — a provider taken off the
+ * Models page takes its bindings with it — and the conversation is moved to
+ * the winner, so the next turn does not have to work it out again.
  */
 async function usableModel(
   ctx: Pick<WorkspaceContext, 'repos'>,
   conversationId: string,
-  bindingId: string,
-  role: string,
+  requested: string | undefined,
+  pinned: string,
+  agent: Pick<AgentDoc, 'modelBindingId' | 'currentVersion'>,
 ): Promise<string> {
-  const current = await ctx.repos.models.findById(bindingId);
-  if (current !== null && current.enabled) return bindingId;
+  const usable = async (id: string | null | undefined): Promise<string | undefined> => {
+    if (id == null) return undefined;
+    const binding = await ctx.repos.models.findById(id);
+    return binding !== null && binding.enabled ? binding._id : undefined;
+  };
 
-  const fallback = await ctx.repos.models.forRole(role);
-  if (fallback === null) {
+  const winner = await usable(requested)
+    ?? await usable(agent.modelBindingId)
+    ?? await usable(pinned)
+    ?? (await ctx.repos.models.forRole(agent.currentVersion.modelRole))?._id;
+
+  if (winner === undefined) {
     throw Errors.conflict(
       'No model is connected for this assistant. Connect Claude or OpenAI on the Models page and try again.',
     );
   }
-  await ctx.repos.conversations.setModelBinding(conversationId, fallback._id);
-  return fallback._id;
+  if (winner !== pinned) await ctx.repos.conversations.setModelBinding(conversationId, winner);
+  return winner;
 }

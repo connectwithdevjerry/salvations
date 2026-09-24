@@ -474,3 +474,9 @@ export const healthSchema = z.object({
   })),
   version: z.string().optional(),
 });
+
+/** The model an assistant thinks with: one of the workspace's providers, one of its models. */
+export const chooseAgentModelSchema = z.object({
+  providerConfigId: idSchema,
+  modelId: z.string().trim().min(1).max(80),
+});

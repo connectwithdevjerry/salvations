@@ -12,6 +12,7 @@ import { SchedulePanel } from '@/components/schedule-panel';
 import { SpeakTab } from '@/components/speak-tab';
 import { IntegrationsTab } from '@/components/integrations-tab';
 import { ServerTab } from '@/components/server-tab';
+import { ModelTab } from '@/components/model-tab';
 import { ago } from '@/components/agent-sidebar';
 import { useAgents } from '@/components/agents-context';
 import { SkeletonPage } from '@/components/skeleton';
@@ -24,14 +25,15 @@ import { SkeletonPage } from '@/components/skeleton';
  * what the assistant is for.
  */
 
-type Tab = 'chat' | 'speak' | 'documents' | 'routine' | 'memories' | 'integrations' | 'server' | 'settings';
-const TABS: readonly { id: Tab; label: string; icon: 'chat' | 'mic' | 'book' | 'clock' | 'spark' | 'plug' | 'server' | 'gear' }[] = [
+type Tab = 'chat' | 'speak' | 'documents' | 'routine' | 'memories' | 'integrations' | 'model' | 'server' | 'settings';
+const TABS: readonly { id: Tab; label: string; icon: 'chat' | 'mic' | 'book' | 'clock' | 'spark' | 'plug' | 'pulse' | 'server' | 'gear' }[] = [
   { id: 'chat', label: 'Chat', icon: 'chat' },
   { id: 'speak', label: 'Speak', icon: 'mic' },
   { id: 'documents', label: 'Documents', icon: 'book' },
   { id: 'routine', label: 'Routine', icon: 'clock' },
   { id: 'memories', label: 'Memories', icon: 'spark' },
   { id: 'integrations', label: 'Integrations', icon: 'plug' },
+  { id: 'model', label: 'Model', icon: 'pulse' },
   { id: 'server', label: 'Server', icon: 'server' },
   { id: 'settings', label: 'Settings', icon: 'gear' },
 ];
@@ -130,6 +132,9 @@ export default function AgentPage({
       )}
       {tab === 'integrations' && (
         <div className="agent-scroll"><IntegrationsTab workspaceId={workspaceId} agentId={agentId} /></div>
+      )}
+      {tab === 'model' && (
+        <div className="agent-scroll"><ModelTab workspaceId={workspaceId} agentId={agentId} agentName={agent.name} /></div>
       )}
       {tab === 'server' && (
         <div className="agent-scroll"><ServerTab workspaceId={workspaceId} agentId={agentId} agentName={agent.name} /></div>

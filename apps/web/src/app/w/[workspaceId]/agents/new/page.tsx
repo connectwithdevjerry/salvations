@@ -67,6 +67,7 @@ export default function CreateAgentPage({ params }: { params: Promise<{ workspac
       render: () => (
         <ModelStep
           workspaceId={workspaceId}
+          agentId={agent?.id ?? ''}
           agentName={agent?.name ?? 'your agent'}
           onDone={next}
           onError={setError}
@@ -663,9 +664,10 @@ interface ProvidersResponse {
  * conversations for no visible reason.
  */
 function ModelStep({
-  workspaceId, agentName, onDone, onError,
+  workspaceId, agentId, agentName, onDone, onError,
 }: {
   workspaceId: string;
+  agentId: string;
   agentName: string;
   onDone: () => void;
   onError: (message: string) => void;
@@ -699,12 +701,17 @@ function ModelStep({
       // One call. The server checks the key with the vendor, then binds the
       // chat role to the chosen model and the cheap and summarizer roles to
       // sensible defaults, so the agent can run the moment this returns.
-      await api.post(`${ws(workspaceId)}/providers`, {
+      const provider = await api.post<{ id: string }>(`${ws(workspaceId)}/providers`, {
         providerType,
         name: vendorCopy(providerType).label,
         apiKey,
         ...(chosen !== undefined ? { chatModelId: chosen } : {}),
       });
+      // The model picked here is this assistant's, not merely the workspace
+      // default, so a second provider later does not quietly take it over.
+      if (agentId !== '' && chosen !== undefined) {
+        await api.put(`${ws(workspaceId)}/agents/${agentId}/model`, { providerConfigId: provider.id, modelId: chosen });
+      }
       onDone();
     } catch (caught) {
       onError(caught instanceof Error ? caught.message : 'Could not connect that provider.');

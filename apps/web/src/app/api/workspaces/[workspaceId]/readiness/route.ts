@@ -15,6 +15,7 @@ import { AgentRepository, ChannelRepository, KnowledgeRepository, ScopedDb, type
 import { firstPartyBindings } from '@/lib/first-party';
 import { ok } from '@/lib/http';
 import { workspaceRoute } from '@/lib/route';
+import { modelForAgent } from '@/lib/agent-model';
 
 export const runtime = 'nodejs';
 
@@ -37,7 +38,9 @@ export const GET = workspaceRoute('workspace:read', async (ctx) => {
 
   // The role the agent actually asks for, not an assumption that it is 'chat'.
   const role = agent?.currentVersion.modelRole ?? 'chat';
-  const binding = await ctx.repos.models.forRole(role);
+  const binding = agent === undefined
+    ? await ctx.repos.models.forRole(role)
+    : await modelForAgent(ctx.repos.models, agent);
 
   const channels = await new ChannelRepository(ctx.database, ctx.workspaceId).list();
   const connected = channels.filter((c) => c.status === 'connected' && (agent === undefined || c.agentId === agent._id));

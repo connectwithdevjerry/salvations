@@ -1391,3 +1391,32 @@ button.square {
 }
 .run-failure-message { word-break: break-word; line-height: 1.4; }
 .run-failure-message a { color: var(--accent); }
+
+/* ---------------------------------------------------------- model choice -- */
+
+/* The models a chosen provider offers, as a column of choices. */
+.model-choices { display: grid; gap: 8px; max-width: 560px; }
+.model-choice {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas: "name id" "summary id";
+  column-gap: 12px;
+  row-gap: 2px;
+  align-items: center;
+  width: 100%;
+  padding: 11px 14px;
+  text-align: left;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-elevated);
+  color: var(--text);
+  font-weight: 400;
+}
+.model-choice:hover { border-color: var(--border-strong); background: var(--bg-elevated); }
+.model-choice.selected {
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  background: color-mix(in srgb, var(--accent) 8%, var(--bg-elevated));
+}
+.model-choice-name { grid-area: name; font-weight: 600; font-size: 14px; }
+.model-choice-summary { grid-area: summary; font-size: 12.5px; color: var(--muted); }
+.model-choice-id { grid-area: id; font-size: 11.5px; color: var(--faint); }

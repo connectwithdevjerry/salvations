@@ -42,6 +42,9 @@ export function ConversationView({
   const [messages, setMessages] = useState<Message[]>([]);
   const [models, setModels] = useState<ModelBinding[]>([]);
   const [modelBindingId, setModelBindingId] = useState('');
+  // Set only by the dropdown. The assistant's own choice (its Model tab) wins
+  // otherwise, so changing it there moves this conversation too.
+  const [picked, setPicked] = useState<string>();
   const [draft, setDraft] = useState('');
   const [runId, setRunId] = useState<string>();
   const [error, setError] = useState<string>();
@@ -64,6 +67,7 @@ export function ConversationView({
   useEffect(() => {
     setRunId(undefined);
     setError(undefined);
+    setPicked(undefined);
     void reload().catch((e: Error) => setError(e.message));
   }, [reload]);
 
@@ -115,7 +119,7 @@ export function ConversationView({
       }
       const result = await api.post<{ runId: string }>(`${target}/messages`, {
         content,
-        ...(modelBindingId !== '' ? { modelBindingId } : {}),
+        ...(picked !== undefined ? { modelBindingId: picked } : {}),
         // Survives a double submit: the server derives the message id from it,
         // so a retry collides instead of appending twice.
         idempotencyKey: crypto.randomUUID(),
@@ -216,7 +220,7 @@ export function ConversationView({
               <span className="faint">Model</span>
               <select
                 value={modelBindingId}
-                onChange={(e) => setModelBindingId(e.target.value)}
+                onChange={(e) => { setModelBindingId(e.target.value); setPicked(e.target.value); }}
                 disabled={busy}
               >
                 {modelBindingId === '' && <option value="">Assistant&apos;s default</option>}

@@ -106,13 +106,17 @@ export class AgentRepository {
    */
   async setMeta(
     agentId: string,
-    meta: { name?: string; description?: string; category?: string | null; color?: string | null },
+    meta: {
+      name?: string; description?: string; category?: string | null; color?: string | null;
+      modelBindingId?: string | null;
+    },
   ): Promise<void> {
     const set: Record<string, unknown> = { updatedAt: new Date() };
     if (meta.name !== undefined) set['name'] = meta.name;
     if (meta.description !== undefined) set['description'] = meta.description;
     if (meta.category !== undefined) set['category'] = meta.category;
     if (meta.color !== undefined) set['color'] = meta.color;
+    if (meta.modelBindingId !== undefined) set['modelBindingId'] = meta.modelBindingId;
     await this.#agents.updateOne({ _id: agentId } as never, { $set: set } as never);
   }
 

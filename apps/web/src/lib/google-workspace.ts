@@ -311,6 +311,14 @@ export function createGoogleSource(input: GoogleSourceInput): GoogleWorkspaceSou
       return ids.length;
     },
 
+    async trashMail(ids) {
+      // The bin is a label. Adding it is how Gmail's own client trashes in bulk.
+      await google<undefined>(`${GMAIL}/messages/batchModify`, json({
+        ids: [...ids], addLabelIds: ['TRASH'], removeLabelIds: ['INBOX'],
+      }));
+      return ids.length;
+    },
+
     async listEvents(input) {
       const params = new URLSearchParams({
         timeMin: input.from, timeMax: input.to, maxResults: String(input.limit),

@@ -38,6 +38,7 @@ function source(): GoogleWorkspaceSource & { calls: { op: string; args: unknown[
       return label;
     },
     async modifyLabels(...args) { calls.push({ op: 'modifyLabels', args }); return args[0].length; },
+    async trashMail(ids) { calls.push({ op: 'trashMail', args: [ids] }); return ids.length; },
     async listEvents(...args) { calls.push({ op: 'listEvents', args }); return []; },
     async createEvent(input) {
       calls.push({ op: 'createEvent', args: [input] });
@@ -65,10 +66,12 @@ describe('the Google Workspace server', () => {
       const { tools } = await client.listTools();
       expect(tools.map((t) => t.name).sort()).toEqual([
         'create_event', 'label_mail', 'list_events', 'list_labels', 'read_file', 'read_mail',
-        'search_files', 'search_mail', 'send_mail',
+        'search_files', 'search_mail', 'send_mail', 'trash_mail',
       ]);
       const writes = tools.filter((t) => t.annotations?.readOnlyHint === false).map((t) => t.name).sort();
-      expect(writes).toEqual(['create_event', 'label_mail', 'send_mail']);
+      expect(writes).toEqual(['create_event', 'label_mail', 'send_mail', 'trash_mail']);
+      // The one destructive tool says so, which is what makes the policy ask first.
+      expect(tools.find((t) => t.name === 'trash_mail')?.annotations?.destructiveHint).toBe(true);
       // No tool takes an account: the mailbox is fixed at construction.
       for (const tool of tools) {
         expect(Object.keys((tool.inputSchema as { properties?: object }).properties ?? {})).not.toContain('account');

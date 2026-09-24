@@ -63,6 +63,8 @@ export interface GoogleWorkspaceSource {
   listLabels(): Promise<readonly MailLabel[]>;
   createLabel(name: string): Promise<MailLabel>;
   modifyLabels(ids: readonly string[], add: readonly string[], remove: readonly string[]): Promise<number>;
+  /** Moves messages to the bin. Gmail keeps them thirty days; nothing here empties it. */
+  trashMail(ids: readonly string[]): Promise<number>;
   listEvents(input: { from: string; to: string; limit: number; query?: string }): Promise<readonly CalendarEvent[]>;
   createEvent(input: {
     summary: string; start: string; end: string; description?: string; attendees?: readonly string[]; location?: string;
@@ -193,6 +195,23 @@ export function createGoogleWorkspaceServer(
       const removeIds = (await Promise.all(remove.map((n) => idOf(n, false)))).filter((id): id is string => id !== undefined);
       const changed = await source.modifyLabels(args.messageIds, addIds, removeIds);
       return text(`Updated ${changed} message${changed === 1 ? '' : 's'}.`);
+    },
+  );
+
+  server.registerTool(
+    'trash_mail',
+    {
+      title: 'Move messages to the bin',
+      description:
+        'Move messages to Gmail\'s bin, by id from search_mail. Gmail keeps them for thirty '
+        + 'days, so this is undoable from Gmail; nothing here empties the bin. For promotional '
+        + 'mail, search `category:promotions` first and show what will go before calling this.',
+      inputSchema: { messageIds: z.array(z.string().trim().min(1).max(64)).min(1).max(200) },
+      annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
+    },
+    async (args) => {
+      const moved = await source.trashMail(args.messageIds);
+      return text(`Moved ${moved} message${moved === 1 ? '' : 's'} to the bin.`);
     },
   );
 

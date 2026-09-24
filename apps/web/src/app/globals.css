@@ -985,8 +985,8 @@ button.square {
 .agent-tab {
   display: flex; align-items: center; gap: 6px;
   background: transparent; border: 0; border-bottom: 2px solid transparent;
-  padding: 10px 12px 12px; margin-bottom: -1px;
-  color: var(--muted); font-size: 13.5px; font-weight: 600; cursor: pointer; border-radius: 0;
+  padding: 10px 9px 12px; margin-bottom: -1px;
+  color: var(--muted); font-size: 13px; font-weight: 600; cursor: pointer; border-radius: 0;
 }
 .agent-tab:hover { color: var(--text); }
 .agent-tab.on { color: var(--text); border-bottom-color: var(--accent); }

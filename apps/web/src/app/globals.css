@@ -978,7 +978,10 @@ button.square {
   50% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--ok) 0%, transparent); }
 }
 @media (prefers-reduced-motion: reduce) { .agent-dot.working, .agent-status.working .agent-status-dot { animation: none; } }
-.agent-tabs { display: flex; gap: 2px; margin-left: 18px; }
+/* Always a row of their own under the name: nine tabs no longer fit beside it. */
+.agent-tabs { display: flex; gap: 2px; flex-basis: 100%; margin-left: -6px; overflow-x: auto; scrollbar-width: none; }
+.agent-tabs::-webkit-scrollbar { display: none; }
+.agent-tab { white-space: nowrap; }
 .agent-tab {
   display: flex; align-items: center; gap: 6px;
   background: transparent; border: 0; border-bottom: 2px solid transparent;

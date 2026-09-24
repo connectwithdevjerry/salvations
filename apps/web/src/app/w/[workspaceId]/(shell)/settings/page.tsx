@@ -7,6 +7,7 @@ import { auth, type SignedInUser } from '@/lib/client/auth';
 import Link from 'next/link';
 import { Icon, Tile } from '@/components/ui';
 import { ThemePicker } from '@/components/theme-picker';
+import { GoogleButton } from '@/components/google-button';
 
 interface Workspace { id: string; name: string; role: string }
 
@@ -57,9 +58,16 @@ export default function SettingsPage({
                 <p className="muted" style={{ margin: '2px 0 0' }}>{user.email}</p>
               )}
               {user !== undefined && user !== null && !user.emailVerified && (
-                <span className="badge warn" style={{ marginTop: 6, display: 'inline-block' }}>
-                  email not verified
-                </span>
+                <div className="verify-note">
+                  <span className="badge warn">Email not verified</span>
+                  <p className="muted" style={{ margin: '6px 0 8px' }}>
+                    You signed up with a password, so nothing has confirmed this address is yours yet.
+                    Signing in once with a Google account that uses the same address confirms it.
+                  </p>
+                  <div style={{ maxWidth: 260 }}>
+                    <GoogleButton returnTo={`/w/${workspaceId}/settings`} />
+                  </div>
+                </div>
               )}
             </div>
           </div>

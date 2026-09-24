@@ -88,6 +88,14 @@ export class UserRepository {
     return doc;
   }
 
+  /** A verified assertion of the address arrived — from Google, or a link. */
+  async markEmailVerified(userId: string): Promise<void> {
+    await this.#users().updateOne(
+      { _id: userId, emailVerifiedAt: null },
+      { $set: { emailVerifiedAt: new Date(), updatedAt: new Date() } },
+    );
+  }
+
   async setPassword(userId: string, passwordHash: string): Promise<void> {
     // Changing a password revokes every session, including the one doing the
     // changing. Anything else means a thief who learned the old password keeps

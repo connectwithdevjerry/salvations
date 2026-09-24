@@ -84,6 +84,9 @@ export async function GET(request: Request): Promise<Response> {
       if (!identity.emailVerified) return rejected('google_unverified', [clearPending]);
 
       const byEmail = await users.findByEmail(identity.email);
+      // A password account whose address Google has just vouched for: the
+      // same proof a verification link would give, so it counts as one.
+      if (byEmail !== null && byEmail.emailVerifiedAt == null) await users.markEmailVerified(byEmail._id);
       user = byEmail ?? await users.create({
         email: identity.email,
         emailVerified: true,

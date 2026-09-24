@@ -8,10 +8,10 @@
  * stale.
  */
 import { upsertAgentSchema } from '@salvations/contracts';
-import { DEFAULT_SYSTEM_PROMPT } from '@salvations/catalog';
-import { AgentRepository, type AgentDoc, type ConversationDoc, type RunDoc } from '@salvations/db';
+import { defaultSystemPrompt, isDefaultSystemPrompt } from '@salvations/catalog';
+import { WorkspaceRepository, AgentRepository, type AgentDoc, type ConversationDoc, type RunDoc } from '@salvations/db';
 import { jsonBody, ok } from '@/lib/http';
-import { workspaceRoute } from '@/lib/route';
+import { workspaceRoute, type WorkspaceContext } from '@/lib/route';
 import { actorIdOf } from '@/lib/principal';
 
 export const runtime = 'nodejs';
@@ -76,7 +76,8 @@ export function presentAgents(
 }
 
 export const GET = workspaceRoute('agents:read', async (ctx) => {
-  const agents = await new AgentRepository(ctx.database, ctx.workspaceId).list();
+  const repo = new AgentRepository(ctx.database, ctx.workspaceId);
+  const agents = await upgradeNamelessDefaults(ctx, repo, await repo.list());
   const [conversations, runs] = await Promise.all([
     ctx.repos.conversations.list(200),
     ctx.repos.runs.listRecent(200),
@@ -99,7 +100,10 @@ export const POST = workspaceRoute('agents:write', async (ctx) => {
     // own instructions: visible on the agent page, editable, and versioned like
     // anything else it says. A default living only in the runtime would be a
     // set of instructions nobody could read or change.
-    systemPrompt: input.systemPrompt ?? DEFAULT_SYSTEM_PROMPT,
+    systemPrompt: input.systemPrompt ?? defaultSystemPrompt({
+      assistantName: input.name,
+      businessName: (await new WorkspaceRepository(ctx.database).findById(ctx.workspaceId))?.name,
+    }),
     modelRole: input.modelRole,
     createdBy: actorIdOf(ctx.principal),
   });
@@ -109,3 +113,30 @@ export const POST = workspaceRoute('agents:write', async (ctx) => {
 
 const slugOf = (name: string): string =>
   name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'agent';
+
+/**
+ * Assistants made before the default introduced them by name still carry
+ * the nameless one. The first listing after this change gives each of them
+ * the named default, once, as a new version. A prompt somebody edited is
+ * not a default and is left alone.
+ */
+async function upgradeNamelessDefaults(
+  ctx: Pick<WorkspaceContext, 'database' | 'workspaceId' | 'principal'>,
+  repo: AgentRepository,
+  agents: AgentDoc[],
+): Promise<AgentDoc[]> {
+  const stale = agents.filter((a) =>
+    isDefaultSystemPrompt(a.currentVersion.systemPrompt) && !a.currentVersion.systemPrompt.startsWith(`You are ${a.name},`));
+  if (stale.length === 0) return agents;
+
+  const businessName = (await new WorkspaceRepository(ctx.database).findById(ctx.workspaceId))?.name;
+  for (const agent of stale) {
+    await repo.publishVersion(
+      ctx.database, ctx.workspaceId, agent._id,
+      { ...agent.currentVersion, systemPrompt: defaultSystemPrompt({ assistantName: agent.name, businessName }) },
+      'Default instructions now introduce the assistant by name',
+      actorIdOf(ctx.principal),
+    );
+  }
+  return repo.list();
+}

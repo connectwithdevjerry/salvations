@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { api, ws } from '@/lib/client/api';
-import { DEFAULT_SYSTEM_PROMPT } from '@salvations/catalog';
+import { defaultSystemPrompt, isDefaultSystemPrompt } from '@salvations/catalog';
 import { GroupPicker } from '@/components/group-picker';
 
 export interface AgentDetail {
@@ -42,7 +42,7 @@ export function AgentEditor({
    * continue. Editing an existing agent shows what it actually says.
    */
   const [systemPrompt, setSystemPrompt] = useState(
-    agent?.systemPrompt ?? DEFAULT_SYSTEM_PROMPT,
+    agent?.systemPrompt ?? defaultSystemPrompt({ assistantName: agent?.name ?? 'Assistant' }),
   );
   const [modelRole, setModelRole] = useState(agent?.modelRole ?? 'chat');
   const [attached, setAttached] = useState<Set<string>>(
@@ -121,10 +121,10 @@ export function AgentEditor({
               Part of the cacheable prefix, so it stays identical between steps and the cache
               keeps hitting.
             </p>
-            {systemPrompt !== DEFAULT_SYSTEM_PROMPT && (
+            {!(isDefaultSystemPrompt(systemPrompt) && systemPrompt.startsWith(`You are ${name.trim()},`)) && (
               <button
                 type="button" className="ghost"
-                onClick={() => setSystemPrompt(DEFAULT_SYSTEM_PROMPT)}
+                onClick={() => setSystemPrompt(defaultSystemPrompt({ assistantName: name.trim() || 'Assistant' }))}
               >
                 Reset to default
               </button>

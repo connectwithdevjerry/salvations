@@ -132,9 +132,9 @@ export function stepsFor(context: TourContext): readonly TourStep[] {
     },
     ...(context.admin === true ? [{
       id: 'admin',
-      target: 'nav-admin',
+      target: 'workspace',
       title: 'Admin',
-      body: 'Spend against the daily cap, the week’s runs, who is in the workspace and the limits. Invite people from here.',
+      body: 'Your workspace name opens the admin dashboard: spend against the daily cap, the week’s runs, who is in the workspace and the limits. Invite people from there.',
     }] : []),
     {
       id: 'done',

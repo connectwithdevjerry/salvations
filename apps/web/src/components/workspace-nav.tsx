@@ -31,10 +31,9 @@ const SECTIONS: readonly { href: string; label: string; icon: IconName }[] = [
   { href: 'activity', label: 'Activity', icon: 'pulse' },
   { href: 'models', label: 'Models', icon: 'spark' },
   { href: 'settings', label: 'Settings', icon: 'gear' },
-  // Owners and admins only. Filtered below once the role is known.
-  { href: 'admin', label: 'Admin', icon: 'grid' },
 ];
 
+/** Who the workspace button takes to the admin dashboard; everyone else lands on Settings. */
 const ADMIN_ROLES = new Set(['owner', 'admin']);
 
 export function WorkspaceNav({ workspaceId }: { workspaceId: string }) {
@@ -78,7 +77,7 @@ export function WorkspaceNav({ workspaceId }: { workspaceId: string }) {
   }, [workspaceId]);
 
   const current = workspaces.find((w) => w.id === workspaceId);
-  const sections = SECTIONS.filter((s) => s.href !== 'admin' || (current !== undefined && ADMIN_ROLES.has(current.role)));
+  const runsIt = current !== undefined && ADMIN_ROLES.has(current.role);
   const initial = (current?.name ?? '?').trim().charAt(0).toUpperCase();
 
   return (
@@ -86,7 +85,7 @@ export function WorkspaceNav({ workspaceId }: { workspaceId: string }) {
       <BrandMark />
 
       <div className="rail-items">
-        {sections.map((section) => {
+        {SECTIONS.map((section) => {
           const href = `/w/${workspaceId}/${section.href}`;
           const active = pathname === href || pathname.startsWith(`${href}/`);
           return (
@@ -126,9 +125,10 @@ export function WorkspaceNav({ workspaceId }: { workspaceId: string }) {
       <button
         type="button"
         className="rail-avatar"
-        title={current?.name ?? 'Workspace'}
-        aria-label={`Workspace: ${current?.name ?? 'loading'} — settings`}
-        onClick={() => router.push(`/w/${workspaceId}/settings`)}
+        title={runsIt ? 'Admin dashboard' : current?.name ?? 'Workspace'}
+        aria-label={`Workspace: ${current?.name ?? 'loading'} — ${runsIt ? 'admin dashboard' : 'settings'}`}
+        data-tour="workspace"
+        onClick={() => router.push(`/w/${workspaceId}/${runsIt ? 'admin' : 'settings'}`)}
       >
         <span aria-hidden>{initial}</span>
         <span className="rail-workspace">{current?.name ?? ''}</span>

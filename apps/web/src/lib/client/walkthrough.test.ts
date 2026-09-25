@@ -28,7 +28,7 @@ describe('stepsFor', () => {
     expect(ids(true)).toContain('admin');
     expect(ids(false)).not.toContain('admin');
     expect(ids(true).indexOf('admin')).toBe(ids(true).length - 2);
-    expect(stepsFor({ workspaceId: 'ws_1', admin: true }).find((s) => s.id === 'admin')?.target).toBe('nav-admin');
+    expect(stepsFor({ workspaceId: 'ws_1', admin: true }).find((s) => s.id === 'admin')?.target).toBe('workspace');
   });
 
   it('starts with a centred welcome and ends on the help button', () => {

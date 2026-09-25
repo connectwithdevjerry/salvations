@@ -75,9 +75,12 @@ export function createWebSource(fetchImpl: typeof fetch = globalThis.fetch): Web
             headers: { 'user-agent': USER_AGENT, accept: 'text/html,application/xhtml+xml,text/plain,application/json;q=0.9,*/*;q=0.5' },
           });
         } catch (caught) {
-          throw new Error(controller.signal.aborted
-            ? 'That page took too long to answer.'
-            : `That page could not be reached: ${caught instanceof Error ? caught.message : String(caught)}`);
+          throw new Error(
+            controller.signal.aborted
+              ? 'That page took too long to answer.'
+              : `That page could not be reached: ${caught instanceof Error ? caught.message : String(caught)}`,
+            { cause: caught },
+          );
         } finally {
           clearTimeout(timer);
         }

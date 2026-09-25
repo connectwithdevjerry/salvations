@@ -17,6 +17,7 @@ import { db } from '@/lib/db';
 import { env } from '@/lib/env';
 import { VercelBackgroundTrigger } from '@/lib/trigger';
 import { tickSchedules } from '@/lib/schedule-tick';
+import { refreshStaleWebhooks } from '@/lib/channel-webhook';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -87,8 +88,17 @@ async function sweep(): Promise<Response> {
     error: caught instanceof Error ? caught.message : String(caught),
   }));
 
+  // 4. Re-point any bot still delivering to an address this deployment no
+  //    longer has. Isolated for the same reason as the tick.
+  const webhooks = await refreshStaleWebhooks(handle.db).catch((caught: unknown) => ({
+    considered: 0,
+    updated: 0,
+    failed: 0,
+    error: caught instanceof Error ? caught.message : String(caught),
+  }));
+
   return Response.json(
-    { ...swept, retriggered: orphaned.length, schedules },
+    { ...swept, retriggered: orphaned.length, schedules, webhooks },
     { status: 200 },
   );
 }

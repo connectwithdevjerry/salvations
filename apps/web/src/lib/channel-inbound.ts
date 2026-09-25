@@ -22,6 +22,7 @@ import { ChannelRepository, ConversationRepository, AgentRepository, PlatformDb 
 import type { ChannelDoc } from '@salvations/db';
 import { channelAdapter, type InboundMessage, type VerifyContext } from '@salvations/channels';
 import { NO_EAR, transcribeAudio } from './transcribe';
+import { deliveredToOldAddress, registerWebhook } from './channel-webhook';
 import {
   DEFAULT_BUDGET, asId, type RunId, type UserId, type WorkspaceId,
 } from '@salvations/core';
@@ -89,6 +90,16 @@ export async function handleDelivery(
   };
 
   const judged = adapter.receive(raw, headers, context);
+
+  // Delivered to an address this deployment no longer calls its own: the
+  // site moved. The bot is re-pointed now, on the strength of a delivery the
+  // platform signed, so the next message arrives at the new address without
+  // anyone having to notice.
+  if (judged.kind !== 'rejected' && deliveredToOldAddress(headers)) {
+    await registerWebhook(handle.db, row).catch((caught: unknown) => {
+      console.log(JSON.stringify({ at: 'channel-inbound', channel: row._id, webhook: 'refresh_failed', error: caught instanceof Error ? caught.message : String(caught) }));
+    });
+  }
 
   switch (judged.kind) {
     case 'rejected':

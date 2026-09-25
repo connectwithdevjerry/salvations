@@ -31,6 +31,9 @@ export const GET = workspaceRoute('channels:read', async (ctx) => {
       displayName: row.identity.displayName,
       agentId: row.agentId,
       webhookUrl: webhookUrl(row.type, row._id),
+      // Where the platform actually delivers, when that is known. Differs
+      // from the line above after the site moves, until the bot is re-pointed.
+      ...(row.webhookUrl !== null && row.webhookUrl !== undefined ? { registeredWebhookUrl: row.webhookUrl } : {}),
       // Shown only while the handshake is outstanding. A live connection has
       // no code, and returning a stale one would invite somebody to send a
       // string that cannot work.
@@ -136,6 +139,7 @@ export const POST = workspaceRoute('channels:write', async (ctx) => {
   const url = webhookUrl(row.type, row._id);
   try {
     await adapter.register(input.token, { webhookUrl: url, webhookSecret });
+    await channels.recordWebhook(row._id, url);
   } catch (caught) {
     await channels.recordFailure(
       row._id, caught instanceof Error ? caught.message : String(caught),

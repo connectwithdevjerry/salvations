@@ -144,6 +144,14 @@ export class ChannelRepository {
     );
   }
 
+  /** The address the platform was just told to deliver to. */
+  async recordWebhook(channelId: string, url: string): Promise<void> {
+    await this.#channels.updateOne(
+      { _id: channelId } as never,
+      { $set: { webhookUrl: url, updatedAt: new Date() } } as never,
+    );
+  }
+
   async recordDelivery(channelId: string): Promise<void> {
     await this.#channels.updateOne(
       { _id: channelId } as never,

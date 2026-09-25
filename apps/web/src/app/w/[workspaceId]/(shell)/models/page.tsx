@@ -3,8 +3,9 @@
 import { use, useCallback, useEffect, useState } from 'react';
 import { api, ws } from '@/lib/client/api';
 import { rateHasExpired, type CatalogModel } from '@salvations/catalog';
-import { VendorCards, keyStatesOf, vendorCopy } from '@/components/vendor-mark';
+import { VendorCards, keyStatesOf, vendorCopy, voiceNote } from '@/components/vendor-mark';
 import { useDialog } from '@/components/dialog';
+import { Icon } from '@/components/ui';
 
 interface Provider {
   id: string; providerType: string; name: string; keyHint: string;
@@ -195,7 +196,12 @@ function ProviderRow({
 
   return (
     <tr>
-      <td>{vendorCopy(provider.providerType).label}</td>
+      <td>
+        {vendorCopy(provider.providerType).label}
+        <span className={vendorCopy(provider.providerType).voice ? 'vendor-note' : 'vendor-note off'}>
+          <Icon name="mic" size={12} /> {voiceNote(provider.providerType)}
+        </span>
+      </td>
       {/* The hint, never the key. Enough to tell two apart. */}
       <td className="mono muted">{provider.keyHint}</td>
       <td>

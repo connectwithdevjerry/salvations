@@ -10,7 +10,7 @@
 import { errorResponse, ok } from '@/lib/http';
 import { workspaceRoute } from '@/lib/route';
 import { sendUserMessage } from '@/lib/send-message';
-import { transcribeAudio } from '@/lib/transcribe';
+import { NO_EAR, transcribeAudio } from '@/lib/transcribe';
 
 export const runtime = 'nodejs';
 
@@ -36,11 +36,7 @@ export const POST = workspaceRoute<{ conversationId: string }>('runs:create', as
   );
 
   if (heard.kind === 'unconfigured') {
-    return errorResponse(
-      422, 'unsupported',
-      'No model is set up to listen yet. Bind one to the transcription role on the Models page — '
-      + 'connecting OpenAI does this for you.',
-    );
+    return errorResponse(422, 'unsupported', NO_EAR);
   }
   if (heard.kind === 'failed') return errorResponse(502, 'provider_error', heard.message);
 

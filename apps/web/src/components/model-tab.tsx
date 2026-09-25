@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import type { CatalogModel } from '@salvations/catalog';
 import { api, ws } from '@/lib/client/api';
-import { VendorCards, keyStatesOf, vendorCopy } from '@/components/vendor-mark';
+import { VendorCards, keyStatesOf, vendorCopy, voiceNote } from '@/components/vendor-mark';
 import { SkeletonRows } from '@/components/skeleton';
 
 /**
@@ -109,6 +109,14 @@ export function ModelTab({ workspaceId, agentId, agentName }: { workspaceId: str
               setSaved(false);
             }}
           />
+          {provider !== undefined && !vendorCopy(provider.providerType).voice && (
+            <p className="muted" style={{ margin: '-4px 0 14px', fontSize: 13 }}>
+              {voiceNote(provider.providerType)}
+              {options.providers.some((p) => vendorCopy(p.providerType).voice)
+                ? ' Voice notes still work here because an OpenAI key is connected to this workspace.'
+                : ' A voice note sent to this assistant will be answered with a sentence saying so.'}
+            </p>
+          )}
           {types.length !== distinct.length && provider !== undefined && (
             <div style={{ marginBottom: 14 }}>
               <label htmlFor="provider-row">Which {vendorCopy(provider.providerType).label} key</label>

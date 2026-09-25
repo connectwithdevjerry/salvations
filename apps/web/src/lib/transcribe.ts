@@ -97,7 +97,7 @@ export async function transcribeAudio(
 }
 
 /** Said when nothing can hear: no OpenAI key, or a text-only model bound. */
-export const NO_EAR = 'I can’t listen to voice notes yet: add an OpenAI key on the Models page and I will.';
+export const NO_EAR = 'You can’t use voice notes here: the model this assistant can use does not support them.';
 
 /**
  * One sentence for the person, whatever the vendor said.

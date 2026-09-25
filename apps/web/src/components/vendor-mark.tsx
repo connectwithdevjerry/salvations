@@ -6,6 +6,7 @@
  * two glyphs are not worth a dependency.
  */
 import type { ReactNode } from 'react';
+import { Icon } from '@/components/ui';
 
 export interface VendorCopy {
   readonly label: string;
@@ -13,6 +14,11 @@ export interface VendorCopy {
   readonly keysAt: string;
   readonly keysUrl: string;
   readonly keyPrefix: string;
+  /**
+   * Whether this vendor can hear. Voice notes, on Telegram and in the Speak
+   * tab, need a model that transcribes, and only some vendors offer one.
+   */
+  readonly voice: boolean;
 }
 
 export const VENDORS: Readonly<Record<string, VendorCopy>> = {
@@ -22,6 +28,7 @@ export const VENDORS: Readonly<Record<string, VendorCopy>> = {
     keysAt: 'console.anthropic.com',
     keysUrl: 'https://console.anthropic.com/settings/keys',
     keyPrefix: 'sk-ant-…',
+    voice: false,
   },
   openai: {
     label: 'OpenAI',
@@ -29,11 +36,18 @@ export const VENDORS: Readonly<Record<string, VendorCopy>> = {
     keysAt: 'platform.openai.com',
     keysUrl: 'https://platform.openai.com/api-keys',
     keyPrefix: 'sk-…',
+    voice: true,
   },
 };
 
 export const vendorCopy = (type: string): VendorCopy =>
-  VENDORS[type] ?? { label: type, blurb: '', keysAt: 'your provider', keysUrl: '', keyPrefix: '' };
+  VENDORS[type] ?? { label: type, blurb: '', keysAt: 'your provider', keysUrl: '', keyPrefix: '', voice: false };
+
+/** Said on a card and in the Model tab: what choosing this vendor means for voice. */
+export const voiceNote = (type: string): string =>
+  vendorCopy(type).voice
+    ? 'Voice notes supported.'
+    : `Voice notes are not available with ${vendorCopy(type).label}.`;
 
 /** Claude's sunburst: eight rays in its terracotta. */
 function ClaudeMark({ size }: { size: number }) {
@@ -151,6 +165,9 @@ export function VendorCards({
               {badge !== undefined && <span className={badge.className}>{badge.text}</span>}
             </span>
             <span className="vendor-blurb">{copy.blurb}</span>
+            <span className={copy.voice ? 'vendor-note' : 'vendor-note off'}>
+              <Icon name="mic" size={13} /> {voiceNote(type)}
+            </span>
             <span className="vendor-tick" aria-hidden>
               <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M5 12.5l4.2 4.2L19 7" />

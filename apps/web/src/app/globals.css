@@ -1305,6 +1305,9 @@ button.square {
 .vendor-name { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 15px; }
 .vendor-name .badge { font-size: 11px; }
 .vendor-blurb { font-size: 13px; color: var(--muted); line-height: 1.35; }
+/* What choosing this vendor means for voice: said on the card, before the key is typed. */
+.vendor-note { grid-column: 2; display: flex; align-items: center; gap: 5px; margin-top: 6px; font-size: 12px; color: var(--ok); }
+.vendor-note.off { color: var(--warn); }
 .vendor-tick {
   position: absolute;
   top: 10px;

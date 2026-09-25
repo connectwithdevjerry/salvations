@@ -1536,3 +1536,33 @@ td > .vendor-note { margin-top: 3px; white-space: nowrap; }
 @media (prefers-reduced-motion: reduce) {
   .tour-spot, .tour-card, .tour-card.anchored { transition: none; animation: none; }
 }
+
+/* ----------------------------------------------------------------- admin -- */
+
+.stat.link { text-decoration: none; color: inherit; }
+.stat.link:hover { border-color: var(--accent); }
+.stat-value.warn { color: var(--warn); }
+/* How much of today's cap is gone. */
+.meter { display: block; height: 4px; border-radius: 999px; background: var(--border); overflow: hidden; margin-top: 6px; }
+.meter > span { display: block; height: 100%; background: var(--accent); border-radius: 999px; transition: width 300ms ease; }
+.meter > span.warn { background: var(--warn); }
+.bars { display: flex; align-items: flex-end; gap: 6px; height: 140px; }
+.bar { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; gap: 4px; min-width: 0; }
+.bar > span { display: block; width: 100%; max-width: 28px; background: var(--accent); border-radius: 4px 4px 2px 2px; transition: height 300ms ease; }
+.bar > span.zero { background: var(--border-strong); }
+.bar small { font-size: 10px; color: var(--faint); font-variant-numeric: tabular-nums; }
+table.tight { margin: 0; }
+table.tight td, table.tight th { padding: 7px 8px; }
+table.tight td:first-child, table.tight th:first-child { padding-left: 0; }
+table.tight td:last-child, table.tight th:last-child { padding-right: 0; }
+td.danger { color: var(--danger); }
+.invite { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+.invite input { flex: 1; min-width: 200px; max-width: none; }
+.invite select { width: auto; }
+/* A table wider than a phone scrolls sideways instead of crushing its columns. */
+.scroll-x { overflow-x: auto; }
+.scroll-x table { min-width: 520px; }
+.audit { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.audit li { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.page .card + .card, .page .two-up + .card { margin-top: 14px; }
+@media (max-width: 640px) { .bars { gap: 3px; } .bar small { display: none; } }

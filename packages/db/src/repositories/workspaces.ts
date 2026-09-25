@@ -7,7 +7,7 @@
  */
 import type { Db } from 'mongodb';
 import { IdPrefix, newId, type Role } from '@salvations/core';
-import type { WorkspaceDoc, WorkspaceMemberSub } from '../documents';
+import type { WorkspaceDoc, WorkspaceInvitationSub, WorkspaceMemberSub } from '../documents';
 import { PlatformDb, ScopedDb, type ScopedCollection } from '../scoped';
 
 /** Documented cap; beyond this a workspace migrates to its own collection. */
@@ -128,6 +128,80 @@ export class WorkspaceRepository {
 
     await this.#scoped(id).insertOne(doc as never);
     return doc;
+  }
+
+  /** A new name, from the settings page. */
+  async rename(workspaceId: string, name: string): Promise<boolean> {
+    const result = await this.#scoped(workspaceId).updateOne(
+      { _id: workspaceId } as never,
+      { $set: { name, updatedAt: new Date() } } as never,
+    );
+    return result.matchedCount === 1;
+  }
+
+  /** The knobs an owner turns: the daily cap, how many runs at once, what tools do by default. */
+  async updateSettings(
+    workspaceId: string,
+    settings: Partial<Pick<WorkspaceDoc['settings'], 'dailyCostCapUsd' | 'maxConcurrentRuns' | 'defaultToolEffect'>>,
+  ): Promise<boolean> {
+    const set: Record<string, unknown> = { updatedAt: new Date() };
+    if (settings.dailyCostCapUsd !== undefined) set['settings.dailyCostCapUsd'] = settings.dailyCostCapUsd;
+    if (settings.maxConcurrentRuns !== undefined) set['settings.maxConcurrentRuns'] = settings.maxConcurrentRuns;
+    if (settings.defaultToolEffect !== undefined) set['settings.defaultToolEffect'] = settings.defaultToolEffect;
+    const result = await this.#scoped(workspaceId).updateOne({ _id: workspaceId } as never, { $set: set } as never);
+    return result.matchedCount === 1;
+  }
+
+  /**
+   * Records an invitation. Only the hash of its token is kept: the link is
+   * shown to the inviter once, and a dump of this collection admits nobody.
+   * One open invitation per address — inviting again replaces it.
+   */
+  async createInvitation(workspaceId: string, invitation: WorkspaceInvitationSub): Promise<void> {
+    const scoped = this.#scoped(workspaceId);
+    await scoped.updateOne(
+      { _id: workspaceId } as never,
+      { $pull: { invitations: { email: invitation.email } } } as never,
+    );
+    await scoped.updateOne(
+      { _id: workspaceId } as never,
+      { $push: { invitations: invitation }, $set: { updatedAt: new Date() } } as never,
+    );
+  }
+
+  async revokeInvitation(workspaceId: string, invitationId: string): Promise<void> {
+    await this.#scoped(workspaceId).updateOne(
+      { _id: workspaceId } as never,
+      { $pull: { invitations: { id: invitationId } }, $set: { updatedAt: new Date() } } as never,
+    );
+  }
+
+  /** The invitation a presented token names, if it exists and has not expired. */
+  async findInvitation(
+    workspaceId: string,
+    tokenHash: string,
+  ): Promise<{ workspace: WorkspaceDoc; invitation: WorkspaceInvitationSub } | null> {
+    const workspace = await this.findById(workspaceId);
+    const invitation = workspace?.invitations?.find((i) => i.tokenHash === tokenHash);
+    if (workspace === null || invitation === undefined) return null;
+    if (invitation.expiresAt.getTime() < Date.now()) return null;
+    return { workspace, invitation };
+  }
+
+  /**
+   * Turns an invitation into a membership: the member is added and the
+   * invitation removed, in that order, so a failure between the two leaves
+   * an extra invitation rather than a person locked out.
+   */
+  async acceptInvitation(workspaceId: string, invitation: WorkspaceInvitationSub, userId: string): Promise<void> {
+    await this.addMember(workspaceId, {
+      userId,
+      role: invitation.role,
+      status: 'active',
+      joinedAt: new Date(),
+      invitedBy: invitation.invitedBy,
+    });
+    await this.revokeInvitation(workspaceId, invitation.id);
   }
 
   async addMember(

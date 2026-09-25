@@ -122,7 +122,7 @@ export function ModelTab({ workspaceId, agentId, agentName }: { workspaceId: str
               <label htmlFor="provider-row">Which {vendorCopy(provider.providerType).label} key</label>
               <select id="provider-row" value={provider.id} onChange={(e) => { setProviderId(e.target.value); setSaved(false); }}>
                 {options.providers.filter((p) => p.providerType === provider.providerType).map((p) => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
+                  <option key={p.id} value={p.id}>{p.name} · {voiceNote(p.providerType)}</option>
                 ))}
               </select>
             </div>

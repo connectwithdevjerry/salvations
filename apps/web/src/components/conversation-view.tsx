@@ -8,6 +8,7 @@ import { ApprovalPrompt } from '@/components/approval-prompt';
 import { Icon, Tile } from '@/components/ui';
 import { AgentAvatar } from '@/components/agent-avatar';
 import { RichText } from '@/components/rich-text';
+import { vendorCopy, voiceNote } from '@/components/vendor-mark';
 
 interface Block { type: string; text?: string; name?: string; isError?: boolean }
 interface Message {
@@ -225,9 +226,22 @@ export function ConversationView({
               >
                 {modelBindingId === '' && <option value="">Assistant&apos;s default</option>}
                 {models.map((m) => (
-                  <option key={m.id} value={m.id}>{m.name} · {m.modelId}</option>
+                  <option key={m.id} value={m.id}>
+                    {m.name} · {m.modelId}{vendorCopy(m.providerType).voice ? '' : ' · no voice notes'}
+                  </option>
                 ))}
               </select>
+              {(() => {
+                // What the picked model means for voice, said beside the picker
+                // rather than only inside a closed list.
+                const picked = models.find((m) => m.id === modelBindingId);
+                if (picked === undefined) return null;
+                return (
+                  <span className={vendorCopy(picked.providerType).voice ? 'vendor-note' : 'vendor-note off'} style={{ marginTop: 0 }}>
+                    <Icon name="mic" size={12} /> {voiceNote(picked.providerType)}
+                  </span>
+                );
+              })()}
             </label>
             <span className="faint">Enter to send · Shift+Enter for a new line</span>
           </div>

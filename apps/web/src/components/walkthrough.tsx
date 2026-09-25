@@ -51,7 +51,16 @@ export function WalkthroughProvider({ workspaceId, children }: { workspaceId: st
     } catch {
       // Without the list the tour still runs, in its "make one" form.
     }
-    setSteps(stepsFor(agent === undefined ? { workspaceId } : { workspaceId, agent }));
+    // Owners and admins get the Admin step; nobody else can open that page.
+    let admin = false;
+    try {
+      const mine = await api.get<{ items: { id: string; role: string }[] }>('/api/workspaces');
+      const role = mine.items.find((w) => w.id === workspaceId)?.role;
+      admin = role === 'owner' || role === 'admin';
+    } catch {
+      // Unknown role: the step is left out rather than pointed at nothing.
+    }
+    setSteps(stepsFor({ workspaceId, admin, ...(agent === undefined ? {} : { agent }) }));
   }, [workspaceId]);
 
   // First visit: once the page has settled, unless this account has seen it.

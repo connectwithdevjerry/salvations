@@ -22,6 +22,8 @@ export interface TourContext {
   readonly workspaceId: string;
   /** The assistant whose tabs the middle of the tour walks. Absent when there are none. */
   readonly agent?: { readonly id: string; readonly name: string };
+  /** Whether this person runs the workspace. The Admin page is only shown to those who can open it. */
+  readonly admin?: boolean;
 }
 
 /**
@@ -128,6 +130,12 @@ export function stepsFor(context: TourContext): readonly TourStep[] {
       title: 'Activity',
       body: 'Every run an assistant made: what it did, what it used, what it cost.',
     },
+    ...(context.admin === true ? [{
+      id: 'admin',
+      target: 'nav-admin',
+      title: 'Admin',
+      body: 'Spend against the daily cap, the week’s runs, who is in the workspace and the limits. Invite people from here.',
+    }] : []),
     {
       id: 'done',
       target: 'help',

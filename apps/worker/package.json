@@ -1,0 +1,19 @@
+{
+  "name": "@salvations/worker",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Phase 4 worker service. Compiled and smoke-tested in Phase 1 so the migration is a configuration change, not a discovery exercise.",
+  "scripts": {
+    "dev": "tsx watch src/main.ts",
+    "start": "tsx src/main.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@salvations/core": "workspace:*",
+    "@salvations/db": "workspace:*",
+    "@salvations/mcp": "workspace:*",
+    "@salvations/provider-registry": "workspace:*",
+    "@salvations/runtime": "workspace:*"
+  }
+}

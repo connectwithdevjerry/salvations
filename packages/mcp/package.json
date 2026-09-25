@@ -1,0 +1,9 @@
+{
+  "name": "@salvations/mcp",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts", "./*": "./src/*.ts" },
+  "scripts": { "typecheck": "tsc --noEmit -p tsconfig.json" },
+  "dependencies": { "@modelcontextprotocol/client": "^2.0.0", "ajv": "^8.20.0", "ajv-formats": "^3.0.1", "@salvations/core": "workspace:*" }
+}

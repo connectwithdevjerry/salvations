@@ -1,0 +1,212 @@
+/**
+ * The runtime's state port, over repositories.
+ *
+ * Every write is LEASE-GUARDED, which is what makes a stolen lease harmless
+ * rather than catastrophic: an executor whose lease lapsed mid-step finds its
+ * next write refused, so it cannot append a duplicate tool result or a second
+ * assistant message for the same turn. The repositories already take the token
+ * on the writes that touch the run; the heartbeat covers the rest.
+ *
+ * The runtime hands this in as a port and never learns there is a database, a
+ * collection, or a lease.
+ */
+import type { Database } from '@salvations/db';
+import {
+  type ContentBlock, type LeaseToken, type Message, type MessageId, type RunConsumption,
+  type Usage,
+} from '@salvations/core';
+import type {
+  AppendMessage, RecordedStep, RunStateStore, ToolInvocationResult,
+} from '@salvations/runtime';
+import {
+  ConversationRepository, MongoRunQueue, RunRepository, UsageRepository, toMessage,
+} from '@salvations/db';
+
+export interface RunStoreDeps {
+  readonly db: Database;
+  readonly workspaceId: string;
+  readonly runId: string;
+  readonly conversationId: string;
+  readonly leaseToken: LeaseToken;
+  readonly leaseMs: number;
+  /** What the run had already spent when this slice claimed it. */
+  readonly consumedSoFar: RunConsumption;
+  /** Which binding to bill the spend to. */
+  readonly modelBindingId: string;
+}
+
+export class MongoRunStateStore implements RunStateStore {
+  readonly #conversations: ConversationRepository;
+  readonly #runs: RunRepository;
+  readonly #queue: MongoRunQueue;
+  readonly #usage: UsageRepository;
+  readonly #deps: RunStoreDeps;
+  #lastSaved: RunConsumption;
+  #lastUsage: Usage = { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 };
+  #eventSeq = 0;
+
+  constructor(deps: RunStoreDeps) {
+    this.#deps = deps;
+    this.#conversations = new ConversationRepository(deps.db, deps.workspaceId);
+    this.#runs = new RunRepository(deps.db, deps.workspaceId);
+    this.#queue = new MongoRunQueue(deps.db);
+    this.#usage = new UsageRepository(deps.db, deps.workspaceId);
+    this.#lastSaved = deps.consumedSoFar;
+  }
+
+  /**
+   * Proves this executor still owns the run.
+   *
+   * Throws `LeaseLostError`, which the executor treats as a stop signal rather
+   * than a transient failure. It doubles as the heartbeat: two mechanisms that
+   * must agree about liveness are one too many.
+   */
+  async #guard(): Promise<void> {
+    await this.#queue.heartbeat(this.#deps.runId, this.#deps.leaseToken, this.#deps.leaseMs);
+  }
+
+  async loadMessages(): Promise<readonly Message[]> {
+    // Reads need no guard. Reading with a lost lease is harmless, and requiring
+    // one would turn every resume into a write.
+    const docs = await this.#conversations.recentMessages(this.#deps.conversationId, 500);
+    return docs.map(toMessage);
+  }
+
+  async appendMessage(message: AppendMessage): Promise<Message> {
+    await this.#guard();
+    const doc = await this.#conversations.appendMessage({
+      conversationId: this.#deps.conversationId,
+      role: message.role,
+      content: message.content as unknown[],
+      runId: this.#deps.runId,
+      ...(message.providerArtifacts !== undefined
+        ? { providerArtifacts: message.providerArtifacts as Record<string, unknown> }
+        : {}),
+      ...(message.tokenEstimate !== undefined ? { tokenEstimate: message.tokenEstimate } : {}),
+    });
+    return toMessage(doc);
+  }
+
+  async supersede(ids: readonly MessageId[], by: MessageId): Promise<void> {
+    await this.#guard();
+    await this.#conversations.supersedeMessages(
+      this.#deps.conversationId, ids.map(String), String(by),
+    );
+  }
+
+  async recordStep(step: RecordedStep): Promise<void> {
+    await this.#runs.appendStep(this.#deps.runId, this.#deps.leaseToken, step as never);
+  }
+
+  /**
+   * Persists what has been spent.
+   *
+   * The runtime reports a CUMULATIVE figure and the repository applies an
+   * increment, so the difference is computed here. Passing the cumulative value
+   * straight through would double-count every step after the first, and the
+   * error would compound quietly across a long run.
+   */
+  async saveConsumption(consumed: RunConsumption, usage: Usage): Promise<void> {
+    const delta = {
+      steps: consumed.steps - this.#lastSaved.steps,
+      toolCalls: consumed.toolCalls - this.#lastSaved.toolCalls,
+      tokens: consumed.tokens - this.#lastSaved.tokens,
+      costUsd: consumed.costUsd - this.#lastSaved.costUsd,
+    };
+    const usageDelta = subtractUsage(usage, this.#lastUsage);
+
+    this.#lastSaved = consumed;
+    this.#lastUsage = usage;
+
+    await this.#runs.recordConsumption(
+      this.#deps.runId, this.#deps.leaseToken, delta, usageDelta,
+    );
+
+    // Rolled up INCREMENTALLY rather than when a run finishes. A run killed
+    // mid-way still cost money, and a rollup that only counts completed runs
+    // understates the bill by exactly the runs that went wrong.
+    if (delta.costUsd !== 0 || usageDelta.inputTokens !== 0 || usageDelta.outputTokens !== 0) {
+      await this.#usage.record(this.#deps.modelBindingId, usageDelta, delta.costUsd);
+    }
+  }
+
+  /**
+   * Results already produced for the in-flight phase.
+   *
+   * Read from the persisted steps — the same place an operator would look. A
+   * separate cache would be a second answer to "did this tool already run", and
+   * the two would disagree exactly when it mattered.
+   */
+  async completedToolCalls(): Promise<ReadonlyMap<string, ToolInvocationResult>> {
+    const steps = await this.#runs.listSteps(this.#deps.runId);
+    const results = new Map<string, ToolInvocationResult>();
+
+    for (const step of steps) {
+      for (const call of step.toolCalls ?? []) {
+        const stored = call as unknown as ToolInvocationResult & { content?: ContentBlock[] };
+        if (stored.content === undefined) continue;
+        results.set(stored.id, stored);
+      }
+    }
+    return results;
+  }
+
+  async saveToolResult(result: ToolInvocationResult): Promise<void> {
+    const now = new Date();
+    await this.#runs.appendStep(this.#deps.runId, this.#deps.leaseToken, {
+      type: 'tool_call',
+      status: result.isError ? 'failed' : 'succeeded',
+      // The whole invocation, not just its result: the replay half keeps a
+      // suspended phase from repeating a side effect, and the audit half lets a
+      // reviewer answer "why was this allowed" later.
+      toolCalls: [{
+        id: result.id,
+        canonicalName: result.canonicalName,
+        bindingId: result.bindingId ?? null,
+        content: result.content as unknown[],
+        ...(result.structured !== undefined ? { structured: result.structured } : {}),
+        isError: result.isError,
+        durationMs: result.durationMs,
+        mrtrRounds: result.mrtrRounds,
+        argumentsRedacted: result.argumentsRedacted,
+        permission: result.permission ?? null,
+      }],
+      latencyMs: result.durationMs,
+      startedAt: now,
+      finishedAt: now,
+    } as never);
+  }
+
+  /**
+   * Publishes a run event.
+   *
+   * Not part of the state port: the runtime takes it as a narrow function, so
+   * it never learns there is a collection behind it. The sequence is this
+   * executor's own counter, and the unique (runId, seq) index turns a second
+   * writer into a loud failure rather than a scrambled stream.
+   */
+  publish = async (type: string, payload: unknown): Promise<void> => {
+    await this.#runs.appendEvent(this.#deps.runId, this.#eventSeq++, type, payload);
+  };
+
+  /** Continues the event sequence after a slice boundary. */
+  resumeEventSeqFrom(seq: number): void {
+    this.#eventSeq = seq;
+  }
+}
+
+/**
+ * The change since the last save.
+ *
+ * The runtime reports usage CUMULATIVELY, and both the run document and the
+ * daily rollup apply increments. Passing the cumulative figure to either would
+ * double-count every step after the first — the same trap the consumption delta
+ * above exists to avoid, and easier to miss here because the numbers still look
+ * plausible.
+ */
+const subtractUsage = (current: Usage, previous: Usage): Usage => ({
+  inputTokens: current.inputTokens - previous.inputTokens,
+  outputTokens: current.outputTokens - previous.outputTokens,
+  cacheReadTokens: current.cacheReadTokens - previous.cacheReadTokens,
+  cacheWriteTokens: current.cacheWriteTokens - previous.cacheWriteTokens,
+});

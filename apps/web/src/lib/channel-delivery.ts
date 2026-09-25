@@ -1,0 +1,179 @@
+/**
+ * Sending a finished answer back to the chat it came from.
+ *
+ * Runs on the executor's invocation, right after a run reaches a terminal
+ * state, because that is the only moment the system knows an answer is
+ * complete. A conversation that did not come from a channel costs one indexed
+ * lookup and nothing else.
+ *
+ * Every failure here is swallowed. The run is finished and its answer is
+ * already persisted; turning "Telegram was briefly unreachable" into a failed
+ * executor response would make the platform retry a slice that has nothing
+ * left to do.
+ */
+import { ChannelRepository, ConversationRepository, PlatformDb, toMessage } from '@salvations/db';
+import type { ChannelDoc, RunDoc } from '@salvations/db';
+import { channelAdapter, chunk, type ChannelAdapter } from '@salvations/channels';
+import { db } from './db';
+import { repositories } from './container';
+
+/** How far back to look for the answer. A turn is rarely more than a few. */
+const RECENT_MESSAGES = 10;
+
+export type Delivery =
+  | { readonly result: 'sent' }
+  | { readonly result: 'skipped'; readonly reason: string };
+
+const skipped = (reason: string): Delivery => ({ result: 'skipped', reason });
+
+/** Where a run's answer goes: the chat it came from, with what is needed to reach it. */
+export interface ChannelTarget {
+  readonly run: RunDoc;
+  readonly conversationId: string;
+  readonly row: ChannelDoc;
+  readonly chatRef: string;
+  readonly adapter: ChannelAdapter;
+  readonly token: string;
+  readonly channels: ChannelRepository;
+  readonly conversations: ConversationRepository;
+}
+
+/**
+ * Resolves a run to the chat it should answer in, or says why it has none.
+ *
+ * Shared by the live reply (typing, the draft) and the final delivery, so the
+ * two cannot disagree about which chat a run belongs to.
+ */
+export async function channelTargetOf(runId: string): Promise<ChannelTarget | { readonly reason: string }> {
+  const handle = await db();
+
+  // The run id is all the executor has. Finding its workspace is the same
+  // unscoped-by-necessity read the inbound path makes, and for the same reason.
+  const platform = new PlatformDb(handle.db, 'channel-delivery');
+  const run = await platform.collection<RunDoc>('runs').findOne({ _id: runId } as never, { comment: platform.comment });
+  if (run === null) return { reason: 'no such run' };
+
+  const conversations = new ConversationRepository(handle.db, run.workspaceId);
+  const conversation = await conversations.findById(run.conversationId);
+  // The overwhelmingly common case: a conversation somebody is watching in the
+  // browser, which needs no delivery at all.
+  if (conversation?.channelId === null || conversation?.channelId === undefined) return { reason: 'not a channel conversation' };
+
+  const channels = new ChannelRepository(handle.db, run.workspaceId);
+  const row = await channels.findById(conversation.channelId);
+  if (row === null) return { reason: 'channel row missing' };
+  if (row.status !== 'connected') return { reason: `channel is ${row.status}` };
+
+  const identity = await channels.findIdentityByConversation(conversation._id);
+  // `externalRef` is the fallback: an identity row can be removed by a
+  // disconnect while a run it started is still in flight.
+  const chatRef = identity?.chatRef ?? conversation.externalRef;
+  if (chatRef === null || chatRef === undefined) return { reason: 'no chat to send to' };
+
+  const adapter = channelAdapter(row.type);
+  if (adapter === undefined) return { reason: `no adapter for ${row.type}` };
+
+  const repos = repositories(handle.db, run.workspaceId);
+  const token = await repos.credentials.resolve(row.tokenCredentialId);
+  if (token === null) return { reason: 'bot token missing or revoked' };
+
+  return { run, conversationId: conversation._id, row, chatRef, adapter, token: token.expose(), channels, conversations };
+}
+
+export const isTarget = (value: ChannelTarget | { reason: string }): value is ChannelTarget => 'run' in value;
+
+/** A draft the live reply left in the chat, to be rewritten with the answer. */
+export interface Draft { readonly messageRef: string }
+
+export async function deliverFinishedRun(runId: string, draft?: Draft): Promise<Delivery> {
+  try {
+    return await deliver(runId, draft);
+  } catch (caught) {
+    return skipped(`threw: ${caught instanceof Error ? caught.message : String(caught)}`);
+  }
+}
+
+async function deliver(runId: string, draft: Draft | undefined): Promise<Delivery> {
+  const target = await channelTargetOf(runId);
+  if (!isTarget(target)) return skipped(target.reason);
+  const { run, conversationId, row, chatRef, adapter, token, channels, conversations } = target;
+
+  const text = await answerOf(conversations, conversationId, runId, run.status, run.error?.message ?? undefined);
+  if (text === undefined) return skipped(`nothing to say (run ${run.status}, no assistant text for this run)`);
+
+  try {
+    if (draft !== undefined && adapter.editDraft !== undefined) {
+      // The draft becomes the answer's first part; anything beyond one
+      // message follows it, as it would have without a draft.
+      await adapter.editDraft(token, chatRef, draft.messageRef, text);
+      const rest = remainderBeyondFirst(text);
+      if (rest !== undefined) await adapter.send(token, chatRef, rest);
+    } else {
+      await adapter.send(token, chatRef, text);
+    }
+    await channels.recordDelivery(row._id);
+    return { result: 'sent' };
+  } catch (caught) {
+    // Recorded rather than retried. The person can see on the integrations page
+    // that the connection is failing, which is more useful than a silent retry
+    // against a bot token that has been revoked.
+    const message = caught instanceof Error ? caught.message : String(caught);
+    await channels.recordFailure(row._id, message);
+    return skipped(`send failed: ${message}`);
+  }
+}
+
+/** What did not fit in the draft's one message. */
+function remainderBeyondFirst(text: string): string | undefined {
+  const [first, ...rest] = chunk(text);
+  if (first === undefined || rest.length === 0) return undefined;
+  return rest.join('\n');
+}
+
+/**
+ * What to say.
+ *
+ * The assistant's text for this run, or — when a run ended without producing
+ * any — a plain sentence saying so. Silence is the worst possible answer in a
+ * chat window: the person cannot tell it from a message that never arrived.
+ */
+async function answerOf(
+  conversations: ConversationRepository,
+  conversationId: string,
+  runId: string,
+  status: string,
+  failure?: string,
+): Promise<string | undefined> {
+  const recent = await conversations.recentMessages(conversationId, RECENT_MESSAGES);
+
+  const text = recent
+    .map(toMessage)
+    .filter((message) => message.runId === runId && message.role === 'assistant')
+    .flatMap((message) => message.content)
+    .filter((block): block is { type: 'text'; text: string } =>
+      (block as { type?: string }).type === 'text'
+      && typeof (block as { text?: unknown }).text === 'string')
+    .map((block) => block.text)
+    .join('\n')
+    .trim();
+
+  if (text !== '') return text;
+
+  if (status === 'succeeded') return undefined;
+  if (status === 'cancelled') return 'That was cancelled before it finished.';
+  // The vendor's own sentence when there is one — "your credit balance is
+  // too low" tells the person what to do; "something went wrong" does not.
+  if (failure !== undefined && failure.trim() !== '') return `I could not answer that: ${sentence(failure)}`;
+  return 'Something went wrong on my end and I could not finish that. Try again?';
+}
+
+/** A message that is already a sentence stays; a status-and-JSON dump becomes one. */
+function sentence(raw: string): string {
+  const body = raw.replace(/^\d{3}\s+/, '');
+  try {
+    const parsed = JSON.parse(body) as { error?: { message?: string; error?: { message?: string } }; message?: string };
+    const inner = parsed.error?.error?.message ?? parsed.error?.message ?? parsed.message;
+    if (typeof inner === 'string' && inner !== '') return inner;
+  } catch { /* plain text */ }
+  return body;
+}

@@ -23,6 +23,14 @@ describe('stepsFor', () => {
     expect(steps.find((s) => s.id === 'create')?.target).toBe('create-assistant');
   });
 
+  it('shows the Admin page only to those who run the workspace', () => {
+    const ids = (admin: boolean) => stepsFor({ workspaceId: 'ws_1', admin }).map((s) => s.id);
+    expect(ids(true)).toContain('admin');
+    expect(ids(false)).not.toContain('admin');
+    expect(ids(true).indexOf('admin')).toBe(ids(true).length - 2);
+    expect(stepsFor({ workspaceId: 'ws_1', admin: true }).find((s) => s.id === 'admin')?.target).toBe('nav-admin');
+  });
+
   it('starts with a centred welcome and ends on the help button', () => {
     const steps = stepsFor({ workspaceId: 'ws_1' });
     expect(steps[0]?.target).toBeUndefined();

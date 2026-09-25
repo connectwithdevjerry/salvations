@@ -30,6 +30,13 @@ export const auth = {
 
   session: () => api.get<{ user: SignedInUser | null }>('/api/auth/session'),
 
+  /** Emails a six-digit code to the signed-in address. */
+  sendVerificationCode: () => api.post<{ sent: boolean; to: string; expiresAt: string }>('/api/auth/verify/send'),
+
+  /** Presents the code. On success the address is verified. */
+  confirmVerificationCode: (code: string) =>
+    api.post<{ verified: boolean }>('/api/auth/verify/confirm', { code }),
+
   /** Remembers, on the account, that the walkthrough was seen. */
   markWalkthroughSeen: () => api.post<{ seen: boolean }>('/api/auth/session/walkthrough'),
 

@@ -699,5 +699,7 @@ export interface AuthChallengeDoc extends BaseDoc {
   tokenHash: string;
   expiresAt: Date;
   consumedAt?: Date | null;
+  /** Wrong guesses so far. A short code survives only a few. */
+  attempts?: number;
   createdAt: Date;
 }

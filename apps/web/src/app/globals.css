@@ -1560,6 +1560,8 @@ td.danger { color: var(--danger); }
 .invite input { flex: 1; min-width: 200px; max-width: none; }
 .invite select { width: auto; }
 /* A table wider than a phone scrolls sideways instead of crushing its columns. */
+.verify-code { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.verify-code input { width: 120px; font-family: var(--mono); font-size: 16px; letter-spacing: 0.2em; text-align: center; }
 .scroll-x { overflow-x: auto; }
 .scroll-x table { min-width: 520px; }
 .audit { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }

@@ -12,7 +12,7 @@
  */
 import type { Db } from 'mongodb';
 import { IdPrefix, newId } from '@salvations/core';
-import type { AuthSessionDoc, IdentityDoc, UserDoc } from '../documents';
+import type { AuthChallengeDoc, AuthSessionDoc, IdentityDoc, UserDoc } from '../documents';
 import { PlatformDb } from '../scoped';
 
 /**
@@ -45,6 +45,10 @@ export class UserRepository {
 
   #sessions() {
     return new PlatformDb(this.#db, 'user-workspaces').collection<AuthSessionDoc>('authSessions');
+  }
+
+  #challenges() {
+    return new PlatformDb(this.#db, 'user-workspaces').collection<AuthChallengeDoc>('authChallenges');
   }
 
   #identities() {
@@ -131,6 +135,60 @@ export class UserRepository {
 
   async recordSignIn(userId: string): Promise<void> {
     await this.#users().updateOne({ _id: userId }, { $set: { lastSignedInAt: new Date() } });
+  }
+
+  // ─── Challenges ───────────────────────────────────────────────────────────
+
+  /**
+   * Issues a challenge — a verification code, a reset token — replacing any
+   * open one of the same kind. One live code per person: a second request
+   * makes the first stop working, so a code read off an old email cannot
+   * be used after a new one was asked for.
+   */
+  async issueChallenge(input: {
+    userId: string;
+    kind: AuthChallengeDoc['kind'];
+    tokenHash: string;
+    ttlMs: number;
+  }): Promise<AuthChallengeDoc> {
+    await this.#challenges().deleteMany({ userId: input.userId, kind: input.kind, consumedAt: null });
+    const now = new Date();
+    const doc: AuthChallengeDoc = {
+      _id: newId(IdPrefix.authChallenge),
+      userId: input.userId,
+      kind: input.kind,
+      tokenHash: input.tokenHash,
+      expiresAt: new Date(now.getTime() + input.ttlMs),
+      consumedAt: null,
+      attempts: 0,
+      createdAt: now,
+    };
+    await this.#challenges().insertOne(doc);
+    return doc;
+  }
+
+  /** The open challenge of a kind for a person, if one is still within its window. */
+  async openChallenge(userId: string, kind: AuthChallengeDoc['kind']): Promise<AuthChallengeDoc | null> {
+    return this.#challenges().findOne({ userId, kind, consumedAt: null, expiresAt: { $gt: new Date() } });
+  }
+
+  /** A wrong guess. Returns how many there have been. */
+  async recordChallengeAttempt(challengeId: string): Promise<number> {
+    const updated = await this.#challenges().findOneAndUpdate(
+      { _id: challengeId },
+      { $inc: { attempts: 1 } },
+      { returnDocument: 'after' },
+    );
+    return updated?.attempts ?? 0;
+  }
+
+  /** Spent: the same code cannot be presented twice. */
+  async consumeChallenge(challengeId: string): Promise<boolean> {
+    const result = await this.#challenges().updateOne(
+      { _id: challengeId, consumedAt: null },
+      { $set: { consumedAt: new Date() } },
+    );
+    return result.matchedCount === 1;
   }
 
   // ─── Sessions ─────────────────────────────────────────────────────────────

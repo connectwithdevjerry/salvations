@@ -347,6 +347,12 @@ export interface ChannelDoc extends TenantDoc {
   } | null;
   /** Set once the handshake completes. Until then nothing is answered. */
   verifiedChatRef?: string | null;
+  /**
+   * The address last registered with the platform. Compared with the address
+   * the deployment now has, so a moved site re-points its bots rather than
+   * leaving them delivering to the old one.
+   */
+  webhookUrl?: string | null;
   health: {
     lastOkAt?: Date | null;
     lastDeliveryAt?: Date | null;

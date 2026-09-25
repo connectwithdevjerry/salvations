@@ -21,7 +21,7 @@ import { SetupSteps, ScopeList, Copyable } from '@/components/setup-steps';
 
 interface Channel {
   id: string; channel: string; status: string; handle: string; displayName: string;
-  agentId: string; webhookUrl: string; connectCode?: string; lastError?: string;
+  agentId: string; webhookUrl: string; registeredWebhookUrl?: string; connectCode?: string; lastError?: string;
 }
 interface Binding {
   id: string; agentId?: string; alias: string; catalogId?: string; serverName: string; url?: string; trustTier: string;
@@ -623,6 +623,32 @@ function ConnectedChannel({
 
       {connection.lastError !== undefined && (
         <p className="error" style={{ margin: 0 }}>{connection.lastError}</p>
+      )}
+
+      {entry.id === 'telegram' && connection.registeredWebhookUrl !== connection.webhookUrl && (
+        <div className="note">
+          <span className="tile" aria-hidden><Icon name="plug" size={16} /></span>
+          <span style={{ flex: 1 }}>
+            {connection.registeredWebhookUrl === undefined
+              ? 'Telegram has not been told this site’s current address.'
+              : 'This site moved. Telegram still delivers to the old address, and will follow the next message here on its own.'}
+            {' '}Point it here now to be sure.
+          </span>
+          <button
+            type="button" disabled={busy}
+            onClick={async () => {
+              setBusy(true);
+              try {
+                await api.post(`${base}/webhook`);
+                onChanged();
+              } catch (caught) {
+                onError(caught instanceof Error ? caught.message : 'Could not update the webhook.');
+              } finally { setBusy(false); }
+            }}
+          >
+            Point Telegram here
+          </button>
+        </div>
       )}
 
       <div className="row" style={{ justifyContent: 'flex-start', gap: 8 }}>

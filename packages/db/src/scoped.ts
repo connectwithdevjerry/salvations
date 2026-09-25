@@ -228,6 +228,8 @@ export type PlatformReason =
    * workspace id to scope by before the scan, only after it.
    */
   | 'schedule-tick'
+  /** Re-pointing every bot at a deployment whose address changed, across all workspaces. */
+  | 'webhook-refresh'
   /** Resolving an API key by its prefix, before any workspace is known. */
   | 'api-key-lookup'
   /** Resolving a token our own authorization server issued, by its hash. */

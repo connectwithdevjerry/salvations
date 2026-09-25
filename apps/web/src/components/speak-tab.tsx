@@ -33,7 +33,9 @@ export function SpeakTab({ workspaceId, agentId }: { workspaceId: string; agentI
   const [runId, setRunId] = useState<string>();
   const [readAloud, setReadAloud] = useState(true);
   const [error, setError] = useState<string>();
-  const [unconfigured, setUnconfigured] = useState(false);
+  // The one sentence saying why voice cannot be used right now: no model that
+  // hears, or one that cannot be reached. The mic is off while it stands.
+  const [blocked, setBlocked] = useState<string>();
   const recorder = useRef<MediaRecorder>(null);
   const chunks = useRef<Blob[]>([]);
   const conversationId = useRef<string>(null);
@@ -115,8 +117,11 @@ export function SpeakTab({ workspaceId, agentId }: { workspaceId: string; agentI
       setPhase('answering');
     } catch (caught) {
       setPhase('idle');
-      if (caught instanceof ApiError && caught.code === 'unsupported') setUnconfigured(true);
-      else setError(caught instanceof Error ? caught.message : 'Could not send that.');
+      if (caught instanceof ApiError && (caught.code === 'unsupported' || caught.code === 'provider_error')) {
+        setBlocked(caught.message);
+      } else {
+        setError(caught instanceof Error ? caught.message : 'Could not send that.');
+      }
     }
   }
 
@@ -154,13 +159,12 @@ export function SpeakTab({ workspaceId, agentId }: { workspaceId: string; agentI
       </div>
 
       <div className="speak-controls">
-        {unconfigured && (
+        {blocked !== undefined && (
           <div className="note" style={{ marginBottom: 12 }}>
-            <span className="tile" aria-hidden><Icon name="spark" size={16} /></span>
+            <span className="tile" aria-hidden><Icon name="mic" size={16} /></span>
             <span>
-              No model is set up to listen yet. Connecting OpenAI binds one; otherwise bind a
-              model to the <strong>transcription</strong> role on the{' '}
-              <Link href={`/w/${workspaceId}/models`}>Models page</Link>.
+              {blocked}{' '}
+              <Link href={`/w/${workspaceId}/models`}>Models</Link>
             </span>
           </div>
         )}
@@ -170,13 +174,13 @@ export function SpeakTab({ workspaceId, agentId }: { workspaceId: string; agentI
           type="button"
           className={`mic ${phase}`}
           aria-label={phase === 'listening' ? 'Stop recording' : 'Start recording'}
-          disabled={phase === 'hearing' || phase === 'answering'}
+          disabled={blocked !== undefined || phase === 'hearing' || phase === 'answering'}
           onClick={() => (phase === 'listening' ? stop() : void start())}
         >
           <Icon name="mic" size={26} />
         </button>
         <p className="muted speak-status">
-          {phase === 'idle' && 'Tap to talk'}
+          {phase === 'idle' && (blocked === undefined ? 'Tap to talk' : 'Voice is off for now')}
           {phase === 'listening' && 'Listening… tap to stop'}
           {phase === 'hearing' && 'Hearing you…'}
           {phase === 'answering' && 'Thinking…'}

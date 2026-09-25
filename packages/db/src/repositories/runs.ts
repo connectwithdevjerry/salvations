@@ -34,6 +34,14 @@ export interface CreateRunInput {
   readonly priority?: number;
 }
 
+export interface RunSummaryRow {
+  readonly status: string;
+  readonly agentId: string;
+  readonly queuedAt: Date;
+  readonly costUsd: number;
+  readonly trigger: string;
+}
+
 export class RunRepository {
   readonly #runs: ScopedCollection<RunDoc>;
   readonly #steps: ScopedCollection<RunStepDoc>;
@@ -126,6 +134,25 @@ export class RunRepository {
    * where you would look for it rather than at the bottom under everything that
    * has already finished.
    */
+  /**
+   * The runs since a moment, cut down to what a summary needs. Read with a
+   * projection, so a busy week does not load every snapshot and budget to
+   * count outcomes and add up spend.
+   */
+  async summarySince(since: Date, limit = 5_000): Promise<RunSummaryRow[]> {
+    const rows = await this.#runs.find(
+      { queuedAt: { $gte: since } } as never,
+      { sort: { queuedAt: -1 }, limit, projection: { status: 1, agentId: 1, queuedAt: 1, 'consumed.costUsd': 1, 'trigger.type': 1 } },
+    );
+    return rows.map((row) => ({
+      status: row.status,
+      agentId: row.agentId,
+      queuedAt: row.queuedAt,
+      costUsd: row.consumed?.costUsd ?? 0,
+      trigger: row.trigger?.type ?? 'unknown',
+    }));
+  }
+
   async listRecent(limit = 50, status?: string): Promise<RunDoc[]> {
     return this.#runs.find(
       (status === undefined ? {} : { status }) as never,

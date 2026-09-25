@@ -118,6 +118,13 @@ export default function SettingsPage({
           <div><dt>Your role</dt><dd><span className="badge">{current?.role ?? '—'}</span></dd></div>
           <div><dt>Id</dt><dd className="mono">{workspaceId}</dd></div>
         </dl>
+        {(current?.role === 'owner' || current?.role === 'admin') && (
+          <p style={{ margin: '12px 0 0' }}>
+            <Link href={`/w/${workspaceId}/admin`}>
+              <button type="button"><Icon name="grid" size={15} /> Open the admin dashboard</button>
+            </Link>
+          </p>
+        )}
       </div>
 
       {workspaces.length > 1 && (

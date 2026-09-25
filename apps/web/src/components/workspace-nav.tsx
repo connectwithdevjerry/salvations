@@ -31,7 +31,11 @@ const SECTIONS: readonly { href: string; label: string; icon: IconName }[] = [
   { href: 'activity', label: 'Activity', icon: 'pulse' },
   { href: 'models', label: 'Models', icon: 'spark' },
   { href: 'settings', label: 'Settings', icon: 'gear' },
+  // Owners and admins only. Filtered below once the role is known.
+  { href: 'admin', label: 'Admin', icon: 'grid' },
 ];
+
+const ADMIN_ROLES = new Set(['owner', 'admin']);
 
 export function WorkspaceNav({ workspaceId }: { workspaceId: string }) {
   const pathname = usePathname();
@@ -74,6 +78,7 @@ export function WorkspaceNav({ workspaceId }: { workspaceId: string }) {
   }, [workspaceId]);
 
   const current = workspaces.find((w) => w.id === workspaceId);
+  const sections = SECTIONS.filter((s) => s.href !== 'admin' || (current !== undefined && ADMIN_ROLES.has(current.role)));
   const initial = (current?.name ?? '?').trim().charAt(0).toUpperCase();
 
   return (
@@ -81,7 +86,7 @@ export function WorkspaceNav({ workspaceId }: { workspaceId: string }) {
       <BrandMark />
 
       <div className="rail-items">
-        {SECTIONS.map((section) => {
+        {sections.map((section) => {
           const href = `/w/${workspaceId}/${section.href}`;
           const active = pathname === href || pathname.startsWith(`${href}/`);
           return (

@@ -22,14 +22,13 @@ import { ChannelRepository, ConversationRepository, AgentRepository, PlatformDb 
 import type { ChannelDoc } from '@salvations/db';
 import { channelAdapter, type InboundMessage, type VerifyContext } from '@salvations/channels';
 import { NO_EAR, transcribeAudio } from './transcribe';
-import { deliveredToOldAddress, registerWebhook } from './channel-webhook';
+import { deliveredToOldAddress, registerWebhook, webhookUrl } from './channel-webhook';
 import {
   DEFAULT_BUDGET, asId, type RunId, type UserId, type WorkspaceId,
 } from '@salvations/core';
 import { db } from './db';
 import { repositories } from './container';
 import { VercelBackgroundTrigger } from './trigger';
-import { env } from './env';
 import { agentSnapshotFor } from '@/lib/agent-snapshot';
 import { modelForAgent } from './agent-model';
 
@@ -52,8 +51,7 @@ const plain = (status: number, body: string): DeliveryOutcome =>
  * with the platform, and a mismatch between the two produces a connection that
  * looks configured and receives nothing.
  */
-export const webhookUrl = (type: string, channelDocId: string): string =>
-  `${env().PUBLIC_BASE_URL.replace(/\/$/, '')}/api/channels/${type}/${channelDocId}`;
+export { webhookUrl } from './channel-webhook';
 
 export async function handleDelivery(
   type: string,

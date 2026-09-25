@@ -13,7 +13,15 @@ import { channelAdapter } from '@salvations/channels';
 import { ChannelRepository, PlatformDb, type ChannelDoc, type Database } from '@salvations/db';
 import { env } from './env';
 import { repositories } from './repositories';
-import { webhookUrl } from './channel-inbound';
+
+/**
+ * Where a platform delivers for one connection.
+ *
+ * One definition, because it is shown to the person during setup AND
+ * registered with the platform, and the two must never drift.
+ */
+export const webhookUrl = (type: string, channelDocId: string): string =>
+  `${env().PUBLIC_BASE_URL.replace(/\/$/, '')}/api/channels/${type}/${channelDocId}`;
 
 /** The host this deployment calls its own. */
 const ownHost = (): string => new URL(env().PUBLIC_BASE_URL).host.toLowerCase();

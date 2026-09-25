@@ -120,6 +120,19 @@ export class AgentRepository {
     await this.#agents.updateOne({ _id: agentId } as never, { $set: set } as never);
   }
 
+  /**
+   * Renames a group: every live agent in it moves to the new name in one
+   * write. A group is nothing but the agents that name it, so this is the
+   * whole operation. Returns how many moved.
+   */
+  async renameCategory(from: string, to: string): Promise<number> {
+    const result = await this.#agents.updateMany(
+      { category: from, isArchived: false } as never,
+      { $set: { category: to, updatedAt: new Date() } } as never,
+    );
+    return result.modifiedCount;
+  }
+
   /** How many live agents there are — the avatar palette rotates on it. */
   async count(): Promise<number> {
     return this.#agents.countDocuments({ isArchived: false } as never);

@@ -898,6 +898,11 @@ button.square {
 }
 .agent-group-head:hover { background: var(--surface); color: var(--muted); }
 .agent-group-count { font-weight: 500; }
+/* The pencil appears on hover, so a list of groups is not a list of pencils. */
+.agent-group-row { display: flex; align-items: center; }
+.agent-group-row .agent-group-head { flex: 1; min-width: 0; }
+.agent-group-rename { flex: none; width: 24px; height: 24px; padding: 0; display: grid; place-items: center; opacity: 0; transition: opacity 120ms ease; }
+.agent-group-row:hover .agent-group-rename, .agent-group-rename:focus-visible { opacity: 1; }
 
 .agent-row {
   display: flex;

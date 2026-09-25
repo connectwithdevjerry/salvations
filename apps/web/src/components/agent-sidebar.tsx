@@ -9,6 +9,7 @@ import { api, ws } from '@/lib/client/api';
 import { Icon } from '@/components/ui';
 import { AgentAvatar } from '@/components/agent-avatar';
 import { SkeletonRows } from '@/components/skeleton';
+import { useDialog } from '@/components/dialog';
 
 /**
  * Every assistant, in groups.
@@ -50,6 +51,7 @@ export function AgentSidebar({ workspaceId }: { workspaceId: string }) {
   const pathname = usePathname();
   const router = useRouter();
   const { agents, reload } = useContext(AgentsContext);
+  const dialog = useDialog();
   const [query, setQuery] = useState('');
   const [collapsed, setCollapsed] = useState<Set<string>>(() => readCollapsed(workspaceId));
 
@@ -92,14 +94,37 @@ export function AgentSidebar({ workspaceId }: { workspaceId: string }) {
           const isCollapsed = collapsed.has(group.name) && query === '';
           return (
             <div key={group.name} className="agent-group">
-              <button
-                type="button" className="agent-group-head"
-                aria-expanded={!isCollapsed}
-                onClick={() => toggle(group.name)}
-              >
-                <span>{group.name}</span>
-                {isCollapsed && <span className="agent-group-count">{group.agents.length}</span>}
-              </button>
+              <div className="agent-group-row">
+                <button
+                  type="button" className="agent-group-head"
+                  aria-expanded={!isCollapsed}
+                  onClick={() => toggle(group.name)}
+                >
+                  <span>{group.name}</span>
+                  {isCollapsed && <span className="agent-group-count">{group.agents.length}</span>}
+                </button>
+                {/* The default group is the absence of one, so it has no name to change. */}
+                {group.name !== DEFAULT_GROUP && (
+                  <button
+                    type="button" className="ghost agent-group-rename"
+                    aria-label={`Rename the group ${group.name}`} title="Rename group"
+                    onClick={async () => {
+                      const to = await dialog.prompt({ title: 'Rename this group', label: 'Name', initial: group.name, maxLength: 40 });
+                      if (to === undefined || to === group.name) return;
+                      try {
+                        await api.patch(`${ws(workspaceId)}/agents/groups`, { from: group.name, to });
+                        const next = new Set(collapsed);
+                        if (next.delete(group.name)) { next.add(to); setCollapsed(next); writeCollapsed(workspaceId, next); }
+                        reload();
+                      } catch (caught) {
+                        await dialog.notice({ title: 'Could not rename that group', body: caught instanceof Error ? caught.message : undefined });
+                      }
+                    }}
+                  >
+                    <Icon name="pencil" size={12} />
+                  </button>
+                )}
+              </div>
               {!isCollapsed && group.agents.map((agent) => (
                 <Link
                   key={agent.id}

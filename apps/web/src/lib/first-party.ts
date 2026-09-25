@@ -24,10 +24,12 @@ export interface FirstPartyBinding {
 export const MEMORY_BINDING_ID = 'mcb_first_party_memory';
 export const CONVERSATION_BINDING_ID = 'mcb_first_party_conversation';
 export const KNOWLEDGE_BINDING_ID = 'mcb_first_party_knowledge';
+export const WEB_BINDING_ID = 'mcb_first_party_web';
 
 const MEMORY_SERVER_ID = 'mcs_first_party_memory';
 const CONVERSATION_SERVER_ID = 'mcs_first_party_conversation';
 const KNOWLEDGE_SERVER_ID = 'mcs_first_party_knowledge';
+const WEB_SERVER_ID = 'mcs_first_party_web';
 
 /**
  * The aliases prefix every tool name — `memory__recall`, `chat__recall`.
@@ -38,6 +40,7 @@ const KNOWLEDGE_SERVER_ID = 'mcs_first_party_knowledge';
 export const MEMORY_ALIAS = 'memory';
 export const CONVERSATION_ALIAS = 'chat';
 export const KNOWLEDGE_ALIAS = 'knowledge';
+export const WEB_ALIAS = 'web';
 
 function binding(id: string, serverId: string, alias: string): FirstPartyBinding {
   return {
@@ -68,6 +71,7 @@ export function firstPartyBindings(workspaceId: string): readonly FirstPartyBind
     binding(MEMORY_BINDING_ID, MEMORY_SERVER_ID, MEMORY_ALIAS),
     binding(CONVERSATION_BINDING_ID, CONVERSATION_SERVER_ID, CONVERSATION_ALIAS),
     binding(KNOWLEDGE_BINDING_ID, KNOWLEDGE_SERVER_ID, KNOWLEDGE_ALIAS),
+    binding(WEB_BINDING_ID, WEB_SERVER_ID, WEB_ALIAS),
   ].map((entry) => ({
     ...entry,
     binding: { ...entry.binding, workspaceId },
@@ -75,7 +79,7 @@ export function firstPartyBindings(workspaceId: string): readonly FirstPartyBind
 }
 
 const FIRST_PARTY_IDS: ReadonlySet<string> = new Set([
-  MEMORY_BINDING_ID, CONVERSATION_BINDING_ID, KNOWLEDGE_BINDING_ID,
+  MEMORY_BINDING_ID, CONVERSATION_BINDING_ID, KNOWLEDGE_BINDING_ID, WEB_BINDING_ID,
 ]);
 
 export const isFirstParty = (bindingId: string): boolean => FIRST_PARTY_IDS.has(bindingId);

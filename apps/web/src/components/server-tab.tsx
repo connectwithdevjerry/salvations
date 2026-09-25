@@ -41,7 +41,7 @@ export function ServerTab({ workspaceId, agentId, agentName }: { workspaceId: st
 
   useEffect(() => { reload(); }, [reload]);
 
-  const builtIn = (surface?.tools ?? []).filter((t) => /^(memory|knowledge|chat)__/.test(t.name));
+  const builtIn = (surface?.tools ?? []).filter((t) => /^(memory|knowledge|chat|web)__/.test(t.name));
 
   return (
     <div className="page">

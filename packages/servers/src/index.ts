@@ -23,4 +23,8 @@ export {
   type GoogleWorkspaceSource, type MailSummary, type MailMessage, type MailLabel,
   type CalendarEvent, type DriveFile, type GmailPayload,
 } from './google-workspace';
+export {
+  createWebServer, SERVER_NAME as WEB_SERVER, MAX_CHARS as WEB_MAX_CHARS, extract as extractPage, htmlToText,
+  type WebSource, type FetchedPage,
+} from './web';
 export { serveOverHttp, type HttpServerFactory } from './http';

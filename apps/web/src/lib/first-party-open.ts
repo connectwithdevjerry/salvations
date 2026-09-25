@@ -12,13 +12,14 @@
  * would let it ask.
  */
 import {
-  createConversationServer, createGoogleWorkspaceServer, createKnowledgeServer, createMemoryServer, linkedPair,
+  createConversationServer, createGoogleWorkspaceServer, createKnowledgeServer, createMemoryServer, createWebServer, linkedPair,
   type ConversationSource, type ServerContext,
 } from '@salvations/servers';
 import { ConversationRepository, toMessage } from '@salvations/db';
 import type { Database } from '@salvations/db';
 import type { InProcessOpener } from '@salvations/mcp';
-import { MEMORY_ALIAS, CONVERSATION_ALIAS, KNOWLEDGE_ALIAS } from './first-party';
+import { MEMORY_ALIAS, CONVERSATION_ALIAS, KNOWLEDGE_ALIAS, WEB_ALIAS } from './first-party';
+import { createWebSource } from './web-service';
 import { createMemorySource } from './memory-service';
 import { createKnowledgeSource } from './knowledge-service';
 import { GOOGLE_WORKSPACE_ALIAS, createGoogleSource } from './google-workspace';
@@ -85,6 +86,12 @@ function build(alias: string, input: OpenerInput, bindingId?: string) {
       database: input.database,
       workspaceId,
     }));
+  }
+
+  if (alias === WEB_ALIAS) {
+    // Nothing of the run's closes over this one: a page is the same page
+    // whoever reads it. What it may reach is decided in the source.
+    return createWebServer(input.context, createWebSource());
   }
 
   return undefined;

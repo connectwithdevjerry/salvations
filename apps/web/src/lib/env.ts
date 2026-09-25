@@ -29,6 +29,15 @@ const schema = z.object({
   /** Set by Vercel for scheduled invocations; the sweep accepts it as an alternative to the HMAC. */
   CRON_SECRET: z.string().min(16).optional(),
 
+  /**
+   * Outgoing mail, for verification codes. Your own mail server, spoken to
+   * directly: an SMTP URL such as smtps://user:password@smtp.example.com:465
+   * and the address mail comes from. Without both, no mail is sent and the
+   * app says so where a code would be offered.
+   */
+  SMTP_URL: z.string().url().optional(),
+  MAIL_FROM: z.string().min(3).optional(),
+
   INTERNAL_HMAC_SECRET: z.string().min(32, 'INTERNAL_HMAC_SECRET must be at least 32 characters'),
   PUBLIC_BASE_URL: z.string().url().default('http://localhost:3000'),
 
@@ -49,6 +58,12 @@ const schema = z.object({
 
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
 }).refine(
+  (value) => (value.SMTP_URL === undefined) === (value.MAIL_FROM === undefined),
+  {
+    message: 'Set both SMTP_URL and MAIL_FROM, or neither. Mail needs a server and a sender.',
+    path: ['SMTP_URL'],
+  },
+).refine(
   (value) =>
     (value.GOOGLE_CLIENT_ID === undefined) === (value.GOOGLE_CLIENT_SECRET === undefined),
   {

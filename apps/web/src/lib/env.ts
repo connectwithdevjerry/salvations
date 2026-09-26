@@ -40,8 +40,10 @@ const schema = z.object({
 
   /**
    * Web search for the assistants, through Google's Programmable Search
-   * with your own key and search engine id. Without both, assistants can
-   * still read a page they are given an address for, but cannot search.
+   * with your own key and search engine id. Search is offered only when
+   * both are set; one alone is not an error, because the engine id is set
+   * first and the key follows, and a deployment must not fail to start in
+   * between.
    */
   GOOGLE_SEARCH_API_KEY: z.string().min(1).optional(),
   GOOGLE_SEARCH_CX: z.string().min(1).optional(),
@@ -66,12 +68,6 @@ const schema = z.object({
 
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
 }).refine(
-  (value) => (value.GOOGLE_SEARCH_API_KEY === undefined) === (value.GOOGLE_SEARCH_CX === undefined),
-  {
-    message: 'Set both GOOGLE_SEARCH_API_KEY and GOOGLE_SEARCH_CX, or neither. Search needs a key and an engine.',
-    path: ['GOOGLE_SEARCH_API_KEY'],
-  },
-).refine(
   (value) => (value.SMTP_URL === undefined) === (value.MAIL_FROM === undefined),
   {
     message: 'Set both SMTP_URL and MAIL_FROM, or neither. Mail needs a server and a sender.',

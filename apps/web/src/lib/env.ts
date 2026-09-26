@@ -38,6 +38,14 @@ const schema = z.object({
   SMTP_URL: z.string().url().optional(),
   MAIL_FROM: z.string().min(3).optional(),
 
+  /**
+   * Web search for the assistants, through Google's Programmable Search
+   * with your own key and search engine id. Without both, assistants can
+   * still read a page they are given an address for, but cannot search.
+   */
+  GOOGLE_SEARCH_API_KEY: z.string().min(1).optional(),
+  GOOGLE_SEARCH_CX: z.string().min(1).optional(),
+
   INTERNAL_HMAC_SECRET: z.string().min(32, 'INTERNAL_HMAC_SECRET must be at least 32 characters'),
   PUBLIC_BASE_URL: z.string().url().default('http://localhost:3000'),
 
@@ -58,6 +66,12 @@ const schema = z.object({
 
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
 }).refine(
+  (value) => (value.GOOGLE_SEARCH_API_KEY === undefined) === (value.GOOGLE_SEARCH_CX === undefined),
+  {
+    message: 'Set both GOOGLE_SEARCH_API_KEY and GOOGLE_SEARCH_CX, or neither. Search needs a key and an engine.',
+    path: ['GOOGLE_SEARCH_API_KEY'],
+  },
+).refine(
   (value) => (value.SMTP_URL === undefined) === (value.MAIL_FROM === undefined),
   {
     message: 'Set both SMTP_URL and MAIL_FROM, or neither. Mail needs a server and a sender.',

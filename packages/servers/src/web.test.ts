@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Client } from '@modelcontextprotocol/client';
-import { createWebServer, extract, htmlToText, linksOf, MAX_CHARS, type WebSource } from './web';
+import { createWebServer, extract, htmlToText, linksOf, MAX_CHARS, type SearchResult, type WebSource } from './web';
 import { linkedPair } from './in-process';
 import type { ServerContext } from './port';
 
@@ -82,6 +82,26 @@ describe('the web server', () => {
       expect(second).toContain(`read again with from=${MAX_CHARS * 2}`);
       const last = textOf(await client.callTool({ name: 'read_page', arguments: { url: 'https://okoro.example/long', from: MAX_CHARS * 2 } }));
       expect(last).not.toContain('more characters follow');
+    } finally { await close(); }
+  });
+
+  it('offers search only when the deployment can search, and lists what it finds', async () => {
+    const results: SearchResult[] = [
+      { title: 'Okoro Trading', url: 'https://okoro.example/', snippet: 'Rice, beans and delivery.' },
+      { title: 'Okoro on the map', url: 'https://maps.example/okoro', snippet: 'Lagos.' },
+    ];
+    const calls: unknown[] = [];
+    const withSearch: WebSource = {
+      fetch: async () => { throw new Error('unused'); },
+      search: async (query, count) => { calls.push([query, count]); return results; },
+    };
+    const { client, close } = await connect(withSearch);
+    try {
+      const { tools } = await client.listTools();
+      expect(tools.map((t) => t.name).sort()).toEqual(['read_page', 'search']);
+      const text = textOf(await client.callTool({ name: 'search', arguments: { query: 'okoro trading', count: 2 } }));
+      expect(text).toBe('1. Okoro Trading\nhttps://okoro.example/\nRice, beans and delivery.\n\n2. Okoro on the map\nhttps://maps.example/okoro\nLagos.');
+      expect(calls).toEqual([['okoro trading', 2]]);
     } finally { await close(); }
   });
 

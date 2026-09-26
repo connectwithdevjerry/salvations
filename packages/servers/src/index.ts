@@ -24,7 +24,8 @@ export {
   type CalendarEvent, type DriveFile, type GmailPayload,
 } from './google-workspace';
 export {
-  createWebServer, SERVER_NAME as WEB_SERVER, MAX_CHARS as WEB_MAX_CHARS, extract as extractPage, htmlToText,
-  type WebSource, type FetchedPage,
+  createWebServer, SERVER_NAME as WEB_SERVER, MAX_CHARS as WEB_MAX_CHARS, MAX_SEARCH as WEB_MAX_SEARCH,
+  extract as extractPage, htmlToText,
+  type WebSource, type FetchedPage, type SearchResult,
 } from './web';
 export { serveOverHttp, type HttpServerFactory } from './http';

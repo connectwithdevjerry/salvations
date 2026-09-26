@@ -1,5 +1,35 @@
 import { describe, expect, it } from 'vitest';
-import { assertPublic, isPrivateAddress } from './web-service';
+import { assertPublic, googleSearch, isPrivateAddress } from './web-service';
+
+describe('searching through Google', () => {
+  const fake = (status: number, body: unknown, seen: string[]): typeof fetch =>
+    (async (input: string | URL | Request) => {
+      seen.push(String(input));
+      return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
+    }) as typeof fetch;
+
+  it('asks the JSON API with the key, engine, query and count, and maps the items', async () => {
+    const seen: string[] = [];
+    const results = await googleSearch({ key: 'k', cx: 'c' }, 'okoro trading', 3, fake(200, {
+      items: [
+        { title: 'Okoro Trading', link: 'https://okoro.example/', snippet: 'Rice,  beans\nand delivery.' },
+        { title: 'No link', snippet: 'dropped' },
+      ],
+    }, seen));
+    const asked = new URL(seen[0] as string);
+    expect(asked.origin + asked.pathname).toBe('https://www.googleapis.com/customsearch/v1');
+    expect(asked.searchParams.get('key')).toBe('k');
+    expect(asked.searchParams.get('cx')).toBe('c');
+    expect(asked.searchParams.get('q')).toBe('okoro trading');
+    expect(asked.searchParams.get('num')).toBe('3');
+    expect(results).toEqual([{ title: 'Okoro Trading', url: 'https://okoro.example/', snippet: 'Rice, beans and delivery.' }]);
+  });
+
+  it('turns a refusal into one sentence', async () => {
+    await expect(googleSearch({ key: 'k', cx: 'c' }, 'x', 5, fake(429, { error: { message: 'Quota exceeded' } }, [])))
+      .rejects.toThrow('The search engine refused the request: Quota exceeded');
+  });
+});
 
 describe('what the web tool may reach', () => {
   it('refuses private, loopback, link-local and metadata ranges', () => {

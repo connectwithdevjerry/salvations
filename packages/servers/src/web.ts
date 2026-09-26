@@ -29,9 +29,24 @@ export interface FetchedPage {
   readonly body: string;
 }
 
+export interface SearchResult {
+  readonly title: string;
+  readonly url: string;
+  readonly snippet: string;
+}
+
+/** Most results one search returns. */
+export const MAX_SEARCH = 10;
+
 export interface WebSource {
   /** Fetches the address, following redirects. Throws with a plain sentence when it cannot. */
   fetch(url: string): Promise<FetchedPage>;
+  /**
+   * Searches the web. Absent when the deployment has no search engine
+   * configured, in which case no search tool is offered at all: a tool that
+   * always fails teaches a model to stop trying.
+   */
+  search?(query: string, count: number): Promise<readonly SearchResult[]>;
 }
 
 export function createWebServer(context: ServerContext, source: WebSource): McpServer {
@@ -93,6 +108,45 @@ export function createWebServer(context: ServerContext, source: WebSource): McpS
       };
     },
   );
+
+  const search = source.search?.bind(source);
+  if (search !== undefined) {
+    server.registerTool(
+      'search',
+      {
+        title: 'Search the web',
+        description:
+          'Search the web and get a short list of pages with a line from each. Use it '
+          + 'when you need a page to start from: a company, a product, a fact, a news '
+          + 'item, a place. Then read the most promising result with `read_page`; a '
+          + 'snippet is a hint, not an answer.',
+        inputSchema: {
+          query: z.string().trim().min(1).max(300).describe('What to search for, in plain words.'),
+          count: z.number().int().min(1).max(MAX_SEARCH).default(5),
+        },
+        annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+      },
+      async (args) => {
+        let results: readonly SearchResult[];
+        try {
+          results = await search(args.query, Math.min(args.count ?? 5, MAX_SEARCH));
+        } catch (caught) {
+          return {
+            content: [{ type: 'text' as const, text: caught instanceof Error ? caught.message : 'The search failed.' }],
+            isError: true,
+          };
+        }
+        return {
+          content: [{
+            type: 'text' as const,
+            text: results.length === 0
+              ? 'Nothing came back for that. Try other words.'
+              : results.map((r, i) => `${i + 1}. ${r.title}\n${r.url}\n${r.snippet}`).join('\n\n'),
+          }],
+        };
+      },
+    );
+  }
 
   return server;
 }

@@ -10,7 +10,8 @@
  */
 import { lookup } from 'node:dns/promises';
 import { isIP } from 'node:net';
-import type { FetchedPage, WebSource } from '@salvations/servers';
+import type { FetchedPage, SearchResult, WebSource } from '@salvations/servers';
+import { env } from './env';
 
 const TIMEOUT_MS = 15_000;
 const MAX_BYTES = 2_000_000;
@@ -59,8 +60,52 @@ export async function assertPublic(target: URL): Promise<void> {
   }
 }
 
+/** Google's Programmable Search, the JSON API: https://developers.google.com/custom-search/v1/reference/rest/v1/cse/list */
+const SEARCH_ENDPOINT = 'https://www.googleapis.com/customsearch/v1';
+
+interface SearchConfig { readonly key: string; readonly cx: string }
+
+export function searchConfig(): SearchConfig | undefined {
+  const key = env().GOOGLE_SEARCH_API_KEY;
+  const cx = env().GOOGLE_SEARCH_CX;
+  return key === undefined || cx === undefined ? undefined : { key, cx };
+}
+
+/** One search, mapped to what the tool shows. Exported for its test. */
+export async function googleSearch(
+  config: SearchConfig,
+  query: string,
+  count: number,
+  fetchImpl: typeof fetch = globalThis.fetch,
+): Promise<readonly SearchResult[]> {
+  const url = new URL(SEARCH_ENDPOINT);
+  url.searchParams.set('key', config.key);
+  url.searchParams.set('cx', config.cx);
+  url.searchParams.set('q', query);
+  url.searchParams.set('num', String(Math.min(Math.max(count, 1), 10)));
+
+  const response = await fetchImpl(url.toString(), { headers: { accept: 'application/json' } });
+  if (!response.ok) {
+    const body = await response.json().catch(() => undefined) as { error?: { message?: string } } | undefined;
+    const reason = body?.error?.message ?? `HTTP ${response.status}`;
+    throw new Error(`The search engine refused the request: ${reason}`);
+  }
+  const body = await response.json() as { items?: { title?: string; link?: string; snippet?: string }[] };
+  return (body.items ?? [])
+    .filter((item) => typeof item.link === 'string' && item.link !== '')
+    .map((item) => ({
+      title: (item.title ?? item.link ?? '').trim(),
+      url: item.link as string,
+      snippet: (item.snippet ?? '').replace(/\s+/g, ' ').trim(),
+    }));
+}
+
 export function createWebSource(fetchImpl: typeof fetch = globalThis.fetch): WebSource {
+  const search = searchConfig();
   return {
+    ...(search === undefined ? {} : {
+      search: (query: string, count: number) => googleSearch(search, query, count, fetchImpl),
+    }),
     async fetch(url: string): Promise<FetchedPage> {
       let current = new URL(url);
       for (let hop = 0; hop <= MAX_REDIRECTS; hop += 1) {

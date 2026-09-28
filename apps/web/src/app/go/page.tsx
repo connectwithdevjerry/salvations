@@ -13,9 +13,9 @@ import { Loader } from '@/components/loader';
  * crawler reads. Renders nothing — it exists to redirect.
  *
  * A first visit gets a workspace made for it, named after the person, without
- * being asked. Somebody with no assistant yet is taken straight to making one
- * — that is the first task, and a page of empty panels would only be a longer
- * route to the same button. Anyone with assistants lands on them.
+ * being asked. Somebody with no assistant yet is taken straight to building a
+ * team: that is the first task, and a page of empty panels would only be a
+ * longer route to the same button. Anyone with assistants lands on them.
  */
 export default function Dispatch() {
   const router = useRouter();
@@ -32,7 +32,8 @@ export default function Dispatch() {
         const agents = await api.get<{ items: unknown[] }>(`/api/workspaces/${workspaceId}/agents`)
           .then((r) => r.items.length)
           .catch(() => 0);
-        router.replace(agents === 0 ? `/w/${workspaceId}/agents/new` : `/w/${workspaceId}/agents`);
+        // Nobody yet: the team page, where the first press makes a working team.
+        router.replace(agents === 0 ? `/w/${workspaceId}/agents/team` : `/w/${workspaceId}/agents`);
       })
       .catch((caught: unknown) => {
         router.replace(caught instanceof ApiError && caught.status === 401 ? '/signin' : '/');

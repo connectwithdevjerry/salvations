@@ -86,7 +86,8 @@ export function AgentSidebar({ workspaceId }: { workspaceId: string }) {
           <Icon name="plus" size={17} />
         </button>
         <button
-          type="button" className="square" aria-label="Import from OpenClaw" title="Import from OpenClaw"
+          type="button" className="square" aria-label="Bring an assistant you already have" title="Bring an assistant you already have"
+          data-tour="import-assistant"
           onClick={() => router.push(`/w/${workspaceId}/agents/import`)}
         >
           <Icon name="download" size={17} />

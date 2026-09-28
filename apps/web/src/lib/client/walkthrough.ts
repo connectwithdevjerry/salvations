@@ -44,8 +44,8 @@ export function stepsFor(context: TourContext): readonly TourStep[] {
       id: 'create',
       path: '/agents',
       target: 'create-assistant',
-      title: 'Create your first assistant',
-      body: 'Name it, connect the Telegram bot it answers on, and pick the model it thinks with. Everything the workspace knows is its from the start.',
+      title: 'Build your team',
+      body: 'Start with a team: a manager, marketing, sales, support and a personal assistant, each with its job written in. Or make one assistant with the role you choose.',
     }]
     : [
       {
@@ -109,7 +109,14 @@ export function stepsFor(context: TourContext): readonly TourStep[] {
       path: agentPath ?? '/agents',
       target: 'assistants',
       title: 'Your assistants',
-      body: 'Each assistant has its own chats, documents, routines and integrations. Pick one on the left; the plus makes another.',
+      body: 'Each assistant has its own chats, documents, routines and integrations. Pick one on the left; the plus makes another, with a job from the team catalogue.',
+    },
+    {
+      id: 'import',
+      path: agentPath ?? '/agents',
+      target: 'import-assistant',
+      title: 'Bring one you already have',
+      body: 'An assistant set up elsewhere comes along: zip its workspace folder and drop it here. Its persona, rules, memory and notes all carry over.',
     },
     ...middle,
     {

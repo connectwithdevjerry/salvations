@@ -1,5 +1,5 @@
 /**
- * Connecting an OpenClaw gateway: its address and its token.
+ * Connecting a self-hosted agent gateway: its address and its token.
  *
  * The gateway is asked to list its agents before anything is stored, so a
  * wrong address or a refused token is the answer to this request and not a
@@ -31,7 +31,7 @@ export const POST = workspaceRoute<{ bindingId: string }>('mcp:install', async (
   const binding = await bindings.findOne({ _id: params.bindingId } as never);
   if (binding === null) return errorResponse(404, 'not_found', 'Connection not found.');
   const server = await mcpServerById(ctx.database, ctx.workspaceId, binding.mcpServerId);
-  if (server?.catalogId !== 'openclaw') return errorResponse(422, 'unsupported', 'This connection is not an OpenClaw gateway.');
+  if (server?.catalogId !== 'openclaw') return errorResponse(422, 'unsupported', 'This connection is not an agent gateway.');
 
   let url: string;
   let agents: readonly { id: string }[];
@@ -45,7 +45,7 @@ export const POST = workspaceRoute<{ bindingId: string }>('mcp:install', async (
   }
 
   const credential = await ctx.repos.credentials.store({
-    name: 'OpenClaw gateway token',
+    name: 'Agent gateway token',
     kind: 'api_key',
     plaintext: input.token,
     createdBy: actorIdOf(ctx.principal),

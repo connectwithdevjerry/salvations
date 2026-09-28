@@ -1,5 +1,5 @@
 /**
- * Importing an OpenClaw workspace as a new assistant.
+ * Importing an assistant's workspace folder as a new assistant here.
  *
  * A zip of the workspace folder comes in as multipart. With `commit` unset
  * the answer is the plan: what would be made, and what would be left out.
@@ -15,7 +15,7 @@ import { actorIdOf } from '@/lib/principal';
 import { ingestDocument } from '@/lib/knowledge-service';
 import { readZip, textOf } from '@/lib/zip';
 import { planImport, type ImportPlan } from '@/lib/openclaw-import';
-import { AGENT_COLORS } from '../../route';
+import { AGENT_COLORS } from '@/lib/agent-colors';
 
 export const runtime = 'nodejs';
 export const maxDuration = 120;
@@ -61,7 +61,7 @@ export const POST = workspaceRoute('agents:write', async (ctx) => {
   const agent = await agents.create({
     slug: plan.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'imported',
     name: plan.name,
-    description: 'Imported from OpenClaw',
+    description: 'Imported from a workspace folder',
     color: AGENT_COLORS[(await agents.count()) % AGENT_COLORS.length],
     systemPrompt: plan.systemPrompt,
     modelRole: 'chat',
@@ -108,7 +108,7 @@ export const POST = workspaceRoute('agents:write', async (ctx) => {
       failed.push('Heartbeat: no chat model is connected yet, so no routine was made. Add one on the Models page and create the routine by hand.');
     } else {
       const created = await new ScheduleRepository(ctx.database, ctx.workspaceId).create({
-        name: 'Heartbeat (from OpenClaw)',
+        name: 'Heartbeat (imported)',
         expression: '0 8 * * *',
         timeZone: 'UTC',
         agentId: agent._id,

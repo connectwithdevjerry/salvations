@@ -1,15 +1,13 @@
 /**
- * Turning an OpenClaw workspace into an assistant here.
+ * Turning a workspace folder from another assistant into an assistant here.
  *
- * An OpenClaw agent is a folder of Markdown: who it is (IDENTITY.md), how
+ * The format is the one self-hosted assistants use: a folder of Markdown: who it is (IDENTITY.md), how
  * it speaks (SOUL.md), how it works (AGENTS.md), who it works for
  * (USER.md), what it remembers (MEMORY.md and memory/*.md) and what it
  * can do (skills/). Every one of those has a home here. The persona and
  * rules become the assistant's instructions; the curated memory becomes
  * memories; the daily logs, skills and other notes become documents it
  * can search; a heartbeat becomes a routine.
- *
- * Reference: https://docs.openclaw.ai/concepts/agent-workspace
  *
  * Pure: files in, a plan out. The route decides what to write.
  */
@@ -44,7 +42,7 @@ export const MAX_DOCUMENTS = 200;
 export function planImport(files: readonly ImportFile[], fallbackName = 'Imported assistant'): ImportPlan {
   const root = findRoot(files);
   if (root === undefined) {
-    throw new Error('No OpenClaw workspace found. The archive should hold SOUL.md, AGENTS.md or MEMORY.md, at any depth.');
+    throw new Error('No assistant workspace found. The archive should hold SOUL.md, AGENTS.md or MEMORY.md, at any depth.');
   }
   const inRoot = files
     .filter((f) => f.path.startsWith(root))
@@ -68,7 +66,7 @@ export function planImport(files: readonly ImportFile[], fallbackName = 'Importe
   }
   for (const name of ['TOOLS.md', 'DREAMS.md'] as const) {
     const text = read(name);
-    if (text !== undefined && text.trim() !== '') documents.push({ title: name === 'TOOLS.md' ? 'OpenClaw tools and environment' : 'OpenClaw dream diary', fileName: name, text });
+    if (text !== undefined && text.trim() !== '') documents.push({ title: name === 'TOOLS.md' ? 'Tools and environment (imported)' : 'Dream diary (imported)', fileName: name, text });
   }
   for (const name of ['BOOT.md', 'BOOTSTRAP.md'] as const) {
     if (read(name) !== undefined) skipped.push({ path: name, reason: 'a first-run or startup ritual, not needed here' });
@@ -147,7 +145,7 @@ function composePrompt(input: {
   user: string | undefined;
 }): string {
   const parts: string[] = [
-    `You are ${input.name}${input.identity.emoji === undefined ? '' : ` ${input.identity.emoji}`}, brought here from OpenClaw. What follows is who you were there, and it still holds. Where it refers to files, shell commands or tools you no longer have, use the tools you have here instead, and say so when something is not possible any more.`,
+    `You are ${input.name}${input.identity.emoji === undefined ? '' : ` ${input.identity.emoji}`}, brought here from your previous setup. What follows is who you were there, and it still holds. Where it refers to files, shell commands or tools you no longer have, use the tools you have here instead, and say so when something is not possible any more.`,
   ];
   const section = (title: string, text: string | undefined) => {
     const body = (text ?? '').trim();

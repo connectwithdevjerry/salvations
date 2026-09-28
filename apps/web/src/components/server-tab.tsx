@@ -157,12 +157,7 @@ export function ServerTab({ workspaceId, agentId, agentName }: { workspaceId: st
             <ol className="steps-list">
               <li><strong>Claude.ai</strong>: Settings → Connectors → Add custom connector → paste the URL.</li>
               <li><strong>ChatGPT</strong>: Settings → Apps &amp; connectors → Create (developer mode) → paste the URL, authentication OAuth.</li>
-              <li>
-                <strong>OpenClaw</strong>: on the machine that runs your gateway, add {agentName} as an MCP server and sign in once.
-                <div style={{ marginTop: 6 }}>
-                  <Copyable label="Command" value={`openclaw mcp add hive --url ${surface.url} --transport streamable-http && openclaw mcp login hive`} />
-                </div>
-              </li>
+              <li><strong>Your own agent gateway</strong>: add {agentName} as a streamable-HTTP MCP server at the URL above and sign in once.</li>
               <li>Approve the request on the page that opens. That is all.</li>
             </ol>
           </div>

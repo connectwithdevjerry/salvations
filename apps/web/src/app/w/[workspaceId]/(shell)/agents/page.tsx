@@ -31,16 +31,21 @@ export default function AgentsIndex({ params }: { params: Promise<{ workspaceId:
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14 }}>
             <Tile name="agent" large />
           </div>
-          <h3 style={{ margin: '0 0 6px', fontSize: 18 }}>Create your first assistant</h3>
+          <h3 style={{ margin: '0 0 6px', fontSize: 18 }}>Build your team</h3>
           <p className="muted" style={{ margin: '0 0 18px' }}>
-            Name it, connect the Telegram bot it answers on, and the model it thinks with. It starts
-            with everything this workspace already knows.
+            A manager, marketing, sales, support and a personal assistant, each with its job written in,
+            or one assistant with the role you choose. They all start with everything this workspace knows.
           </p>
-          <Link href={`/w/${workspaceId}/agents/new`}>
-            <button className="primary lg" type="button" data-tour="create-assistant">Create an assistant</button>
-          </Link>
+          <div className="row" style={{ justifyContent: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <Link href={`/w/${workspaceId}/agents/team`}>
+              <button className="primary lg" type="button" data-tour="create-assistant">Start with a team</button>
+            </Link>
+            <Link href={`/w/${workspaceId}/agents/new`}>
+              <button className="lg" type="button">Create one assistant</button>
+            </Link>
+          </div>
           <p className="muted" style={{ margin: '14px 0 0', fontSize: 13 }}>
-            Already have one in OpenClaw? <Link href={`/w/${workspaceId}/agents/import`}>Bring it here</Link>.
+            Already have an assistant somewhere else? <Link href={`/w/${workspaceId}/agents/import`}>Bring it here</Link>.
           </p>
         </div>
       </div>

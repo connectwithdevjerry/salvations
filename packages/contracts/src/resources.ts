@@ -207,6 +207,8 @@ export const capabilityBindingSchema = z.object({
  */
 export const upsertAgentSchema = z.object({
   name: nameSchema,
+  /** A job from the team catalogue. Writes the role into the instructions and files it under the team. */
+  roleId: z.string().trim().min(1).max(40).optional(),
   description: descriptionSchema.optional(),
   /** Which group the assistant is listed under. Empty means the default group. */
   category: z.string().trim().max(40).optional(),

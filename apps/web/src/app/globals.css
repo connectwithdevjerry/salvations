@@ -1611,3 +1611,29 @@ td.danger { color: var(--danger); }
   .land-stats { gap: 18px; }
 }
 @media (prefers-reduced-motion: reduce) { .land-marquee-track { animation: none; } }
+
+/* ------------------------------------------------------------ the team -- */
+
+.role-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.role-grid.compact { grid-template-columns: repeat(3, 1fr); }
+.role-card {
+  position: relative; text-align: left; display: flex; flex-direction: column; gap: 4px;
+  padding: 12px 34px 12px 14px; border-radius: 12px; background: var(--surface); border: 1px solid var(--border);
+  cursor: pointer; color: var(--text); font-weight: 400; transition: border-color 120ms ease, background 120ms ease;
+}
+.role-card:hover { border-color: var(--border-strong); background: var(--surface); }
+.role-card.on { border-color: var(--accent); background: var(--accent-soft); }
+.role-swatch { width: 10px; height: 10px; border-radius: 999px; display: inline-block; }
+.role-name { font-weight: 650; font-size: 14px; margin-top: 2px; }
+.role-summary { font-size: 12.5px; color: var(--muted); line-height: 1.45; }
+.role-tick { position: absolute; top: 10px; right: 10px; width: 20px; height: 20px; border-radius: 999px; display: grid; place-items: center; background: var(--accent); color: var(--accent-ink); opacity: 0; transform: scale(0.8); transition: opacity 120ms ease, transform 120ms ease; }
+.role-card.on .role-tick { opacity: 1; transform: none; }
+.wizard-body.wide { max-width: 900px; }
+.land-roles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.land-role { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 6px; }
+.land-role strong { font-size: 14.5px; }
+.land-role p { margin: 0; font-size: 12.5px; color: var(--muted); line-height: 1.5; flex: 1; }
+.land-role em { font-size: 12px; color: var(--accent); font-style: normal; }
+@media (max-width: 960px) { .land-roles { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 720px) { .role-grid, .role-grid.compact { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 480px) { .role-grid, .role-grid.compact, .land-roles { grid-template-columns: 1fr; } }

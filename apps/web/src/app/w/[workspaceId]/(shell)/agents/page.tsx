@@ -39,6 +39,9 @@ export default function AgentsIndex({ params }: { params: Promise<{ workspaceId:
           <Link href={`/w/${workspaceId}/agents/new`}>
             <button className="primary lg" type="button" data-tour="create-assistant">Create an assistant</button>
           </Link>
+          <p className="muted" style={{ margin: '14px 0 0', fontSize: 13 }}>
+            Already have one in OpenClaw? <Link href={`/w/${workspaceId}/agents/import`}>Bring it here</Link>.
+          </p>
         </div>
       </div>
     );

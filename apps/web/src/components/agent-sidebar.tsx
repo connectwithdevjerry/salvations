@@ -85,6 +85,12 @@ export function AgentSidebar({ workspaceId }: { workspaceId: string }) {
         >
           <Icon name="plus" size={17} />
         </button>
+        <button
+          type="button" className="square" aria-label="Import from OpenClaw" title="Import from OpenClaw"
+          onClick={() => router.push(`/w/${workspaceId}/agents/import`)}
+        >
+          <Icon name="download" size={17} />
+        </button>
       </div>
 
       <div className="agents-side-list">

@@ -19,7 +19,9 @@ export type SetupKind =
   /** A redirect to the service, consent, and a code exchanged server-side. */
   | 'oauth'
   /** An MCP server reached over HTTP, authorised by its own OAuth if it asks. */
-  | 'mcp';
+  | 'mcp'
+  /** A gateway the person runs themselves: its address and its token, typed in and checked live. */
+  | 'gateway_token';
 
 export type EntryKind = 'channel' | 'integration';
 

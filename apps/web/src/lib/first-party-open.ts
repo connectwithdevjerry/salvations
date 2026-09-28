@@ -12,7 +12,7 @@
  * would let it ask.
  */
 import {
-  createConversationServer, createGoogleWorkspaceServer, createKnowledgeServer, createMemoryServer, createWebServer, linkedPair,
+  createConversationServer, createGoogleWorkspaceServer, createKnowledgeServer, createMemoryServer, createOpenClawServer, createWebServer, linkedPair,
   type ConversationSource, type ServerContext,
 } from '@salvations/servers';
 import { ConversationRepository, toMessage } from '@salvations/db';
@@ -23,6 +23,7 @@ import { createWebSource } from './web-service';
 import { createMemorySource } from './memory-service';
 import { createKnowledgeSource } from './knowledge-service';
 import { GOOGLE_WORKSPACE_ALIAS, createGoogleSource } from './google-workspace';
+import { OPENCLAW_ALIAS, createOpenClawSource } from './openclaw';
 
 export interface OpenerInput {
   readonly database: Database;
@@ -62,6 +63,16 @@ function build(alias: string, input: OpenerInput, bindingId?: string) {
       workspaceId,
       bindingId,
       userId: input.createdBy,
+    }));
+  }
+
+  if (alias === OPENCLAW_ALIAS && bindingId !== undefined) {
+    // The person's own gateway: the binding row says which, and its token
+    // decides whose machine answers.
+    return createOpenClawServer(input.context, createOpenClawSource({
+      database: input.database,
+      workspaceId,
+      bindingId,
     }));
   }
 

@@ -340,6 +340,10 @@ function IntegrationSetup({
     );
   }
 
+  if (entry.setup === 'gateway_token') {
+    return <GatewaySetup workspaceId={workspaceId} agentId={agentId} entry={entry} binding={binding} onChanged={onChanged} onError={onError} />;
+  }
+
   if (binding !== undefined && binding.status === 'connected') {
     return (
       <div className="stack" style={{ gap: 10 }}>
@@ -404,6 +408,97 @@ function IntegrationSetup({
         </button>
       </div>
     </>
+  );
+}
+
+/**
+ * A gateway the person runs: its address and its token, typed in.
+ *
+ * Checked live before anything is stored, so a wrong address is the answer
+ * to pressing the button and not a surprise in a chat. Reconnecting with a
+ * new token or address is the same form again.
+ */
+function GatewaySetup({
+  workspaceId, agentId, entry, binding, onChanged, onError,
+}: {
+  workspaceId: string;
+  agentId: string;
+  entry: CatalogEntry;
+  binding: Binding | undefined;
+  onChanged: () => void;
+  onError: (message: string | undefined) => void;
+}) {
+  const [url, setUrl] = useState('');
+  const [token, setToken] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const connected = binding !== undefined && binding.status === 'connected';
+
+  return (
+    <div className="stack" style={{ gap: 10 }}>
+      {connected && (
+        <div className="note">
+          <span className="tile" aria-hidden><Icon name="check" size={16} /></span>
+          <span>
+            <strong>Connected</strong>{binding.url !== undefined && <> to <span className="mono">{binding.url}</span></>}.{' '}
+            {binding.capabilityCount} {binding.capabilityCount === 1 ? 'tool' : 'tools'} available to this assistant.
+          </span>
+        </div>
+      )}
+      <ScopeList scopes={entry.scopes} />
+      {(!connected || editing) && (
+        <>
+          <SetupSteps steps={entry.steps} />
+          <form
+            className="stack"
+            onSubmit={async (event) => {
+              event.preventDefault();
+              setBusy(true);
+              onError(undefined);
+              try {
+                const id = binding?.id ?? (await api.post<{ id: string }>(
+                  `${ws(workspaceId)}/mcp/bindings`, { catalogId: entry.id, agentId },
+                )).id;
+                await api.post(`${ws(workspaceId)}/mcp/bindings/${id}/gateway`, { url, token });
+                setToken('');
+                setEditing(false);
+                onChanged();
+              } catch (caught) {
+                onError(caught instanceof Error ? caught.message : `Could not connect ${entry.name}.`);
+                onChanged();
+              } finally { setBusy(false); }
+            }}
+          >
+            <div>
+              <label htmlFor={`gateway-url-${entry.id}`}>Gateway address</label>
+              <input
+                id={`gateway-url-${entry.id}`} type="url" required placeholder="https://claw.example.com"
+                value={url} onChange={(e) => setUrl(e.target.value)}
+              />
+            </div>
+            <div>
+              <label htmlFor={`gateway-token-${entry.id}`}>Gateway token</label>
+              <input
+                id={`gateway-token-${entry.id}`} type="password" required autoComplete="off"
+                value={token} onChange={(e) => setToken(e.target.value)}
+              />
+            </div>
+            {binding?.health.lastError !== undefined && !connected && (
+              <p className="error" style={{ margin: 0 }}>{binding.health.lastError}</p>
+            )}
+            <div className="row" style={{ justifyContent: 'flex-start', gap: 8 }}>
+              <button className="primary" type="submit" disabled={busy || url.trim() === '' || token.trim() === ''}>
+                {busy ? 'Checking the gateway…' : connected ? 'Update connection' : `Connect ${entry.name}`}
+              </button>
+              {editing && <button type="button" className="ghost" onClick={() => setEditing(false)}>Cancel</button>}
+            </div>
+          </form>
+        </>
+      )}
+      {connected && !editing && (
+        <div><button type="button" onClick={() => setEditing(true)}>Change address or token</button></div>
+      )}
+    </div>
   );
 }
 

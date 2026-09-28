@@ -44,6 +44,50 @@ const GOOGLE_WORKSPACE: CatalogEntry = {
   ],
 };
 
+/**
+ * OpenClaw: the person's own self-hosted assistant gateway.
+ *
+ * Not a vendor. A gateway somebody runs on their own machine or server, with
+ * their own model keys, their own channels (WhatsApp, Signal, iMessage and
+ * more) and their own skills. Connecting lets an assistant here hand a task
+ * to an agent there, over the gateway's OpenAI-compatible endpoint, and get
+ * the answer back. The gateway's token is held encrypted, per assistant.
+ */
+const OPENCLAW: CatalogEntry = {
+  id: 'openclaw',
+  kind: 'integration',
+  name: 'OpenClaw',
+  summary: 'Your own OpenClaw gateway. Hand tasks to its agents and their channels, files and skills.',
+  setup: 'gateway_token',
+  accent: '#E0553A',
+  docs: 'https://docs.openclaw.ai/gateway/openai-http-api',
+  native: { alias: 'openclaw' },
+  steps: [
+    {
+      title: 'Turn on the chat endpoint',
+      body: 'In ~/.openclaw/openclaw.json, enable the OpenAI-compatible endpoint the gateway '
+        + 'serves. It is off by default. Restart the gateway afterwards.',
+      literal: '{ gateway: { http: { endpoints: { chatCompletions: { enabled: true } } } } }',
+    },
+    {
+      title: 'Find the gateway token',
+      body: 'It is gateway.auth.token in the same file, or the OPENCLAW_GATEWAY_TOKEN '
+        + 'environment variable. Paste it below; it is stored encrypted and never shown again.',
+    },
+    {
+      title: 'Give the gateway a public https address',
+      body: 'The gateway listens on your own machine. This site has to reach it, so put it '
+        + 'behind a reverse proxy, a Tailscale Funnel or a tunnel with an https address, and '
+        + 'paste that address below. OpenClaw’s own guidance is the same.',
+      link: { label: 'OpenClaw: OpenAI chat completions', url: 'https://docs.openclaw.ai/gateway/openai-http-api' },
+    },
+  ],
+  scopes: [
+    { label: 'Send messages to your OpenClaw agents and read their replies', scope: 'openclaw:chat', writes: true },
+    { label: 'List the agents the gateway runs', scope: 'openclaw:models', writes: false },
+  ],
+};
+
 const GITHUB: CatalogEntry = {
   id: 'github',
   kind: 'integration',
@@ -110,4 +154,4 @@ const LINEAR: CatalogEntry = {
   ],
 };
 
-export const INTEGRATIONS: readonly CatalogEntry[] = [GOOGLE_WORKSPACE, GITHUB, NOTION, LINEAR];
+export const INTEGRATIONS: readonly CatalogEntry[] = [GOOGLE_WORKSPACE, OPENCLAW, GITHUB, NOTION, LINEAR];

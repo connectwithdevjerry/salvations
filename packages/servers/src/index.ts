@@ -28,4 +28,8 @@ export {
   extract as extractPage, htmlToText,
   type WebSource, type FetchedPage, type SearchResult,
 } from './web';
+export {
+  createOpenClawServer, SERVER_NAME as OPENCLAW_SERVER, MAX_MESSAGE as OPENCLAW_MAX_MESSAGE,
+  type OpenClawSource, type OpenClawAgent,
+} from './openclaw';
 export { serveOverHttp, type HttpServerFactory } from './http';

@@ -6,7 +6,7 @@ import { api, ws } from '@/lib/client/api';
 import { BrandMark, Icon, Tile } from '@/components/ui';
 
 /**
- * Bringing an OpenClaw assistant here.
+ * Bringing an assistant from elsewhere here.
  *
  * Zip the workspace folder, drop it here, read what would be made, say
  * yes. Nothing is written until the second step, and the plan shown is the
@@ -46,7 +46,7 @@ export default function ImportPage({ params }: { params: Promise<{ workspaceId: 
     form.set('archive', file);
     form.set('commit', commit ? 'true' : 'false');
     try {
-      const result = await api.upload<{ plan: Plan } & Partial<Made>>(`${ws(workspaceId)}/agents/import/openclaw`, form);
+      const result = await api.upload<{ plan: Plan } & Partial<Made>>(`${ws(workspaceId)}/agents/import/workspace`, form);
       if (commit && result.id !== undefined) setMade(result as Made);
       else setPlan(result.plan);
     } catch (caught) {
@@ -67,11 +67,11 @@ export default function ImportPage({ params }: { params: Promise<{ workspaceId: 
         <div className="wizard-head">
           <Tile name="agent" large />
           <div>
-            <h2>Bring an assistant from OpenClaw</h2>
+            <h2>Bring an assistant you already have</h2>
             <p>
-              Zip your OpenClaw workspace folder (the one with SOUL.md and AGENTS.md, usually
-              ~/.openclaw/workspace) and drop it here. Its persona and rules become the assistant&apos;s
-              instructions, its memory becomes memories, and its notes and skills become documents it can search.
+              Zip your assistant&apos;s workspace folder, the one with SOUL.md and AGENTS.md in it, and drop
+              it here. Its persona and rules become the assistant&apos;s instructions, its memory becomes
+              memories, and its notes and skills become documents it can search.
             </p>
           </div>
         </div>
@@ -95,7 +95,7 @@ export default function ImportPage({ params }: { params: Promise<{ workspaceId: 
               </button>
             </p>
             <p className="muted" style={{ margin: '12px 0 0', fontSize: 13 }}>
-              Next: connect its Telegram bot on the Integrations tab, and choose its model. Channel tokens and cron jobs live in openclaw.json, not the workspace, so they are not imported.
+              Next: connect its Telegram bot on the Integrations tab, and choose its model. Channel tokens and scheduled jobs live in the gateway&apos;s configuration rather than the workspace, so set those up here.
             </p>
           </div>
         ) : (

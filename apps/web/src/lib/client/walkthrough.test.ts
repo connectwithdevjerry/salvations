@@ -6,7 +6,7 @@ describe('stepsFor', () => {
     const steps = stepsFor({ workspaceId: 'ws_1', agent: { id: 'agt_1', name: 'Bee' } });
     const ids = steps.map((s) => s.id);
     expect(ids).toEqual([
-      'welcome', 'assistants', 'chat', 'documents', 'routine', 'integrations', 'model', 'server',
+      'welcome', 'assistants', 'import', 'chat', 'documents', 'routine', 'integrations', 'model', 'server',
       'models', 'approvals', 'activity', 'workspace', 'done',
     ]);
     const chat = steps.find((s) => s.id === 'chat');
@@ -18,7 +18,8 @@ describe('stepsFor', () => {
   it('collapses the middle to "create one" when there is no assistant', () => {
     const steps = stepsFor({ workspaceId: 'ws_1' });
     const ids = steps.map((s) => s.id);
-    expect(ids).toEqual(['welcome', 'assistants', 'create', 'models', 'approvals', 'activity', 'workspace', 'done']);
+    expect(ids).toEqual(['welcome', 'assistants', 'import', 'create', 'models', 'approvals', 'activity', 'workspace', 'done']);
+    expect(steps.find((s) => s.id === 'import')?.target).toBe('import-assistant');
     expect(steps.find((s) => s.id === 'assistants')?.path).toBe('/agents');
     expect(steps.find((s) => s.id === 'create')?.target).toBe('create-assistant');
   });

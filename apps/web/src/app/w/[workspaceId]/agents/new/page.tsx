@@ -1,8 +1,9 @@
 'use client';
 
 import { use, useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { CHANNELS, DEFAULT_AGENT_NAME, type CatalogEntry, type CatalogModel } from '@salvations/catalog';
+import { CHANNELS, DEFAULT_AGENT_NAME, ROLES, type AssistantRole, type CatalogEntry, type CatalogModel } from '@salvations/catalog';
 import { api, ws } from '@/lib/client/api';
 import { BrandMark, Icon, Option, StepDots, Tile } from '@/components/ui';
 import { SetupSteps, Copyable } from '@/components/setup-steps';
@@ -144,10 +145,18 @@ function AgentStep({
   onDone: (agent: { id: string; name: string }) => void;
   onError: (message: string) => void;
 }) {
-  const [name, setName] = useState(DEFAULT_AGENT_NAME);
+  const [role, setRole] = useState<AssistantRole | undefined>(ROLES[0]);
+  const [name, setName] = useState(ROLES[0]?.assistantName ?? DEFAULT_AGENT_NAME);
+  const [named, setNamed] = useState(false);
   const [category, setCategory] = useState('');
   const [groups, setGroups] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+
+  const pick = (next: AssistantRole | undefined) => {
+    setRole(next);
+    // The name follows the job until the person types their own.
+    if (!named) setName(next?.assistantName ?? DEFAULT_AGENT_NAME);
+  };
 
   useEffect(() => {
     void api.get<{ items: { category?: string }[] }>(`${ws(workspaceId)}/agents`)
@@ -159,9 +168,37 @@ function AgentStep({
     <>
       <Head
         icon="agent"
-        title="Create your assistant"
-        lede="Give it a name. It starts with sensible instructions and everything this workspace already knows; its own integrations come next."
+        title="What should it do for you?"
+        lede="Give it a job and a name. It starts knowing its role and everything this workspace already knows; its own integrations come next. Want several at once? Start with a team instead."
       />
+
+      <div className="role-grid compact" role="radiogroup" aria-label="Role">
+        {ROLES.map((r) => (
+          <button
+            key={r.id} type="button" role="radio" aria-checked={role?.id === r.id}
+            className={role?.id === r.id ? 'role-card on' : 'role-card'}
+            onClick={() => pick(r)}
+          >
+            <span className="role-swatch" style={{ background: r.color }} aria-hidden />
+            <span className="role-name">{r.name}</span>
+            <span className="role-summary">{r.summary}</span>
+            <span className="role-tick" aria-hidden><Icon name="check" size={13} /></span>
+          </button>
+        ))}
+        <button
+          type="button" role="radio" aria-checked={role === undefined}
+          className={role === undefined ? 'role-card on' : 'role-card'}
+          onClick={() => pick(undefined)}
+        >
+          <span className="role-swatch" style={{ background: 'var(--border-strong)' }} aria-hidden />
+          <span className="role-name">Blank</span>
+          <span className="role-summary">No role yet. Sensible instructions you can shape later.</span>
+          <span className="role-tick" aria-hidden><Icon name="check" size={13} /></span>
+        </button>
+      </div>
+      <p className="muted" style={{ margin: '10px 0 22px', fontSize: 13 }}>
+        Or <Link href={`/w/${workspaceId}/agents/team`}>start with a whole team</Link>: manager, marketing, sales, support, and a personal assistant.
+      </p>
 
       <form
         className="stack"
@@ -175,7 +212,11 @@ function AgentStep({
             // integration, including ones connected later.
             const created = await api.post<{ id: string; name: string }>(
               `${ws(workspaceId)}/agents`,
-              { name, modelRole: 'chat', ...(category.trim() !== '' ? { category: category.trim() } : {}) },
+              {
+                name, modelRole: 'chat',
+                ...(role !== undefined ? { roleId: role.id } : {}),
+                ...(category.trim() !== '' ? { category: category.trim() } : {}),
+              },
             );
             onDone({ id: created.id, name });
           } catch (caught) {
@@ -188,11 +229,11 @@ function AgentStep({
           <label htmlFor="agentName">Name</label>
           <input
             id="agentName" required autoFocus placeholder={DEFAULT_AGENT_NAME}
-            value={name} onChange={(e) => setName(e.target.value)}
+            value={name} onChange={(e) => { setName(e.target.value); setNamed(true); }}
           />
           <p className="muted" style={{ margin: '6px 0 0' }}>
             What you will call it. Next you will connect the Telegram bot it answers on, and
-            the model it thinks with.
+            the model it thinks with.{role !== undefined && ` It is filed under “Team” unless you pick a group.`}
           </p>
         </div>
 

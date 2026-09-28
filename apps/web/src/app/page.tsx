@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
-import { CATALOG, PLANS } from '@salvations/catalog';
+import { CATALOG, PLANS, ROLES } from '@salvations/catalog';
 import { BrandMark, Icon } from '@/components/ui';
 import { VendorMark } from '@/components/vendor-mark';
 import { callerFromCookieHeader } from '@/lib/session';
@@ -52,9 +52,9 @@ export default async function Home() {
             Stop doing what you can <span className="accent">hand over</span>.
           </h1>
           <p className="land-lede">
-            Ask once, get finished work back. HIVE is an AI team that lives in{' '}
-            <strong>Telegram</strong>, reads your documents, works in your tools, and stops
-            to ask before anything it cannot undo.
+            Ask once, get finished work back. HIVE is a team of assistants for marketing, sales,
+            support, product design and your own to-do list. It lives in <strong>Telegram</strong>,
+            reads your documents, works in your tools, and stops to ask before anything it cannot undo.
           </p>
           <div className="land-cta">
             <Link href="/signup"><button className="primary lg" type="button">Create your assistant <Icon name="arrow" size={16} /></button></Link>
@@ -151,12 +151,29 @@ export default async function Home() {
         </div>
       </section>
 
+      {/* ---------------------------------------------------------- team -- */}
+      <section className="land-section">
+        <p className="kicker">Meet the team</p>
+        <h2>A team, not a chatbot.</h2>
+        <p className="land-sub">Each assistant has a job: what it looks after, what it does on its own, and how to start talking to it. Pick the ones you need; they share everything the business knows.</p>
+        <div className="land-roles">
+          {ROLES.map((role) => (
+            <div key={role.id} className="land-role">
+              <span className="role-swatch" style={{ background: role.color }} aria-hidden />
+              <strong>{role.name}</strong>
+              <p>{role.summary}</p>
+              <em>“{role.starters[0]}”</em>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* ----------------------------------------------------------- how -- */}
       <section className="land-section" id="how">
         <p className="kicker land-center">How it works</p>
         <h2 className="land-center">Now hand it to <span className="accent">HIVE</span>.</h2>
         <ol className="land-steps">
-          <Step n={1} title="Connect your stack" body="Your Telegram bot, your Gmail, your calendar, GitHub, Notion, Linear, or the OpenClaw you already run. Each on the vendor's own consent screen; the tokens stay encrypted in your database.">
+          <Step n={1} title="Connect your stack" body="Your Telegram bot, your Gmail, your calendar, GitHub, Notion, Linear, or an assistant you already run on your own machine. Each on the vendor's own consent screen; the tokens stay encrypted in your database.">
             <div className="mock-rows">
               {integrations.slice(0, 4).map((e, i) => (
                 <div key={e.id} className="mock-row"><span className="mock-tag" style={{ background: e.accent }} />{e.name}<span className={`mock-pill ${i < 3 ? 'ok' : ''}`}>{i < 3 ? 'Connected' : 'Connect'}</span></div>
@@ -230,7 +247,7 @@ export default async function Home() {
             <ul>
               {(plan?.features ?? []).map((f) => <li key={f}><Icon name="check" size={14} />{f}</li>)}
               <li><Icon name="check" size={14} />Bring your own model key; pay the vendor directly</li>
-              <li><Icon name="check" size={14} />Import an existing OpenClaw assistant in a minute</li>
+              <li><Icon name="check" size={14} />Bring an assistant you already have, in a minute</li>
             </ul>
             <Link href="/signup"><button className="primary lg" type="button">Start free</button></Link>
           </div>

@@ -26,7 +26,7 @@ describe('planning an OpenClaw import', () => {
 
   it('turns soul, rules and user into instructions that still work here', () => {
     const plan = planImport(WORKSPACE);
-    expect(plan.systemPrompt.startsWith('You are Bee 🐝, brought here from OpenClaw.')).toBe(true);
+    expect(plan.systemPrompt.startsWith('You are Bee 🐝, brought here from your previous setup.')).toBe(true);
     expect(plan.systemPrompt).toContain('## Who you are\n\n# Soul\n\nWarm, brief, never sycophantic.');
     expect(plan.systemPrompt).toContain('Check the calendar before promising a time.');
     expect(plan.systemPrompt).toContain('Ada runs Okoro Trading');
@@ -52,7 +52,7 @@ describe('planning an OpenClaw import', () => {
   });
 
   it('refuses an archive with no workspace in it', () => {
-    expect(() => planImport([{ path: 'notes.txt', text: 'hi' }])).toThrow('No OpenClaw workspace found');
+    expect(() => planImport([{ path: 'notes.txt', text: 'hi' }])).toThrow('No assistant workspace found');
   });
 
   it('reads a name from a heading when there is no name line', () => {

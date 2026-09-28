@@ -1,22 +1,22 @@
 /**
- * The OpenClaw server: a bridge to the person's own gateway.
+ * The gateway server: a bridge to the person's own self-hosted assistant.
  *
- * OpenClaw is a self-hosted assistant somebody runs on their own machine,
- * with its own channels, files, skills and model keys. This server lets an
- * assistant here hand a task to an agent there and get the answer back,
- * over the gateway's OpenAI-compatible endpoint. Which gateway, and with
- * what token, is decided by the source: no tool takes an address or a
- * token, so no prompt can point this at somebody else's machine.
+ * A gateway is an assistant somebody runs on their own machine, with its
+ * own channels, files, skills and model keys, serving an OpenAI-compatible
+ * chat endpoint. This server lets an assistant here hand a task to an agent
+ * there and get the answer back. Which gateway, and with what token, is
+ * decided by the source: no tool takes an address or a token, so no prompt
+ * can point this at somebody else's machine.
  *
- * Asking is a write. An OpenClaw agent may act on what it is told: send a
- * WhatsApp message, run a command, change a file. So the tool is annotated
- * as such, and the approval policy sees it before it happens.
+ * Asking is a write. A gateway agent may act on what it is told: send a
+ * message, run a command, change a file. So the tool is annotated as such,
+ * and the approval policy sees it before it happens.
  */
 import { McpServer } from '@modelcontextprotocol/server';
 import { z } from 'zod';
 import type { ServerContext } from './port';
 
-export const SERVER_NAME = 'openclaw';
+export const SERVER_NAME = 'gateway';
 
 /** Most characters of a message handed over. */
 export const MAX_MESSAGE = 8_000;
@@ -41,14 +41,14 @@ export function createOpenClawServer(context: ServerContext, source: OpenClawSou
   const server = new McpServer({
     name: SERVER_NAME,
     version: '1.0.0',
-    title: 'Your OpenClaw',
+    title: 'Your agent gateway',
   });
 
   server.registerTool(
     'agents',
     {
-      title: 'List OpenClaw agents',
-      description: 'The agents your OpenClaw gateway runs. Use it to find which one to ask.',
+      title: 'List gateway agents',
+      description: 'The agents your own gateway runs. Use it to find which one to ask.',
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
     },
     async () => {
@@ -72,10 +72,10 @@ export function createOpenClawServer(context: ServerContext, source: OpenClawSou
   server.registerTool(
     'ask',
     {
-      title: 'Ask an OpenClaw agent',
+      title: 'Ask a gateway agent',
       description:
-        'Hand a message to one of your OpenClaw agents and get its reply. That agent has '
-        + 'what your OpenClaw has: its channels, its files, its skills, its memory. Use it '
+        'Hand a message to one of the agents on your own gateway and get its reply. That agent '
+        + 'has what your gateway has: its channels, its files, its skills, its memory. Use it '
         + 'for anything that lives on that machine or reaches people through it. Say clearly '
         + 'what you want done; the agent acts on it.',
       inputSchema: {
@@ -102,4 +102,4 @@ export function createOpenClawServer(context: ServerContext, source: OpenClawSou
 }
 
 const failure = (caught: unknown): string =>
-  caught instanceof Error ? caught.message : 'The OpenClaw gateway could not be reached.';
+  caught instanceof Error ? caught.message : 'The gateway could not be reached.';

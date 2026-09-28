@@ -8,18 +8,15 @@
  * stale.
  */
 import { upsertAgentSchema } from '@salvations/contracts';
-import { defaultSystemPrompt, isCurrentDefaultSystemPrompt, isDefaultSystemPrompt } from '@salvations/catalog';
+import { defaultSystemPrompt, isCurrentDefaultSystemPrompt, isDefaultSystemPrompt, roleById } from '@salvations/catalog';
+import { createAssistantFromRole } from '@/lib/agent-team';
+import { AGENT_COLORS } from '@/lib/agent-colors';
 import { WorkspaceRepository, AgentRepository, type AgentDoc, type ConversationDoc, type RunDoc } from '@salvations/db';
-import { jsonBody, ok } from '@/lib/http';
+import { errorResponse, jsonBody, ok } from '@/lib/http';
 import { workspaceRoute, type WorkspaceContext } from '@/lib/route';
 import { actorIdOf } from '@/lib/principal';
 
 export const runtime = 'nodejs';
-
-/** Avatar tints, in the order new assistants take them. */
-export const AGENT_COLORS = [
-  '#3b82f6', '#14b8a6', '#ef4444', '#f59e0b', '#8b5cf6', '#84cc16', '#06b6d4', '#ec4899',
-] as const;
 
 /** A run in any of these states is the agent doing something now. */
 /** A run that is being worked on right now, or is about to be. */
@@ -88,6 +85,17 @@ export const GET = workspaceRoute('agents:read', async (ctx) => {
 export const POST = workspaceRoute('agents:write', async (ctx) => {
   const input = await jsonBody(ctx.request, upsertAgentSchema);
   const repo = new AgentRepository(ctx.database, ctx.workspaceId);
+
+  // A job from the team catalogue: the role writes the instructions and
+  // brings its routines. The wizard's "blank" choice sends no roleId.
+  if (input.roleId !== undefined) {
+    const role = roleById(input.roleId);
+    if (role === undefined) return errorResponse(422, 'validation_failed', 'That role does not exist.');
+    const made = await createAssistantFromRole(ctx, role, {
+      name: input.name, category: input.category, createdBy: actorIdOf(ctx.principal),
+    });
+    return ok({ id: made.id, name: made.name, version: 1, routines: made.routines }, 201);
+  }
 
   const agent = await repo.create({
     slug: slugOf(input.name),

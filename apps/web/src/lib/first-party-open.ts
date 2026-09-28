@@ -67,8 +67,8 @@ function build(alias: string, input: OpenerInput, bindingId?: string) {
   }
 
   if (alias === OPENCLAW_ALIAS && bindingId !== undefined) {
-    // The person's own gateway: the binding row says which, and its token
-    // decides whose machine answers.
+    // The person's own self-hosted gateway: the binding row says which, and
+    // its token decides whose machine answers.
     return createOpenClawServer(input.context, createOpenClawSource({
       database: input.database,
       workspaceId,

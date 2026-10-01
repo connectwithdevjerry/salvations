@@ -46,6 +46,11 @@ export interface GoogleOAuthClient { readonly clientId: string; readonly clientS
 
 export function googleOAuthClient(): GoogleOAuthClient | undefined {
   const e = env();
+  // A client of its own when one is set, so Workspace's long review does not
+  // hold up plain sign-in; otherwise the sign-in client serves both.
+  if (e.GOOGLE_WORKSPACE_CLIENT_ID !== undefined && e.GOOGLE_WORKSPACE_CLIENT_SECRET !== undefined) {
+    return { clientId: e.GOOGLE_WORKSPACE_CLIENT_ID, clientSecret: e.GOOGLE_WORKSPACE_CLIENT_SECRET };
+  }
   if (e.GOOGLE_CLIENT_ID === undefined || e.GOOGLE_CLIENT_SECRET === undefined) return undefined;
   return { clientId: e.GOOGLE_CLIENT_ID, clientSecret: e.GOOGLE_CLIENT_SECRET };
 }

@@ -23,6 +23,17 @@ const schema = z.object({
    */
   GOOGLE_CLIENT_ID: z.string().min(1).optional(),
   GOOGLE_CLIENT_SECRET: z.string().min(1).optional(),
+  /**
+   * A second Google client, for Google Workspace only.
+   *
+   * Optional. Google verifies a whole Cloud project, and a project that asks
+   * for Gmail is held to a long review that a project asking only to sign
+   * people in is not. Keeping the two in separate projects lets sign-in be
+   * published at once while Workspace stays in testing. Without these, the
+   * sign-in client serves both.
+   */
+  GOOGLE_WORKSPACE_CLIENT_ID: z.string().min(1).optional(),
+  GOOGLE_WORKSPACE_CLIENT_SECRET: z.string().min(1).optional(),
 
   CREDENTIAL_KEK: z.string().min(1, 'CREDENTIAL_KEK is required'),
   CREDENTIAL_KEK_VERSION: z.coerce.number().int().positive().default(1),
@@ -68,6 +79,12 @@ const schema = z.object({
 
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
 }).refine(
+  (value) => (value.GOOGLE_WORKSPACE_CLIENT_ID === undefined) === (value.GOOGLE_WORKSPACE_CLIENT_SECRET === undefined),
+  {
+    message: 'Set both GOOGLE_WORKSPACE_CLIENT_ID and GOOGLE_WORKSPACE_CLIENT_SECRET, or neither.',
+    path: ['GOOGLE_WORKSPACE_CLIENT_ID'],
+  },
+).refine(
   (value) => (value.SMTP_URL === undefined) === (value.MAIL_FROM === undefined),
   {
     message: 'Set both SMTP_URL and MAIL_FROM, or neither. Mail needs a server and a sender.',

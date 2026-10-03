@@ -32,36 +32,83 @@ export const WAYS: readonly TalkWay[] = [
   { id: 'voice', name: 'Out loud', sub: 'By voice, on Speak', accent: '#F59E0B', always: true },
 ];
 
+/**
+ * The phone, showing the assistant where the hovered or chosen way puts it.
+ *
+ * Each way is drawn the way that app looks: Telegram's bubbles, Discord's
+ * and Slack's rows under a channel name, HIVE's own chat, and the voice
+ * console for out loud. The words are the same so the eye compares the
+ * place, not the conversation.
+ */
 export function PhoneMock({ agentName, way }: { agentName: string; way: TalkWay }) {
+  const ask = 'Chase Northgate about invoice 2214';
+  const reply = 'Done. I sent them a firm reminder, and they’ve replied: paying Friday.';
+  const rows = (channel: string) => (
+    <>
+      <div className="phone-channel"># {channel}</div>
+      <div className="phone-row">
+        <span className="phone-row-avatar you" />
+        <span><b>You</b> <small>9:41</small><br />{ask}</span>
+      </div>
+      <div className="phone-row">
+        <span className="phone-row-avatar" style={{ background: way.accent }} />
+        <span><b>{agentName}</b> <small>9:41</small><br />{reply}</span>
+      </div>
+    </>
+  );
+
   return (
-    <div className="phone" aria-hidden>
+    <div className={`phone ${way.id}`} aria-hidden>
       <div className="phone-top"><span>9:41</span><span className="phone-notch" /><span>●●●</span></div>
-      <div className="phone-head">
-        <span className="phone-avatar" style={{ background: way.accent }} />
-        <strong>{agentName}</strong>
-        <small style={{ color: way.accent }}>on {way.name === 'Here' ? 'HIVE' : way.name}</small>
+      {way.id === 'voice' ? (
+        <div className="phone-body voice">
+          <div className="phone-orb"><span /></div>
+          <small className="phone-live">LISTENING</small>
+          <div className="phone-transcript">
+            <span>you</span><p>{ask}</p>
+            <span>{agentName.toLowerCase()}</span><p>{reply}</p>
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="phone-head">
+            <span className="phone-avatar" style={{ background: way.accent }} />
+            <strong>{agentName}</strong>
+            <small style={{ color: way.accent }}>on {way.id === 'web' ? 'HIVE' : way.name}</small>
+          </div>
+          <div className="phone-body">
+            {way.id === 'discord' || way.id === 'slack' ? rows('general') : (
+              <>
+                <small>Today 9:41</small>
+                <p className="you">{ask}</p>
+                {way.id === 'telegram' && <small className="end">Delivered</small>}
+                <p>{reply}</p>
+              </>
+            )}
+          </div>
+        </>
+      )}
+      <div className="phone-input">
+        {way.id === 'voice' ? <span className="phone-stop">■ STOP</span>
+          : way.id === 'discord' || way.id === 'slack' ? 'Message #general'
+            : way.id === 'web' ? `Message ${agentName}` : 'Message'}
       </div>
-      <div className="phone-body">
-        <small>Today 9:41</small>
-        <p className="you">Chase Northgate about invoice 2214</p>
-        <small className="end">Delivered</small>
-        <p>Done. I sent them a firm reminder, and they&apos;ve replied: paying Friday.</p>
-      </div>
-      <div className="phone-input">{way.name === 'Out loud' ? '🎙 Speak' : 'Message'}</div>
     </div>
   );
 }
 
 export function WayCards({
-  ways, selected, statusOf, onPick,
+  ways, selected, statusOf, onPick, onHover,
 }: {
   ways: readonly TalkWay[];
   selected?: string | undefined;
   statusOf: (way: TalkWay) => string | undefined;
   onPick: (way: TalkWay) => void;
+  /** The way under the pointer, or undefined when it leaves: the phone follows it. */
+  onHover?: (way: TalkWay | undefined) => void;
 }) {
   return (
-    <div className="ways">
+    <div className="ways" onMouseLeave={() => onHover?.(undefined)}>
       {ways.map((way) => {
         const status = statusOf(way);
         return (
@@ -69,6 +116,8 @@ export function WayCards({
             key={way.id} type="button"
             className={selected === way.id ? 'way on' : 'way'}
             onClick={() => onPick(way)}
+            onMouseEnter={() => onHover?.(way)}
+            onFocus={() => onHover?.(way)}
           >
             {way.entry !== undefined
               ? <AppLogo id={way.entry.id} name={way.entry.name} accent={way.accent} size={44} />
@@ -102,6 +151,7 @@ export function WaysToTalkDialog({
 }) {
   const [channels, setChannels] = useState<{ channel: string; status: string; agentId: string }[]>([]);
   const [picked, setPicked] = useState<TalkWay>();
+  const [hovered, setHovered] = useState<TalkWay>();
 
   const reload = useCallback(() => {
     void api.get<{ items: { channel: string; status: string; agentId: string }[] }>(`${ws(workspaceId)}/channels`)
@@ -124,14 +174,14 @@ export function WaysToTalkDialog({
   return (
     <div className="dialog-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
       <div className="dialog ways-dialog" role="dialog" aria-modal="true" aria-labelledby="ways-title">
-        <PhoneMock agentName={agentName} way={picked ?? WAYS[0]!} />
+        <PhoneMock agentName={agentName} way={picked ?? hovered ?? WAYS[0]!} />
         <div className="ways-main">
           <button type="button" className="ghost ways-close" aria-label="Close" onClick={onClose}><Icon name="exit" size={16} /></button>
           {picked?.entry === undefined ? (
             <>
               <h3 id="ways-title">Text {agentName} like a teammate.</h3>
               <p className="muted">{agentName} answers wherever you already are. Pick one now; add the rest any time.</p>
-              <WayCards ways={WAYS} statusOf={statusOf} onPick={(way) => { if (way.entry !== undefined) setPicked(way); }} />
+              <WayCards ways={WAYS} statusOf={statusOf} onHover={setHovered} onPick={(way) => { if (way.entry !== undefined) setPicked(way); }} />
             </>
           ) : (
             <>

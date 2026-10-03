@@ -57,6 +57,13 @@ export function stepsFor(context: TourContext): readonly TourStep[] {
         body: `Talk to ${name} here exactly as you would on Telegram. Chats can be renamed or deleted from the row above the messages.`,
       },
       {
+        id: 'ways',
+        path: agentPath,
+        target: 'ways',
+        title: 'Ways to talk',
+        body: `Where ${name} answers: Telegram, Discord or Slack from your phone, this chat in the browser, or out loud on the Speak tab. Pick one here and connect it on the spot.`,
+      },
+      {
         id: 'documents',
         path: agentPath,
         target: 'tab-documents',

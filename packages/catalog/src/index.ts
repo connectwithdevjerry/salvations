@@ -41,5 +41,5 @@ export function searchCatalog(
   const needle = query.trim().toLowerCase();
   if (needle === '') return entries;
   return entries.filter((entry) =>
-    `${entry.name} ${entry.summary} ${entry.id}`.toLowerCase().includes(needle));
+    `${entry.name} ${entry.summary} ${entry.id} ${entry.category}`.toLowerCase().includes(needle));
 }

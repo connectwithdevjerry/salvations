@@ -1637,3 +1637,47 @@ td.danger { color: var(--danger); }
 @media (max-width: 960px) { .land-roles { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 720px) { .role-grid, .role-grid.compact { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 480px) { .role-grid, .role-grid.compact, .land-roles { grid-template-columns: 1fr; } }
+
+/* ------------------------------------------------------------ app picker -- */
+
+.apps-bar { display: flex; gap: 10px; align-items: center; margin-bottom: 16px; }
+.apps-search { flex: 1; display: flex; align-items: center; gap: 8px; padding: 0 12px; height: 40px; border-radius: 12px; background: var(--surface); border: 1px solid var(--border); color: var(--faint); }
+.apps-search input { border: 0; background: transparent; flex: 1; padding: 0; max-width: none; color: var(--text); }
+.apps-search input:focus { outline: none; }
+.apps-shelf { margin-bottom: 18px; }
+.apps-shelf .eyebrow { margin: 0 0 8px; }
+.app-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.app-card {
+  position: relative; display: flex; align-items: center; gap: 12px; text-align: left;
+  padding: 12px; border-radius: 12px; background: var(--surface); border: 1px solid var(--border);
+  color: var(--text); font-weight: 400; cursor: pointer; min-height: 72px;
+  transition: border-color 120ms ease, transform 120ms ease;
+}
+.app-card:hover { border-color: var(--border-strong); transform: translateY(-1px); background: var(--surface); }
+.app-tile {
+  width: 42px; height: 42px; border-radius: 11px; flex: none; display: grid; place-items: center;
+  font-weight: 800; font-size: 18px;
+  background: color-mix(in srgb, var(--accent-brand) 18%, transparent);
+  color: var(--accent-brand);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent-brand) 35%, transparent);
+}
+.app-copy { display: flex; flex-direction: column; min-width: 0; }
+.app-name { font-weight: 650; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.app-cat { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.app-status { position: absolute; top: 8px; right: 8px; width: 8px; height: 8px; border-radius: 999px; background: var(--faint); font-size: 0; }
+.app-status.ok { background: var(--ok); }
+.app-status.warn { background: var(--warn); }
+.app-status.danger { background: var(--danger); }
+.request-card { margin-top: 8px; display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 14px 16px; border-radius: 12px; border: 1px dashed var(--border-strong); }
+.dialog.wide { max-width: 640px; max-height: calc(100vh - 48px); overflow-y: auto; padding: 0; }
+.app-dialog-head { display: flex; align-items: center; gap: 12px; padding: 18px 20px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--surface); z-index: 1; }
+.app-dialog-head h3 { font-size: 17px; }
+.app-dialog-body { padding: 18px 20px 22px; }
+.botfather { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.botfather li { display: flex; gap: 12px; align-items: flex-start; }
+.botfather li > div { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1; }
+.botfather .faint { font-size: 12.5px; }
+.botfather .copyable { margin: 0; }
+button.link { background: none; border: 0; padding: 0; color: var(--accent); font: inherit; font-size: 12.5px; text-decoration: underline; cursor: pointer; }
+@media (max-width: 900px) { .app-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 480px) { .app-grid { grid-template-columns: 1fr; } .apps-bar { flex-wrap: wrap; } }

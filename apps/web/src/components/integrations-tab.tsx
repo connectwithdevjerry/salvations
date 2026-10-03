@@ -2,11 +2,13 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { CHANNELS, INTEGRATIONS, searchCatalog, type CatalogEntry } from '@salvations/catalog';
+import { CHANNELS, INTEGRATIONS, type CatalogEntry } from '@salvations/catalog';
 import { api, ws } from '@/lib/client/api';
 import { CapabilityReview } from '@/components/capability-review';
 import { Icon, Option } from '@/components/ui';
-import { SetupSteps, ScopeList, Copyable } from '@/components/setup-steps';
+import { SetupSteps, Copyable } from '@/components/setup-steps';
+import { AppDialog, AppGrid, RequestCard, type AppStatus } from '@/components/app-grid';
+import { CALLBACK_ERRORS, IntegrationSetup, authorise, type Binding } from '@/components/integration-setup';
 
 /**
  * One assistant's integrations.
@@ -22,12 +24,6 @@ import { SetupSteps, ScopeList, Copyable } from '@/components/setup-steps';
 interface Channel {
   id: string; channel: string; status: string; handle: string; displayName: string;
   agentId: string; webhookUrl: string; registeredWebhookUrl?: string; connectCode?: string; lastError?: string;
-}
-interface Binding {
-  id: string; agentId?: string; alias: string; catalogId?: string; serverName: string; url?: string; trustTier: string;
-  status: string; perUserAuth: boolean; negotiatedProtocolVersion?: string;
-  capabilityCount: number;
-  health: { circuitState: string; consecutiveFailures: number; lastError?: string };
 }
 interface Agent { id: string; name: string }
 interface ModelBinding { id: string; name: string; modelId: string }
@@ -105,12 +101,30 @@ export function IntegrationsTab({ workspaceId, agentId }: { workspaceId: string;
   }, [awaitingCode, reload]);
 
   const connectionOf = (entry: CatalogEntry) => channels.find((c) => c.channel === entry.id);
+  const bindingOf = (entry: CatalogEntry) => bindings.find((b) => b.alias === entry.id || b.catalogId === entry.id);
+  const agentName = agents[0]?.name ?? 'this assistant';
+
+  const statusOf = (entry: CatalogEntry): AppStatus => {
+    if (entry.kind === 'channel') {
+      const connection = connectionOf(entry);
+      if (connection === undefined) return { label: 'Not connected', tone: '' };
+      return STATUS[connection.status] ?? { label: connection.status, tone: '' };
+    }
+    if (entry.unavailable !== undefined) return { label: 'Coming soon', tone: '' };
+    const binding = bindingOf(entry);
+    if (binding === undefined) return { label: 'Not connected', tone: '' };
+    return STATUS[binding.status] ?? { label: binding.status, tone: '' };
+  };
+
+  const open = openId === undefined ? undefined : [...CHANNELS, ...INTEGRATIONS].find((e) => e.id === openId);
 
   return (
     <div className="page">
-      <p className="muted" style={{ margin: '0 0 6px' }}>
-        The platforms this assistant talks on and the services it works in. Each assistant has
-        its own; connecting here does not connect it for the others.
+      <h3 style={{ margin: '0 0 4px', fontSize: 18 }}>What should {agentName} be able to do?</h3>
+      <p className="muted" style={{ margin: '0 0 14px' }}>
+        The places it talks and the services it works in. Each is reached directly, on the
+        service&apos;s own consent screen; nothing of yours passes through anyone else. Each assistant
+        connects its own.
       </p>
 
       {error !== undefined && <p className="error" style={{ marginBottom: 12 }}>{error}</p>}
@@ -121,80 +135,43 @@ export function IntegrationsTab({ workspaceId, agentId }: { workspaceId: string;
         </div>
       )}
 
-      <Section
-        title="Channels"
-        lede="Chat platforms this assistant talks through."
-        entries={CHANNELS}
-        placeholder="Search channels…"
-        render={(entry) => {
-          const connection = connectionOf(entry);
-          const status = connection === undefined
-            ? { label: 'Not connected', tone: '' }
-            : STATUS[connection.status] ?? { label: connection.status, tone: '' };
-
-          return (
-            <Entry
-              key={entry.id}
-              entry={entry}
-              badge={status.label}
-              tone={status.tone}
-              open={openId === entry.id}
-              onToggle={() => setOpenId(openId === entry.id ? undefined : entry.id)}
-            >
-              <ChannelSetup
-                workspaceId={workspaceId}
-                entry={entry}
-                connection={connection}
-                agents={agents}
-                models={models}
-                onChanged={reload}
-                onError={setError}
-              />
-            </Entry>
-          );
-        }}
+      <AppGrid
+        entries={[...CHANNELS, ...INTEGRATIONS]}
+        statusOf={statusOf}
+        onPick={(entry) => setOpenId(entry.id)}
+        footer={<RequestCard workspaceId={workspaceId} />}
       />
 
-      <Section
-        title="Integrations"
-        lede="Services this assistant works in. Connect one and every tool it offers is its own."
-        entries={INTEGRATIONS}
-        placeholder="Search integrations…"
-        render={(entry) => {
-          const binding = bindings.find((b) => b.alias === entry.id);
-          const status = entry.unavailable !== undefined
-            ? { label: 'Coming soon', tone: '' }
-            : binding === undefined
-              ? { label: 'Not connected', tone: '' }
-              : STATUS[binding.status] ?? { label: binding.status, tone: '' };
-
-          return (
-            <Entry
-              key={entry.id}
-              entry={entry}
-              badge={status.label}
-              tone={status.tone}
-              open={openId === entry.id}
-              onToggle={() => setOpenId(openId === entry.id ? undefined : entry.id)}
-            >
-              <IntegrationSetup
-                workspaceId={workspaceId}
-                agentId={agentId}
-                entry={entry}
-                binding={binding}
-                onChanged={reload}
-                onError={setError}
-              />
-            </Entry>
-          );
-        }}
-      />
+      {open !== undefined && (
+        <AppDialog entry={open} status={statusOf(open)} onClose={() => setOpenId(undefined)}>
+          {open.kind === 'channel' ? (
+            <ChannelSetup
+              workspaceId={workspaceId}
+              entry={open}
+              connection={connectionOf(open)}
+              agents={agents}
+              models={models}
+              onChanged={reload}
+              onError={setError}
+            />
+          ) : (
+            <IntegrationSetup
+              workspaceId={workspaceId}
+              agentId={agentId}
+              entry={open}
+              binding={bindingOf(open)}
+              onChanged={reload}
+              onError={setError}
+            />
+          )}
+        </AppDialog>
+      )}
 
       <div className="section-head">
         <div>
           <h3 style={{ margin: 0, fontSize: 16 }}>Any MCP server</h3>
           <p>
-            Anything not listed above. Its capabilities arrive pending — installing a server
+            Anything not listed above. Its capabilities arrive pending: installing a server
             does not make its tools callable until somebody has read them.
           </p>
         </div>
@@ -211,293 +188,6 @@ export function IntegrationsTab({ workspaceId, agentId }: { workspaceId: string;
       />
 
       <CapabilityReview workspaceId={workspaceId} onChanged={reload} />
-    </div>
-  );
-}
-
-/** A searchable group. The search field appears only once it would earn its space. */
-function Section({
-  title, lede, entries, placeholder, render,
-}: {
-  title: string;
-  lede: string;
-  entries: readonly CatalogEntry[];
-  placeholder: string;
-  render: (entry: CatalogEntry) => React.ReactNode;
-}) {
-  const [query, setQuery] = useState('');
-  const matching = searchCatalog(entries, query);
-
-  return (
-    <>
-      <div className="section-head">
-        <div>
-          <p className="eyebrow" style={{ margin: '0 0 4px' }}>{title}</p>
-          <p>{lede}</p>
-        </div>
-      </div>
-
-      {entries.length > 4 && (
-        <input
-          type="search" aria-label={placeholder} placeholder={placeholder}
-          value={query} onChange={(e) => setQuery(e.target.value)}
-          style={{ marginBottom: 12 }}
-        />
-      )}
-
-      {matching.map(render)}
-      {matching.length === 0 && <p className="muted">Nothing matches “{query}”.</p>}
-    </>
-  );
-}
-
-/** One catalogue row, tinted with the service's own colour. */
-function Entry({
-  entry, badge, tone, open, onToggle, children,
-}: {
-  entry: CatalogEntry;
-  badge: string;
-  tone: string;
-  open: boolean;
-  onToggle: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className={open ? 'option open' : 'option'}>
-      <button type="button" className="option-head" aria-expanded={open} onClick={onToggle}>
-        <span
-          className="tile"
-          data-accent=""
-          aria-hidden
-          style={{ width: 30, height: 30, borderRadius: 9, ['--accent-brand' as string]: entry.accent }}
-        >
-          <Icon name={entry.kind === 'channel' ? 'chat' : 'plug'} size={16} />
-        </span>
-        <span className="grow">
-          {entry.name}
-          <span className={`badge ${tone}`} style={{ marginLeft: 8 }}>{badge}</span>
-          <span className="sub">{entry.summary}</span>
-        </span>
-        <span className="chev" aria-hidden><Icon name="chevron" size={16} /></span>
-      </button>
-      {open && <div className="option-body">{children}</div>}
-    </div>
-  );
-}
-
-/* ----------------------------------------------------- integration setup -- */
-
-/** What the callback's error codes mean, in words somebody can act on. */
-const CALLBACK_ERRORS: Readonly<Record<string, string>> = {
-  mcp_no_pending: 'That consent took too long, or started in another browser. Connect again.',
-  mcp_denied: 'You cancelled on the vendor\'s consent screen. Nothing was connected.',
-  mcp_incomplete: 'The vendor sent an incomplete response. Connect again.',
-  mcp_signed_out: 'You were signed out before consent finished. Sign in and connect again.',
-  mcp_wrong_person: 'That consent belongs to a different account than the one signed in here.',
-  mcp_gone: 'That connection no longer exists.',
-  mcp_failed: 'The vendor rejected the consent. Connect again; if it repeats, the server may have changed.',
-  mcp_discovery: 'Consent worked, but the server would not list its tools. Try authorising again.',
-};
-
-/**
- * Sends the person to the vendor's consent screen.
- *
- * A full navigation, not a fetch: the consent screen is on the vendor's site,
- * and the callback cookie the authorize route sets is what lets the return
- * trip find this connection.
- */
-async function authorise(workspaceId: string, bindingId: string): Promise<'connected' | 'sent'> {
-  const result = await api.post<{ status: string; authorizationUrl?: string }>(
-    `${ws(workspaceId)}/mcp/bindings/${bindingId}/authorize`,
-  );
-  if (result.authorizationUrl === undefined) return 'connected';
-  window.location.assign(result.authorizationUrl);
-  return 'sent';
-}
-
-function IntegrationSetup({
-  workspaceId, agentId, entry, binding, onChanged, onError,
-}: {
-  workspaceId: string;
-  agentId: string;
-  entry: CatalogEntry;
-  binding: Binding | undefined;
-  onChanged: () => void;
-  onError: (message: string | undefined) => void;
-}) {
-  const [busy, setBusy] = useState(false);
-
-  if (entry.unavailable !== undefined) {
-    return (
-      <>
-        <p className="muted" style={{ marginTop: 0 }}>Connecting will grant this assistant these permissions:</p>
-        <ScopeList scopes={entry.scopes} />
-        <div className="note" style={{ marginTop: 14 }}>
-          <span className="tile" aria-hidden><Icon name="clock" size={16} /></span>
-          <span>{entry.unavailable}</span>
-        </div>
-      </>
-    );
-  }
-
-  if (entry.setup === 'gateway_token') {
-    return <GatewaySetup workspaceId={workspaceId} agentId={agentId} entry={entry} binding={binding} onChanged={onChanged} onError={onError} />;
-  }
-
-  if (binding !== undefined && binding.status === 'connected') {
-    return (
-      <div className="stack" style={{ gap: 10 }}>
-        <div className="note">
-          <span className="tile" aria-hidden><Icon name="check" size={16} /></span>
-          <span>
-            <strong>Connected.</strong> {binding.capabilityCount}{' '}
-            {binding.capabilityCount === 1 ? 'tool' : 'tools'} available to this assistant.
-          </span>
-        </div>
-        <ScopeList scopes={entry.scopes} />
-        <div>
-          <button
-            type="button" disabled={busy}
-            onClick={async () => {
-              setBusy(true);
-              onError(undefined);
-              try {
-                if (await authorise(workspaceId, binding.id) === 'connected') onChanged();
-              } catch (caught) {
-                onError(caught instanceof Error ? caught.message : 'Could not re-authorise.');
-                setBusy(false);
-              }
-            }}
-          >
-            Re-authorise
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <>
-      <p className="muted" style={{ marginTop: 0 }}>Connecting grants this assistant these permissions:</p>
-      <ScopeList scopes={entry.scopes} />
-      <SetupSteps steps={entry.steps} />
-      {entry.native !== undefined && <NativeSetupNote entry={entry} />}
-      {binding?.health.lastError !== undefined && (
-        <p className="error" style={{ margin: '10px 0 0' }}>{binding.health.lastError}</p>
-      )}
-      <div style={{ marginTop: 14 }}>
-        <button
-          className="primary" type="button" disabled={busy}
-          onClick={async () => {
-            setBusy(true);
-            onError(undefined);
-            try {
-              const id = binding?.id ?? (await api.post<{ id: string }>(
-                `${ws(workspaceId)}/mcp/bindings`, { catalogId: entry.id, agentId },
-              )).id;
-              if (await authorise(workspaceId, id) === 'connected') onChanged();
-            } catch (caught) {
-              onError(caught instanceof Error ? caught.message : `Could not connect ${entry.name}.`);
-              setBusy(false);
-              onChanged();
-            }
-          }}
-        >
-          {busy ? 'Opening consent…' : binding === undefined ? `Connect ${entry.name}` : 'Authorise'}
-          {' '}<Icon name="arrow" size={14} />
-        </button>
-      </div>
-    </>
-  );
-}
-
-/**
- * A gateway the person runs: its address and its token, typed in.
- *
- * Checked live before anything is stored, so a wrong address is the answer
- * to pressing the button and not a surprise in a chat. Reconnecting with a
- * new token or address is the same form again.
- */
-function GatewaySetup({
-  workspaceId, agentId, entry, binding, onChanged, onError,
-}: {
-  workspaceId: string;
-  agentId: string;
-  entry: CatalogEntry;
-  binding: Binding | undefined;
-  onChanged: () => void;
-  onError: (message: string | undefined) => void;
-}) {
-  const [url, setUrl] = useState('');
-  const [token, setToken] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [editing, setEditing] = useState(false);
-  const connected = binding !== undefined && binding.status === 'connected';
-
-  return (
-    <div className="stack" style={{ gap: 10 }}>
-      {connected && (
-        <div className="note">
-          <span className="tile" aria-hidden><Icon name="check" size={16} /></span>
-          <span>
-            <strong>Connected</strong>{binding.url !== undefined && <> to <span className="mono">{binding.url}</span></>}.{' '}
-            {binding.capabilityCount} {binding.capabilityCount === 1 ? 'tool' : 'tools'} available to this assistant.
-          </span>
-        </div>
-      )}
-      <ScopeList scopes={entry.scopes} />
-      {(!connected || editing) && (
-        <>
-          <SetupSteps steps={entry.steps} />
-          <form
-            className="stack"
-            onSubmit={async (event) => {
-              event.preventDefault();
-              setBusy(true);
-              onError(undefined);
-              try {
-                const id = binding?.id ?? (await api.post<{ id: string }>(
-                  `${ws(workspaceId)}/mcp/bindings`, { catalogId: entry.id, agentId },
-                )).id;
-                await api.post(`${ws(workspaceId)}/mcp/bindings/${id}/gateway`, { url, token });
-                setToken('');
-                setEditing(false);
-                onChanged();
-              } catch (caught) {
-                onError(caught instanceof Error ? caught.message : `Could not connect ${entry.name}.`);
-                onChanged();
-              } finally { setBusy(false); }
-            }}
-          >
-            <div>
-              <label htmlFor={`gateway-url-${entry.id}`}>Gateway address</label>
-              <input
-                id={`gateway-url-${entry.id}`} type="url" required placeholder="https://claw.example.com"
-                value={url} onChange={(e) => setUrl(e.target.value)}
-              />
-            </div>
-            <div>
-              <label htmlFor={`gateway-token-${entry.id}`}>Gateway token</label>
-              <input
-                id={`gateway-token-${entry.id}`} type="password" required autoComplete="off"
-                value={token} onChange={(e) => setToken(e.target.value)}
-              />
-            </div>
-            {binding?.health.lastError !== undefined && !connected && (
-              <p className="error" style={{ margin: 0 }}>{binding.health.lastError}</p>
-            )}
-            <div className="row" style={{ justifyContent: 'flex-start', gap: 8 }}>
-              <button className="primary" type="submit" disabled={busy || url.trim() === '' || token.trim() === ''}>
-                {busy ? 'Checking the gateway…' : connected ? 'Update connection' : `Connect ${entry.name}`}
-              </button>
-              {editing && <button type="button" className="ghost" onClick={() => setEditing(false)}>Cancel</button>}
-            </div>
-          </form>
-        </>
-      )}
-      {connected && !editing && (
-        <div><button type="button" onClick={() => setEditing(true)}>Change address or token</button></div>
-      )}
     </div>
   );
 }
@@ -946,35 +636,3 @@ function InstallForm({
   );
 }
 
-/**
- * What the vendor's console needs before consent can succeed.
- *
- * Google answers "Access blocked: this app's request is invalid" when the
- * redirect URI is not on the OAuth client, and its own page does not say
- * which URI it wanted. So the URI is here, with the two other things Google
- * checks, in front of the button rather than behind the error.
- */
-function NativeSetupNote({ entry }: { entry: CatalogEntry }) {
-  const [origin, setOrigin] = useState('');
-  useEffect(() => { setOrigin(window.location.origin); }, []);
-  if (entry.id !== 'google_workspace') return null;
-  return (
-    <div className="card" style={{ marginTop: 14 }}>
-      <strong>Before the first connection, in Google Cloud</strong>
-      <ol className="steps-list" style={{ margin: '8px 0 0' }}>
-        <li>
-          On the OAuth client used for “Sign in with Google”, add this authorised redirect URI:
-          <div style={{ marginTop: 6 }}><Copyable label="Redirect URI" value={`${origin}/api/mcp/callback`} /></div>
-        </li>
-        <li>Enable the Gmail API, Google Calendar API and Google Drive API for the project.</li>
-        <li>
-          On the consent screen, add the three scopes above. While the app is in testing, add
-          yourself as a test user.
-        </li>
-      </ol>
-      <p className="muted" style={{ margin: '8px 0 0' }}>
-        Google says “Access blocked: this app’s request is invalid” when the redirect URI is missing.
-      </p>
-    </div>
-  );
-}

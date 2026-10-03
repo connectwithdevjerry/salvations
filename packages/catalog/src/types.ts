@@ -25,6 +25,19 @@ export type SetupKind =
 
 export type EntryKind = 'channel' | 'integration';
 
+/** The shelves of the picker, in the order they are shown. */
+export const CATEGORIES = [
+  'Chat',
+  'Email, calendar & files',
+  'Work & docs',
+  'Money & sales',
+  'Support',
+  'Design & content',
+  'Product & code',
+  'Your own',
+] as const;
+export type CatalogCategory = typeof CATEGORIES[number];
+
 /** One instruction in a setup flow, in the order a person performs it. */
 export interface SetupStep {
   readonly title: string;
@@ -51,6 +64,8 @@ export interface CatalogEntry {
   readonly name: string;
   /** One line, in the list. Says what connecting gets you, not what it is. */
   readonly summary: string;
+  /** Where it sits in the picker: the shelf a person would look on. */
+  readonly category: CatalogCategory;
   readonly setup: SetupKind;
   /** The brand colour, used only for the entry's tile. */
   readonly accent: string;

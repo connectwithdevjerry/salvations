@@ -3,13 +3,15 @@
 import { use, useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { CHANNELS, DEFAULT_AGENT_NAME, ROLES, type AssistantRole, type CatalogEntry, type CatalogModel } from '@salvations/catalog';
+import { CHANNELS, DEFAULT_AGENT_NAME, INTEGRATIONS, ROLES, type AssistantRole, type CatalogEntry, type CatalogModel } from '@salvations/catalog';
 import { api, ws } from '@/lib/client/api';
 import { BrandMark, Icon, Option, StepDots, Tile } from '@/components/ui';
 import { SetupSteps, Copyable } from '@/components/setup-steps';
 import { Qr } from '@/components/qr';
 import { GroupPicker } from '@/components/group-picker';
 import { VendorCards, keyStatesOf, vendorCopy } from '@/components/vendor-mark';
+import { AppDialog, AppGrid, type AppStatus } from '@/components/app-grid';
+import { IntegrationSetup, type Binding } from '@/components/integration-setup';
 
 /**
  * Creating an agent.
@@ -67,6 +69,18 @@ export default function CreateAgentPage({ params }: { params: Promise<{ workspac
       id: 'model',
       render: () => (
         <ModelStep
+          workspaceId={workspaceId}
+          agentId={agent?.id ?? ''}
+          agentName={agent?.name ?? 'your agent'}
+          onDone={next}
+          onError={setError}
+        />
+      ),
+    },
+    {
+      id: 'apps',
+      render: () => (
+        <AppsStep
           workspaceId={workspaceId}
           agentId={agent?.id ?? ''}
           agentName={agent?.name ?? 'your agent'}
@@ -370,6 +384,7 @@ function ChannelStep({
                     workspaceId={workspaceId}
                     entry={entry}
                     agentId={agentId}
+                    agentName={agentName}
                     onDone={reload}
                     onError={onError}
                   />
@@ -407,15 +422,17 @@ function ChannelStep({
  * is the same underneath; the walkthrough only decides when it appears.
  */
 function TelegramSetup({
-  workspaceId, entry, agentId, onDone, onError,
+  workspaceId, entry, agentId, agentName, onDone, onError,
 }: {
   workspaceId: string;
   entry: CatalogEntry;
   agentId: string;
+  agentName: string;
   onDone: () => void;
   onError: (message: string) => void;
 }) {
   const [hasBot, setHasBot] = useState<boolean>();
+  const [username, setUsername] = useState(() => botUsername(agentName));
 
   if (hasBot === undefined) {
     return (
@@ -455,10 +472,105 @@ function TelegramSetup({
         </div>
       </div>
 
-      <SetupSteps steps={entry.steps.slice(1)} />
+      <p className="muted" style={{ margin: 0 }}>
+        BotFather walks you through three messages. The username can be anything unused on
+        Telegram that ends in “bot”; ours is ready to paste, and if BotFather says it is taken,
+        generate another.
+      </p>
+      <ol className="botfather">
+        <li><span className="steps-num" aria-hidden>1</span><div><span className="faint">Send</span><Copyable value="/newbot" /></div></li>
+        <li><span className="steps-num" aria-hidden>2</span><div><span className="faint">When it asks for a name</span><Copyable value={agentName} /></div></li>
+        <li>
+          <span className="steps-num" aria-hidden>3</span>
+          <div>
+            <span className="faint">
+              When it asks for a username ·{' '}
+              <button type="button" className="link" onClick={() => setUsername(botUsername(agentName))}>generate another</button>
+            </span>
+            <Copyable value={username} />
+          </div>
+        </li>
+      </ol>
+      <p className="muted" style={{ margin: 0 }}>
+        BotFather replies with an <strong>HTTP API token</strong>, a long line like{' '}
+        <span className="mono">8123456789:AAF…</span>. Copy it and paste it below.
+      </p>
 
       <TokenForm workspaceId={workspaceId} entry={entry} agentId={agentId} onDone={onDone} onError={onError} />
     </div>
+  );
+}
+
+/** A Telegram bot username: the assistant's name, a few random characters, and the required "Bot". */
+function botUsername(agentName: string): string {
+  const base = agentName.replace(/[^a-zA-Z0-9]/g, '').slice(0, 20) || 'Hive';
+  const salt = Math.random().toString(36).replace(/[^a-z0-9]/g, '').slice(0, 4).toUpperCase();
+  return `${base}${salt}Bot`;
+}
+
+/* --------------------------------------------------------------- 4. apps -- */
+
+/**
+ * What it should be able to do.
+ *
+ * The same picker as the Integrations tab. Connecting most apps sends the
+ * person to the vendor's consent screen and brings them back to the
+ * assistant, so this step is also where the wizard ends for them, and that
+ * is fine: the assistant is made, and the rest is on its page.
+ */
+function AppsStep({
+  workspaceId, agentId, agentName, onDone, onError,
+}: {
+  workspaceId: string;
+  agentId: string;
+  agentName: string;
+  onDone: () => void;
+  onError: (message: string) => void;
+}) {
+  const [bindings, setBindings] = useState<Binding[]>([]);
+  const [open, setOpen] = useState<CatalogEntry>();
+
+  const reload = useCallback(() => {
+    void api.get<{ items: Binding[] }>(`${ws(workspaceId)}/mcp/bindings?agent=${encodeURIComponent(agentId)}`)
+      .then((r) => setBindings(r.items)).catch(() => undefined);
+  }, [workspaceId, agentId]);
+  useEffect(() => { reload(); }, [reload]);
+
+  const bindingOf = (entry: CatalogEntry) => bindings.find((b) => b.alias === entry.id || b.catalogId === entry.id);
+  const statusOf = (entry: CatalogEntry): AppStatus => {
+    if (entry.unavailable !== undefined) return { label: 'Coming soon', tone: '' };
+    const binding = bindingOf(entry);
+    if (binding === undefined) return { label: 'Not connected', tone: '' };
+    return binding.status === 'connected' ? { label: 'Connected', tone: 'ok' } : { label: 'Needs authorisation', tone: 'warn' };
+  };
+
+  return (
+    <>
+      <Head
+        icon="plug"
+        title={`What should ${agentName} be able to do?`}
+        lede="Gmail, your calendar and the tools you already use. Each is connected on the service's own consent screen, and the token stays encrypted in your database."
+      />
+      <AppGrid entries={INTEGRATIONS} statusOf={statusOf} onPick={setOpen} compact />
+      {open !== undefined && (
+        <AppDialog entry={open} status={statusOf(open)} onClose={() => setOpen(undefined)}>
+          <IntegrationSetup
+            workspaceId={workspaceId}
+            agentId={agentId}
+            entry={open}
+            binding={bindingOf(open)}
+            onChanged={reload}
+            onError={(message) => { if (message !== undefined) onError(message); }}
+          />
+        </AppDialog>
+      )}
+      <div className="wizard-foot">
+        <span className="faint">You can connect more later on the Integrations tab.</span>
+        <button className="primary" type="button" onClick={onDone}>
+          {bindings.length === 0 ? 'Skip for now' : 'Continue'} <Icon name="arrow" size={15} />
+        </button>
+      </div>
+    </>
   );
 }
 

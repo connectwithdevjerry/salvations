@@ -19,6 +19,7 @@ import type { CatalogEntry } from './types';
 const TELEGRAM: CatalogEntry = {
   id: 'telegram',
   kind: 'channel',
+  category: 'Chat',
   name: 'Telegram',
   summary: 'DM your agent on Telegram through a bot you create with BotFather.',
   setup: 'bot_token',
@@ -58,6 +59,7 @@ const TELEGRAM: CatalogEntry = {
 const DISCORD: CatalogEntry = {
   id: 'discord',
   kind: 'channel',
+  category: 'Chat',
   name: 'Discord',
   summary: 'Ask your agent from any Discord channel with a /hive command.',
   setup: 'bot_token',
@@ -101,6 +103,7 @@ const DISCORD: CatalogEntry = {
 const SLACK: CatalogEntry = {
   id: 'slack',
   kind: 'channel',
+  category: 'Chat',
   name: 'Slack',
   summary: 'Connect a Slack workspace for direct messages and channel mentions.',
   setup: 'bot_token',

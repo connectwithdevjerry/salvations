@@ -57,6 +57,14 @@ export function stepsFor(context: TourContext): readonly TourStep[] {
         body: `Talk to ${name} here exactly as you would on Telegram. Chats can be renamed or deleted from the row above the messages.`,
       },
       {
+        id: 'speak',
+        path: agentPath,
+        target: 'tab-speak',
+        activate: true,
+        title: 'Speak',
+        body: `Talk to ${name} out loud. Press Start, say what you need, and it answers in its own voice, with everything it heard and said written down beside it. Voice needs an OpenAI key.`,
+      },
+      {
         id: 'ways',
         path: agentPath,
         target: 'ways',

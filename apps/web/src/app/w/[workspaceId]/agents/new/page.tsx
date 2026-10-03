@@ -311,7 +311,8 @@ function ChannelStep({
 }) {
   const [open, setOpen] = useState<string>('telegram');
   const [channels, setChannels] = useState<Channel[]>([]);
-  const way = WAYS.find((w) => w.id === open) ?? WAYS[0]!;
+  const [hovered, setHovered] = useState<TalkWay>();
+  const way = hovered ?? WAYS.find((w) => w.id === open) ?? WAYS[0]!;
   const entry = way.entry;
   const connection = entry === undefined ? undefined : channels.find((c) => c.channel === entry.id);
 
@@ -374,6 +375,7 @@ function ChannelStep({
                   return c === undefined ? undefined : c.connectCode !== undefined ? 'One step left' : 'Connected';
                 }}
                 onPick={(w) => setOpen(w.id)}
+                onHover={setHovered}
               />
               {entry !== undefined && (
                 <div className="card" style={{ marginTop: 14 }}>

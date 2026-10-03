@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { CATEGORIES, searchCatalog, type CatalogEntry } from '@salvations/catalog';
 import { api, ws } from '@/lib/client/api';
 import { Icon } from '@/components/ui';
 import { useDialog } from '@/components/dialog';
+import { AppLogo } from '@/components/app-logo';
 
 /**
  * The app picker.
@@ -61,9 +62,7 @@ export function AppGrid({
               const status = statusOf(entry);
               return (
                 <button key={entry.id} type="button" className="app-card" onClick={() => onPick(entry)}>
-                  <span className="app-tile" style={{ ['--accent-brand' as string]: entry.accent }} aria-hidden>
-                    {entry.name.charAt(0)}
-                  </span>
+                  <AppLogo id={entry.id} name={entry.name} accent={entry.accent} />
                   <span className="app-copy">
                     <span className="app-name">{entry.name}</span>
                     <span className="app-cat">{entry.category}</span>
@@ -96,7 +95,7 @@ export function AppDialog({
     <div className="dialog-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
       <div className="dialog wide app-dialog" role="dialog" aria-modal="true" aria-labelledby="app-dialog-title">
         <div className="app-dialog-head">
-          <span className="app-tile" style={{ ['--accent-brand' as string]: entry.accent }} aria-hidden>{entry.name.charAt(0)}</span>
+          <AppLogo id={entry.id} name={entry.name} accent={entry.accent} />
           <div style={{ flex: 1, minWidth: 0 }}>
             <h3 id="app-dialog-title" style={{ margin: 0 }}>{entry.name}</h3>
             <p className="muted" style={{ margin: '2px 0 0' }}>{entry.summary}</p>
@@ -106,6 +105,91 @@ export function AppDialog({
         </div>
         <div className="app-dialog-body">{children}</div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * The picker, as a modal.
+ *
+ * Every app on one sheet, searchable, on shelves, over whatever page asked
+ * for it. Picking one closes the sheet and hands the entry back; the page
+ * then opens that app's own panel.
+ */
+export function AppPickerDialog({
+  title, lede, entries, statusOf, onPick, onClose, footer,
+}: {
+  title: string;
+  lede?: string;
+  entries: readonly CatalogEntry[];
+  statusOf: (entry: CatalogEntry) => AppStatus;
+  onPick: (entry: CatalogEntry) => void;
+  onClose: () => void;
+  footer?: ReactNode;
+}) {
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  return (
+    <div className="dialog-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+      <div className="dialog wide apps-dialog" role="dialog" aria-modal="true" aria-labelledby="apps-dialog-title">
+        <div className="app-dialog-head">
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <h3 id="apps-dialog-title" style={{ margin: 0 }}>{title}</h3>
+            {lede !== undefined && <p className="muted" style={{ margin: '2px 0 0' }}>{lede}</p>}
+          </div>
+          <button type="button" className="ghost" aria-label="Close" onClick={onClose}><Icon name="exit" size={16} /></button>
+        </div>
+        <div className="app-dialog-body">
+          <AppGrid entries={entries} statusOf={statusOf} onPick={onPick} footer={footer} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * What is connected, and the card that adds more.
+ *
+ * The page shows only the apps this assistant actually has; the whole
+ * catalogue lives in the picker. An assistant with nothing yet gets one
+ * card that says so and opens it.
+ */
+export function ConnectedApps({
+  entries, statusOf, onPick, onAdd, addLabel = 'Add an app',
+}: {
+  entries: readonly CatalogEntry[];
+  statusOf: (entry: CatalogEntry) => AppStatus;
+  onPick: (entry: CatalogEntry) => void;
+  onAdd: () => void;
+  addLabel?: string;
+}) {
+  const connected = entries
+    .map((entry) => ({ entry, status: statusOf(entry) }))
+    .filter(({ status }) => status.label !== 'Not connected' && status.label !== 'Coming soon');
+
+  return (
+    <div className="app-grid">
+      {connected.map(({ entry, status }) => (
+        <button key={entry.id} type="button" className="app-card" onClick={() => onPick(entry)}>
+          <AppLogo id={entry.id} name={entry.name} accent={entry.accent} />
+          <span className="app-copy">
+            <span className="app-name">{entry.name}</span>
+            <span className={`app-cat ${status.tone}`}>{status.label}</span>
+          </span>
+          <span className={`app-status ${status.tone}`} title={status.label}>{status.label}</span>
+        </button>
+      ))}
+      <button type="button" className={`app-card app-add${connected.length === 0 ? ' wide' : ''}`} onClick={onAdd}>
+        <span className="app-tile" aria-hidden><Icon name="plus" size={20} /></span>
+        <span className="app-copy">
+          <span className="app-name">{addLabel}</span>
+          <span className="app-cat">{connected.length === 0 ? `Browse all ${entries.length} apps` : `${entries.length - connected.length} more to choose from`}</span>
+        </span>
+      </button>
     </div>
   );
 }

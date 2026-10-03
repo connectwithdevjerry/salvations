@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { CHANNELS, type CatalogEntry } from '@salvations/catalog';
 import { api, ws } from '@/lib/client/api';
 import { Icon } from '@/components/ui';
+import { AppLogo } from '@/components/app-logo';
 
 /**
  * Where you can reach an assistant.
@@ -69,9 +70,13 @@ export function WayCards({
             className={selected === way.id ? 'way on' : 'way'}
             onClick={() => onPick(way)}
           >
-            <span className="way-tile" style={{ ['--accent-brand' as string]: way.accent }} aria-hidden>
-              <Icon name={way.id === 'voice' ? 'mic' : 'chat'} size={20} />
-            </span>
+            {way.entry !== undefined
+              ? <AppLogo id={way.entry.id} name={way.entry.name} accent={way.accent} size={44} />
+              : (
+                <span className="way-tile" style={{ ['--accent-brand' as string]: way.accent }} aria-hidden>
+                  <Icon name={way.id === 'voice' ? 'mic' : 'chat'} size={20} />
+                </span>
+              )}
             <span className="way-copy">
               <strong>{way.name}</strong>
               <small>{way.sub}</small>

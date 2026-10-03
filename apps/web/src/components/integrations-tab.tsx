@@ -7,7 +7,7 @@ import { api, ws } from '@/lib/client/api';
 import { CapabilityReview } from '@/components/capability-review';
 import { Icon, Option } from '@/components/ui';
 import { SetupSteps, Copyable } from '@/components/setup-steps';
-import { AppDialog, AppGrid, RequestCard, type AppStatus } from '@/components/app-grid';
+import { AppDialog, AppPickerDialog, ConnectedApps, RequestCard, type AppStatus } from '@/components/app-grid';
 import { CALLBACK_ERRORS, IntegrationSetup, authorise, type Binding } from '@/components/integration-setup';
 
 /**
@@ -44,6 +44,7 @@ export function IntegrationsTab({ workspaceId, agentId }: { workspaceId: string;
   const [agents, setAgents] = useState<Agent[]>([]);
   const [models, setModels] = useState<ModelBinding[]>([]);
   const [openId, setOpenId] = useState<string>();
+  const [picking, setPicking] = useState(false);
   const [error, setError] = useState<string>();
 
   const reload = useCallback(() => {
@@ -135,12 +136,24 @@ export function IntegrationsTab({ workspaceId, agentId }: { workspaceId: string;
         </div>
       )}
 
-      <AppGrid
+      <ConnectedApps
         entries={[...CHANNELS, ...INTEGRATIONS]}
         statusOf={statusOf}
         onPick={(entry) => setOpenId(entry.id)}
-        footer={<RequestCard workspaceId={workspaceId} />}
+        onAdd={() => setPicking(true)}
       />
+
+      {picking && (
+        <AppPickerDialog
+          title={`What should ${agentName} be able to do?`}
+          lede="Every app here is reached directly, on its own consent screen."
+          entries={[...CHANNELS, ...INTEGRATIONS]}
+          statusOf={statusOf}
+          onPick={(entry) => { setPicking(false); setOpenId(entry.id); }}
+          onClose={() => setPicking(false)}
+          footer={<RequestCard workspaceId={workspaceId} />}
+        />
+      )}
 
       {open !== undefined && (
         <AppDialog entry={open} status={statusOf(open)} onClose={() => setOpenId(undefined)}>

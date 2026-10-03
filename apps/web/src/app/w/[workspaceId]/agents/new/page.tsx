@@ -10,7 +10,7 @@ import { SetupSteps, Copyable } from '@/components/setup-steps';
 import { Qr } from '@/components/qr';
 import { GroupPicker } from '@/components/group-picker';
 import { VendorCards, keyStatesOf, vendorCopy } from '@/components/vendor-mark';
-import { AppDialog, AppGrid, type AppStatus } from '@/components/app-grid';
+import { AppDialog, AppPickerDialog, ConnectedApps, type AppStatus } from '@/components/app-grid';
 import { IntegrationSetup, type Binding } from '@/components/integration-setup';
 import { PhoneMock, WayCards, WAYS, type TalkWay } from '@/components/ways-to-talk';
 
@@ -544,6 +544,7 @@ function AppsStep({
 }) {
   const [bindings, setBindings] = useState<Binding[]>([]);
   const [open, setOpen] = useState<CatalogEntry>();
+  const [picking, setPicking] = useState(false);
 
   const reload = useCallback(() => {
     void api.get<{ items: Binding[] }>(`${ws(workspaceId)}/mcp/bindings?agent=${encodeURIComponent(agentId)}`)
@@ -566,7 +567,17 @@ function AppsStep({
         title={`What should ${agentName} be able to do?`}
         lede="Gmail, your calendar and the tools you already use. Each is connected on the service's own consent screen, and the token stays encrypted in your database."
       />
-      <AppGrid entries={INTEGRATIONS} statusOf={statusOf} onPick={setOpen} compact />
+      <ConnectedApps entries={INTEGRATIONS} statusOf={statusOf} onPick={setOpen} onAdd={() => setPicking(true)} addLabel="Choose an app" />
+      {picking && (
+        <AppPickerDialog
+          title={`What should ${agentName} be able to do?`}
+          lede="Every app here is reached directly, on its own consent screen."
+          entries={INTEGRATIONS}
+          statusOf={statusOf}
+          onPick={(entry) => { setPicking(false); setOpen(entry); }}
+          onClose={() => setPicking(false)}
+        />
+      )}
       {open !== undefined && (
         <AppDialog entry={open} status={statusOf(open)} onClose={() => setOpen(undefined)}>
           <IntegrationSetup

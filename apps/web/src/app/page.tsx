@@ -4,6 +4,8 @@ import { cookies } from 'next/headers';
 import { CATALOG, PLANS, ROLES } from '@salvations/catalog';
 import { BrandMark, Icon } from '@/components/ui';
 import { VendorMark } from '@/components/vendor-mark';
+import { AppLogo } from '@/components/app-logo';
+import { LandingApps } from '@/components/landing-apps';
 import { callerFromCookieHeader } from '@/lib/session';
 
 /**
@@ -77,8 +79,8 @@ export default async function Home() {
         <div className="land-marquee">
           <div className="land-marquee-track">
             {[...CATALOG, ...CATALOG].map((entry, i) => (
-              <span key={`${entry.id}-${i}`} className="land-logo" style={{ ['--accent-brand' as string]: entry.accent }}>
-                <span className="land-logo-dot" aria-hidden />{entry.name}
+              <span key={`${entry.id}-${i}`} className="land-logo">
+                <AppLogo id={entry.id} name={entry.name} accent={entry.accent} size={22} />{entry.name}
               </span>
             ))}
             {['anthropic', 'openai', 'anthropic', 'openai'].map((type, i) => (
@@ -88,6 +90,7 @@ export default async function Home() {
             ))}
           </div>
         </div>
+        <LandingApps />
       </section>
 
       {/* ------------------------------------------------------- explain -- */}
@@ -205,7 +208,7 @@ export default async function Home() {
           <Step n={1} title="Connect your stack" body="Your Telegram bot, your Gmail, your calendar, GitHub, Notion, Linear, or an assistant you already run on your own machine. Each on the vendor's own consent screen; the tokens stay encrypted in your database.">
             <div className="mock-rows">
               {integrations.slice(0, 4).map((e, i) => (
-                <div key={e.id} className="mock-row"><span className="mock-tag" style={{ background: e.accent }} />{e.name}<span className={`mock-pill ${i < 3 ? 'ok' : ''}`}>{i < 3 ? 'Connected' : 'Connect'}</span></div>
+                <div key={e.id} className="mock-row"><AppLogo id={e.id} name={e.name} accent={e.accent} size={20} />{e.name}<span className={`mock-pill ${i < 3 ? 'ok' : ''}`}>{i < 3 ? 'Connected' : 'Connect'}</span></div>
               ))}
             </div>
           </Step>

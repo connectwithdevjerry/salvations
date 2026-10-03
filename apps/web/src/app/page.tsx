@@ -35,6 +35,7 @@ export default async function Home() {
         <BrandMark />
         <nav className="land-links" aria-label="Sections">
           <a href="#how">How it works</a>
+          <a href="#speak">Speak</a>
           <a href="#integrations">Integrations</a>
           <a href="#security">Security</a>
           <a href="#pricing">Pricing</a>
@@ -54,7 +55,7 @@ export default async function Home() {
           <p className="land-lede">
             Ask once, get finished work back. HIVE is a team of assistants for marketing, sales,
             support, product design and your own to-do list. It lives in <strong>Telegram</strong>,
-            reads your documents, works in your tools, and stops to ask before anything it cannot undo.
+            talks with you out loud, reads your documents, works in your tools, and stops to ask before anything it cannot undo.
           </p>
           <div className="land-cta">
             <Link href="/signup"><button className="primary lg" type="button">Create your assistant <Icon name="arrow" size={16} /></button></Link>
@@ -151,6 +152,34 @@ export default async function Home() {
         </div>
       </section>
 
+      {/* --------------------------------------------------------- speak -- */}
+      <section className="land-section land-speak" id="speak">
+        <div>
+          <p className="kicker">Speak</p>
+          <h2>Or just say it out loud.</h2>
+          <p className="land-sub">
+            Open the Speak tab, press Start, and talk. It listens, answers in its own voice, and writes
+            down everything it heard and said. The same assistant, the same memory, the same approvals.
+          </p>
+          <ul className="land-ticks">
+            <li><Icon name="mic" size={16} /><span><strong>Hands free.</strong> Ask for the morning summary while you make the coffee.</span></li>
+            <li><Icon name="chat" size={16} /><span><strong>Written down.</strong> Every word, both ways, in the transcript beside the console.</span></li>
+            <li><Icon name="key" size={16} /><span><strong>Your key.</strong> Voice runs on your own OpenAI key. Text works with either provider.</span></li>
+          </ul>
+        </div>
+        <div className="mock-voice" aria-hidden>
+          <div className="mock-voice-top"><span>BEE // VOICE LINK</span><span className="mock-voice-live">LISTENING</span></div>
+          <div className="mock-voice-orb"><span className="mock-voice-ring" /><span className="mock-voice-core" /></div>
+          <div className="mock-voice-bars">
+            {Array.from({ length: 32 }, (_, i) => <span key={i} style={{ height: `${18 + Math.round(72 * Math.abs(Math.sin(i * 0.7 + 0.4)))}%` }} />)}
+          </div>
+          <div className="mock-voice-log">
+            <span>you</span><p>what is waiting on me today?</p>
+            <span>bee</span><p>Three things. Okoro&apos;s invoice query, Bright Lane&apos;s quote, and Tunde&apos;s delivery date. Want me to draft the replies?</p>
+          </div>
+        </div>
+      </section>
+
       {/* ---------------------------------------------------------- team -- */}
       <section className="land-section">
         <p className="kicker">Meet the team</p>
@@ -189,7 +218,7 @@ export default async function Home() {
               <span className="mock-node n4">Team</span>
             </div>
           </Step>
-          <Step n={3} title="Delegate where you already work" body="Send the request from Telegram, or type it here, or ask from Claude.ai and ChatGPT: every assistant is its own MCP server. It does the work and reports back, including what did not work.">
+          <Step n={3} title="Delegate where you already work" body="Send the request from Telegram, type it here, say it out loud on the Speak tab, or ask from Claude.ai and ChatGPT: every assistant is its own MCP server. It does the work and reports back, including what did not work.">
             <div className="mock-chat">
               <span className="mock-bubble you">draft replies to everyone waiting on me, then archive the newsletters</span>
               <span className="mock-bubble">Three drafts are in your Gmail. The 14 newsletters wait for your approval above.</span>

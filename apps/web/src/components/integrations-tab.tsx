@@ -194,6 +194,61 @@ export function IntegrationsTab({ workspaceId, agentId }: { workspaceId: string;
 
 /* --------------------------------------------------------- channel setup -- */
 
+/**
+ * The channel setup panel on its own, loading what it needs. For the
+ * "Ways to talk" dialog, which has no list of channels of its own.
+ */
+export function ChannelSetupFor({
+  workspaceId, agentId, entry, onChanged,
+}: {
+  workspaceId: string;
+  agentId: string;
+  entry: CatalogEntry;
+  onChanged: () => void;
+}) {
+  const [channels, setChannels] = useState<Channel[]>([]);
+  const [agents, setAgents] = useState<Agent[]>([]);
+  const [models, setModels] = useState<ModelBinding[]>([]);
+  const [error, setError] = useState<string>();
+
+  const reload = useCallback(() => {
+    void api.get<{ items: Channel[] }>(`${ws(workspaceId)}/channels`)
+      .then((r) => setChannels(r.items.filter((c) => c.agentId === agentId))).catch(() => undefined);
+    onChanged();
+  }, [workspaceId, agentId, onChanged]);
+
+  useEffect(() => {
+    reload();
+    void api.get<{ items: Agent[] }>(`${ws(workspaceId)}/agents`)
+      .then((r) => setAgents(r.items.filter((a) => a.id === agentId))).catch(() => undefined);
+    void api.get<{ items: ModelBinding[] }>(`${ws(workspaceId)}/models`)
+      .then((r) => setModels(r.items)).catch(() => undefined);
+  }, [reload, workspaceId, agentId]);
+
+  const awaiting = channels.some((c) => c.connectCode !== undefined);
+  useEffect(() => {
+    if (!awaiting) return;
+    const timer = setInterval(reload, 3_000);
+    return () => clearInterval(timer);
+  }, [awaiting, reload]);
+
+  return (
+    <>
+      {error !== undefined && <p className="error">{error}</p>}
+      <ChannelSetup
+        workspaceId={workspaceId}
+        entry={entry}
+        connection={channels.find((c) => c.channel === entry.id)}
+        agents={agents}
+        models={models}
+        onChanged={reload}
+        onError={setError}
+      />
+    </>
+  );
+}
+
+
 /** Which platforms issue their own signing secret, and what to call it. */
 const SECONDARY: Record<string, { label: string; help: string }> = {
   slack: {

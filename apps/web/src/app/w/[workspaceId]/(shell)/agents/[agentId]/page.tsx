@@ -9,7 +9,9 @@ import { AgentEditor, type AgentDetail, type Binding } from '@/components/agent-
 import { ConversationView } from '@/components/conversation-view';
 import { KnowledgePanel } from '@/components/knowledge-panel';
 import { SchedulePanel } from '@/components/schedule-panel';
-import { SpeakTab } from '@/components/speak-tab';
+import { VoiceLink } from '@/components/voice-link';
+import { WaysToTalkDialog } from '@/components/ways-to-talk';
+import { ChannelSetupFor } from '@/components/integrations-tab';
 import { IntegrationsTab } from '@/components/integrations-tab';
 import { ServerTab } from '@/components/server-tab';
 import { ModelTab } from '@/components/model-tab';
@@ -55,6 +57,7 @@ export default function AgentPage({
   const agent = agents?.find((a) => a.id === agentId);
   const [tab, setTab] = useState<Tab>('chat');
   const [conversationId, setConversationId] = useState<string>();
+  const [ways, setWays] = useState(false);
 
   // Tab and conversation come from the URL, read after mount so a link to a
   // specific chat opens it. useSearchParams would opt the page out of static
@@ -115,6 +118,9 @@ export default function AgentPage({
           <span className="agent-status-dot" aria-hidden />
           {STATUS_LABEL[agent.status]}
         </span>
+        <button type="button" className="ghost agent-ways" onClick={() => setWays(true)} data-tour="ways">
+          <Icon name="chat" size={15} /> Ways to talk
+        </button>
         <nav className="agent-tabs" aria-label="Sections">
           {TABS.map((t) => (
             <button
@@ -138,7 +144,16 @@ export default function AgentPage({
           onPick={(c) => go('chat', c)}
         />
       )}
-      {tab === 'speak' && <SpeakTab workspaceId={workspaceId} agentId={agentId} />}
+      {tab === 'speak' && <VoiceLink workspaceId={workspaceId} agentId={agentId} agentName={agent.name} />}
+      {ways && (
+        <WaysToTalkDialog
+          workspaceId={workspaceId}
+          agentId={agentId}
+          agentName={agent.name}
+          onClose={() => setWays(false)}
+          renderSetup={(entry, reload) => <ChannelSetupFor workspaceId={workspaceId} agentId={agentId} entry={entry} onChanged={reload} />}
+        />
+      )}
       {tab === 'documents' && (
         <div className="agent-scroll"><KnowledgePanel workspaceId={workspaceId} embedded /></div>
       )}

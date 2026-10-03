@@ -3,15 +3,16 @@
 import { use, useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { CHANNELS, DEFAULT_AGENT_NAME, INTEGRATIONS, ROLES, type AssistantRole, type CatalogEntry, type CatalogModel } from '@salvations/catalog';
+import { DEFAULT_AGENT_NAME, INTEGRATIONS, ROLES, type AssistantRole, type CatalogEntry, type CatalogModel } from '@salvations/catalog';
 import { api, ws } from '@/lib/client/api';
-import { BrandMark, Icon, Option, StepDots, Tile } from '@/components/ui';
+import { BrandMark, Icon, StepDots, Tile } from '@/components/ui';
 import { SetupSteps, Copyable } from '@/components/setup-steps';
 import { Qr } from '@/components/qr';
 import { GroupPicker } from '@/components/group-picker';
 import { VendorCards, keyStatesOf, vendorCopy } from '@/components/vendor-mark';
 import { AppDialog, AppGrid, type AppStatus } from '@/components/app-grid';
 import { IntegrationSetup, type Binding } from '@/components/integration-setup';
+import { PhoneMock, WayCards, WAYS, type TalkWay } from '@/components/ways-to-talk';
 
 /**
  * Creating an agent.
@@ -310,6 +311,9 @@ function ChannelStep({
 }) {
   const [open, setOpen] = useState<string>('telegram');
   const [channels, setChannels] = useState<Channel[]>([]);
+  const way = WAYS.find((w) => w.id === open) ?? WAYS[0]!;
+  const entry = way.entry;
+  const connection = entry === undefined ? undefined : channels.find((c) => c.channel === entry.id);
 
   const reload = useCallback(() => {
     // Only THIS agent's connections: another agent's bot is not a way to
@@ -336,8 +340,8 @@ function ChannelStep({
     <>
       <Head
         icon="chat"
-        title={`Set up a way to talk to ${agentName}`}
-        lede={`Two minutes, and ${agentName} can text you like a person.`}
+        title={`Text ${agentName} like a teammate.`}
+        lede={`${agentName} answers wherever you already are. Pick one now; add the rest any time.`}
       />
 
       {connected !== undefined ? (
@@ -358,48 +362,59 @@ function ChannelStep({
         </>
       ) : (
         <>
-          {CHANNELS.map((entry) => {
-            const connection = channels.find((c) => c.channel === entry.id);
-            return (
-              <Option
-                key={entry.id}
-                icon="chat"
-                title={entry.name}
-                subtitle={entry.summary}
-                {...(connection?.connectCode !== undefined ? { badge: 'One step left' } : {})}
-                open={open === entry.id}
-                onToggle={() => setOpen(open === entry.id ? '' : entry.id)}
-              >
-                {connection?.connectCode !== undefined ? (
-                  <Handshake
-                    workspaceId={workspaceId}
-                    entry={entry}
-                    agentName={agentName}
-                    connection={connection}
-                    onChanged={reload}
-                    onError={onError}
-                  />
-                ) : entry.id === 'telegram' ? (
-                  <TelegramSetup
-                    workspaceId={workspaceId}
-                    entry={entry}
-                    agentId={agentId}
-                    agentName={agentName}
-                    onDone={reload}
-                    onError={onError}
-                  />
-                ) : (
-                  <ConnectForm
-                    workspaceId={workspaceId}
-                    entry={entry}
-                    agentId={agentId}
-                    onDone={reload}
-                    onError={onError}
-                  />
-                )}
-              </Option>
-            );
-          })}
+          <div className="ways-split">
+            <PhoneMock agentName={agentName} way={way} />
+            <div>
+              <WayCards
+                ways={WAYS}
+                selected={open}
+                statusOf={(w: TalkWay) => {
+                  if (w.always === true) return 'Always on';
+                  const c = channels.find((x) => x.channel === w.id);
+                  return c === undefined ? undefined : c.connectCode !== undefined ? 'One step left' : 'Connected';
+                }}
+                onPick={(w) => setOpen(w.id)}
+              />
+              {entry !== undefined && (
+                <div className="card" style={{ marginTop: 14 }}>
+                  {connection?.connectCode !== undefined ? (
+                    <Handshake
+                      workspaceId={workspaceId}
+                      entry={entry}
+                      agentName={agentName}
+                      connection={connection}
+                      onChanged={reload}
+                      onError={onError}
+                    />
+                  ) : entry.id === 'telegram' ? (
+                    <TelegramSetup
+                      workspaceId={workspaceId}
+                      entry={entry}
+                      agentId={agentId}
+                      agentName={agentName}
+                      onDone={reload}
+                      onError={onError}
+                    />
+                  ) : (
+                    <ConnectForm
+                      workspaceId={workspaceId}
+                      entry={entry}
+                      agentId={agentId}
+                      onDone={reload}
+                      onError={onError}
+                    />
+                  )}
+                </div>
+              )}
+              {entry === undefined && (
+                <p className="muted" style={{ margin: '14px 0 0' }}>
+                  {way.id === 'web'
+                    ? 'The chat tab is always there; nothing to set up.'
+                    : 'The Speak tab is always there: press Start and talk.'}
+                </p>
+              )}
+            </div>
+          </div>
 
           <div className="wizard-foot">
             <span className="faint">The web chat works without any of this.</span>

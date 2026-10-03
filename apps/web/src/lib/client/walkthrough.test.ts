@@ -6,13 +6,18 @@ describe('stepsFor', () => {
     const steps = stepsFor({ workspaceId: 'ws_1', agent: { id: 'agt_1', name: 'Bee' } });
     const ids = steps.map((s) => s.id);
     expect(ids).toEqual([
-      'welcome', 'assistants', 'import', 'chat', 'documents', 'routine', 'integrations', 'model', 'server',
+      'welcome', 'assistants', 'import', 'chat', 'ways', 'documents', 'routine', 'integrations', 'model', 'server',
       'models', 'approvals', 'activity', 'workspace', 'done',
     ]);
     const chat = steps.find((s) => s.id === 'chat');
     expect(chat?.path).toBe('/agents/agt_1');
     expect(chat?.activate).toBe(true);
     expect(chat?.body).toContain('Bee');
+    const ways = steps.find((s) => s.id === 'ways');
+    expect(ways?.target).toBe('ways');
+    expect(ways?.path).toBe('/agents/agt_1');
+    expect(ways?.activate).toBeUndefined();
+    expect(ways?.body).toContain('Bee');
   });
 
   it('collapses the middle to "create one" when there is no assistant', () => {

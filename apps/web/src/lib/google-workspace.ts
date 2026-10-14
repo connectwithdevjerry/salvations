@@ -16,7 +16,7 @@ import {
   plainTextOfPayload, rawMessage,
   type CalendarEvent, type DriveFile, type GmailPayload, type GoogleWorkspaceSource, type MailLabel, type MailMessage, type MailSummary,
 } from '@salvations/servers';
-import { MongoOAuthCredentialStore, ScopedDb, type Database, type McpServerBindingDoc } from '@salvations/db';
+import { MongoOAuthCredentialStore, ScopedDb, type Database, type McpServerBindingDoc, PlatformDb, type OAuthConnectionDoc } from '@salvations/db';
 import { randomBytes } from 'node:crypto';
 import { catalogEntry } from '@salvations/catalog';
 import { env } from './env';
@@ -110,7 +110,7 @@ export async function exchangeGoogleCode(
   };
 }
 
-async function refreshGoogleToken(
+export async function refreshGoogleToken(
   client: GoogleOAuthClient,
   refreshToken: string,
   fetchImpl: typeof fetch,
@@ -373,4 +373,117 @@ export function createGoogleSource(input: GoogleSourceInput): GoogleWorkspaceSou
       return { file: toFile(meta), text: await response.text() };
     },
   };
+}
+
+/* ------------------------------------------------------- revoke and sweep -- */
+
+const REVOKE_URL = 'https://oauth2.googleapis.com/revoke';
+
+/**
+ * Tells Google the grant is over, so the refresh token stops working there
+ * and the person's Google account no longer lists HIVE. True when Google
+ * accepted it; false when there was nothing stored to revoke.
+ */
+export async function revokeGoogleTokens(
+  database: Database,
+  workspaceId: string,
+  scopeKey: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<boolean> {
+  const store = googleStore(database, workspaceId);
+  const tokens = await store.loadTokens(scopeKey, GOOGLE_ISSUER) as StoredTokens | undefined;
+  if (tokens === undefined) return false;
+  const token = tokens.refresh_token ?? tokens.access_token;
+  const response = await fetchImpl(REVOKE_URL, {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ token }),
+  });
+  if (!response.ok) throw new Error(`Google answered ${response.status} to the revocation.`);
+  return true;
+}
+
+/** How close to expiry a token is before the sweep renews it. Well past one slice of work. */
+export const SWEEP_MARGIN_MS = 6 * 60 * 60 * 1000;
+
+/** Whether a stored token set is the sweep's to renew: expiring soon, and renewable. */
+export function needsSweep(tokens: StoredTokens, now = Date.now(), margin = SWEEP_MARGIN_MS): boolean {
+  return tokens.refresh_token !== undefined && tokens.expires_at - margin <= now;
+}
+
+export interface TokenSweep {
+  readonly considered: number;
+  readonly refreshed: number;
+  readonly failed: number;
+  readonly error?: string;
+}
+
+/**
+ * Renews Google tokens before they lapse, across every workspace.
+ *
+ * A token refreshed on use is enough for an assistant somebody talks to
+ * daily. One with a morning routine and nothing else refreshes once a day,
+ * fine; one connected and then left alone for weeks has a refresh token
+ * Google may retire for disuse, and the first routine after that fails on
+ * the person's behalf with nobody watching. Renewing on a schedule keeps
+ * the grant exercised. A refresh Google refuses outright marks the binding
+ * as needing authorisation, so the Integrations tab says so before a run
+ * finds out.
+ */
+export async function refreshExpiringGoogleTokens(
+  database: Database,
+  fetchImpl: typeof fetch = fetch,
+  now = Date.now(),
+): Promise<TokenSweep> {
+  const client = googleOAuthClient();
+  if (client === undefined) return { considered: 0, refreshed: 0, failed: 0 };
+
+  const platform = new PlatformDb(database, 'token-refresh');
+  const servers = await platform.collection<{ _id: string; workspaceId: string; catalogId?: string }>('mcpServers')
+    .find({ catalogId: GOOGLE_WORKSPACE_ALIAS } as never, { comment: platform.comment })
+    .toArray();
+  if (servers.length === 0) return { considered: 0, refreshed: 0, failed: 0 };
+
+  let considered = 0;
+  let refreshed = 0;
+  let failed = 0;
+  for (const server of servers) {
+    const scoped = new ScopedDb(database, server.workspaceId);
+    const bindings = await scoped.collection<McpServerBindingDoc>('mcpServerBindings')
+      .find({ mcpServerId: server._id, enabled: true } as never);
+    const store = googleStore(database, server.workspaceId);
+    for (const binding of bindings) {
+      const rows = await scoped.collection<OAuthConnectionDoc>('oauthConnections')
+        .find({ bindingId: binding._id } as never);
+      for (const row of rows) {
+        let tokens: StoredTokens | undefined;
+        try {
+          tokens = await store.loadTokens(row.scopeKey, GOOGLE_ISSUER) as StoredTokens | undefined;
+        } catch {
+          continue;
+        }
+        if (tokens === undefined || !needsSweep(tokens, now)) continue;
+        considered += 1;
+        try {
+          const fresh = await refreshGoogleToken(client, tokens.refresh_token as string, fetchImpl);
+          await store.saveTokens(row.scopeKey, GOOGLE_ISSUER, fresh);
+          refreshed += 1;
+        } catch (caught) {
+          failed += 1;
+          const message = caught instanceof Error ? caught.message : String(caught);
+          console.log(JSON.stringify({ at: 'token-refresh', binding: binding._id, error: message }));
+          // "invalid_grant" is Google saying the grant is gone for good:
+          // revoked by the person, or retired for disuse. Only a new consent
+          // fixes that, so the binding says so.
+          if (/invalid_grant/i.test(message)) {
+            await scoped.collection<McpServerBindingDoc>('mcpServerBindings').updateOne(
+              { _id: binding._id } as never,
+              { $set: { status: 'pending_auth', 'health.lastError': 'Google ended this connection. Re-authorise it on the Integrations tab.' } } as never,
+            );
+          }
+        }
+      }
+    }
+  }
+  return { considered, refreshed, failed };
 }

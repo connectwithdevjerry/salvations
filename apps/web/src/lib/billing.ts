@@ -1,12 +1,15 @@
 /**
  * This deployment's payment processor, if it has one.
  *
- * Returns undefined rather than throwing when billing is not configured, and
- * every caller is expected to treat that as "charge nobody, refuse nobody". A
- * private install with no processor is a normal thing to be, not an error.
+ * Returns undefined rather than throwing when billing is not configured. Then
+ * nobody can pay, and the plan page says so; a free trial still starts, and
+ * an exempt workspace still runs.
  */
-import { createStripeProcessor, entitlementsOf, UNCONFIGURED, type Entitlements, type PaymentProcessor } from '@salvations/billing';
-import { SubscriptionRepository, type Database } from '@salvations/db';
+import {
+  createStripeProcessor, entitlementsOf, trialEntitlements, NONE, UNCONFIGURED,
+  type Entitlements, type PaymentProcessor,
+} from '@salvations/billing';
+import { SubscriptionRepository, WorkspaceRepository, type Database } from '@salvations/db';
 import { env } from './env';
 
 let cached: PaymentProcessor | undefined;
@@ -33,24 +36,32 @@ export const priceId = (): string | undefined => env().STRIPE_PRICE_ID;
 /**
  * What this workspace may do.
  *
- * One database read, and only when a processor exists — an unbilled deployment
- * must not pay for a query on every request to discover it still charges
- * nobody.
+ * In order: the operator's exemption, a subscription the processor confirmed,
+ * the free trial. A subscription only exists where a processor does, so an
+ * unbilled deployment pays for one workspace read and no more.
  */
 export async function entitlements(
   database: Database,
   workspaceId: string,
 ): Promise<Entitlements> {
-  if (!billingConfigured()) return UNCONFIGURED;
+  if (env().COMPLIMENTARY_WORKSPACES.has(workspaceId)) return UNCONFIGURED;
 
-  const row = await new SubscriptionRepository(database, workspaceId).current();
-  if (row === null) return entitlementsOf(undefined);
+  if (billingConfigured()) {
+    const row = await new SubscriptionRepository(database, workspaceId).current();
+    if (row !== null) {
+      const subscribed = entitlementsOf({
+        externalId: row.externalId,
+        planId: row.planId,
+        status: row.status as never,
+        currentPeriodEnd: row.currentPeriodEnd ?? undefined,
+        cancelAtPeriodEnd: row.cancelAtPeriodEnd,
+      });
+      if (subscribed.active) return subscribed;
+    }
+  }
 
-  return entitlementsOf({
-    externalId: row.externalId,
-    planId: row.planId,
-    status: row.status as never,
-    currentPeriodEnd: row.currentPeriodEnd ?? undefined,
-    cancelAtPeriodEnd: row.cancelAtPeriodEnd,
-  });
+  const workspace = await new WorkspaceRepository(database).findById(workspaceId);
+  const trial = workspace?.trial;
+  if (trial !== null && trial !== undefined) return trialEntitlements({ endsAt: trial.endsAt });
+  return NONE;
 }

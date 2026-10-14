@@ -28,7 +28,7 @@ export default function SettingsPage({
   const router = useRouter();
   const [user, setUser] = useState<SignedInUser | null>();
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
-  const [billing, setBilling] = useState<{ configured: boolean; active: boolean; planId?: string }>();
+  const [billing, setBilling] = useState<{ configured: boolean; active: boolean; planId?: string; state?: string; trialEndsAt?: string }>();
   const [busy, setBusy] = useState(false);
   const walkthrough = useWalkthrough();
 
@@ -36,7 +36,7 @@ export default function SettingsPage({
     void auth.session().then((r) => setUser(r.user)).catch(() => setUser(null));
     void api.get<{ items: Workspace[] }>('/api/workspaces')
       .then((r) => setWorkspaces(r.items)).catch(() => undefined);
-    void api.get<{ configured: boolean; active: boolean; planId?: string }>(
+    void api.get<{ configured: boolean; active: boolean; planId?: string; state?: string; trialEndsAt?: string }>(
       `/api/workspaces/${workspaceId}/billing`,
     ).then(setBilling).catch(() => undefined);
   }, [workspaceId]);
@@ -132,24 +132,28 @@ export default function SettingsPage({
         </>
       )}
 
-      {/* Only when this deployment can actually charge. A private install with
-          no processor should not be shown a plan it cannot buy. */}
-      {billing?.configured === true && (
+      {billing !== undefined && billing.state !== 'exempt' && (
         <>
           <p className="eyebrow" style={{ marginTop: 26 }}>Plan</p>
           <div className="card">
             <div className="row">
               <div>
-                <strong>{billing.active ? (billing.planId ?? 'Active') : 'No active plan'}</strong>
+                <strong>
+                  {billing.state === 'trial' ? 'Free trial'
+                    : billing.state === 'trial_ended' ? 'Trial ended'
+                    : billing.active ? (billing.planId ?? 'Active') : 'No plan yet'}
+                </strong>
                 <p className="muted" style={{ margin: '2px 0 0' }}>
-                  {billing.active
-                    ? 'Your agents stay online.'
-                    : 'Subscribe to keep agents running when this tab is closed.'}
+                  {billing.state === 'trial' && billing.trialEndsAt !== undefined
+                    ? `Everything is on until ${new Date(billing.trialEndsAt).toLocaleDateString()}.`
+                    : billing.active
+                      ? 'Your assistants stay online.'
+                      : 'Start a free trial or subscribe to run assistants.'}
                 </p>
               </div>
               <Link href={`/w/${workspaceId}/billing`}>
-                <button type="button" className={billing.active ? '' : 'primary'}>
-                  {billing.active ? 'Manage' : 'Subscribe'}
+                <button type="button" className={billing.active && billing.state !== 'trial' ? '' : 'primary'}>
+                  {billing.state === 'subscribed' ? 'Manage' : billing.state === 'trial' ? 'Subscribe' : 'Choose a plan'}
                 </button>
               </Link>
             </div>

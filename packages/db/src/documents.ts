@@ -50,6 +50,8 @@ export interface WorkspaceDoc extends TenantDoc {
   };
   members: WorkspaceMemberSub[];
   invitations: WorkspaceInvitationSub[];
+  /** The free trial, once started. Used once: a second one is refused. */
+  trial?: { startedAt: Date; endsAt: Date; startedBy: string } | null;
   createdBy: string;
   createdAt: Date;
   updatedAt: Date;

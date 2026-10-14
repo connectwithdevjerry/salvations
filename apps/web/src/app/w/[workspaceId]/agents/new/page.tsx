@@ -3,6 +3,7 @@
 import { use, useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { usePlan } from '@/lib/client/use-plan';
 import { DEFAULT_AGENT_NAME, INTEGRATIONS, ROLES, type AssistantRole, type CatalogEntry, type CatalogModel } from '@salvations/catalog';
 import { api, ws } from '@/lib/client/api';
 import { BrandMark, Icon, StepDots, Tile } from '@/components/ui';
@@ -37,6 +38,11 @@ interface StepDef {
 export default function CreateAgentPage({ params }: { params: Promise<{ workspaceId: string }> }) {
   const { workspaceId } = use(params);
   const router = useRouter();
+  const plan = usePlan(workspaceId);
+  // Nothing granted yet: the plan page first, and back here once it is.
+  useEffect(() => {
+    if (plan !== undefined && !plan.active) router.replace(`/w/${workspaceId}/billing?then=new`);
+  }, [plan, router, workspaceId]);
   const [agent, setAgent] = useState<{ id: string; name: string }>();
   const [index, setIndex] = useState(0);
   const [error, setError] = useState<string>();

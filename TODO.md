@@ -226,7 +226,7 @@ platform exist beside the first three.
 - [x] Tick on the existing sweeper; capped catch-up; self-disabling after repeated failures
 - [x] Schedule page with presets and a visible expression
 
-### 1.5.3 Billing — done, unconfigured by default
+### 1.5.3 Billing — done, trial first
 
 - [x] `packages/catalog/plans` — the plan, hard-coded
 - [x] `packages/billing` — `PaymentProcessor` port + Stripe over its REST API
@@ -312,6 +312,13 @@ platform exist beside the first three.
 - [x] A Telegram bot registered before button presses were asked for never heard a press, so
       Approve did nothing and said nothing. The webhook is re-registered the moment buttons are
       sent on a stale connection, and on the next inbound message; the daily sweep stays
+- [x] Pay or try first: a workspace runs assistants on a subscription, a 10-day free trial
+      (one click, no card, once per workspace, `POST /billing/trial`), or the operator's
+      exemption (`COMPLIMENTARY_WORKSPACES`). Nothing else makes or runs an assistant: the
+      create pages send a new person to the plan page and bring them back once the trial has
+      started; a chat message on an unentitled workspace is answered with the reason. The plan
+      page says the days left, the Settings card says the state, the landing page says the
+      offer. Stripe unconfigured now means "cannot pay yet", not "everything is free"
 - [x] Rules editor: on the Approvals page, one list per scope (every assistant, or one). A rule
       is an effect (allow, ask, never), an app (any, a built-in, or a connection), a tool name or
       glob, and an optional per-run cap. The workspace default sits above it. `GET`/`PUT`

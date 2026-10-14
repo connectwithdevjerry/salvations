@@ -15,6 +15,7 @@ export type ErrorCode =
   | 'validation_failed'
   | 'tenant_violation'
   | 'budget_exhausted'
+  | 'payment_required'
   | 'capability_not_approved'
   | 'capability_changed'
   | 'permission_denied'
@@ -56,6 +57,8 @@ export const Errors = {
   /** Never exposed: the message would confirm another tenant's data exists. */
   tenantViolation: make('tenant_violation', false),
   budgetExhausted: make('budget_exhausted', true),
+  /** No trial, or one that ended, and no subscription. */
+  paymentRequired: make('payment_required', true),
   capabilityNotApproved: make('capability_not_approved', true),
   capabilityChanged: make('capability_changed', true),
   permissionDenied: make('permission_denied', true),

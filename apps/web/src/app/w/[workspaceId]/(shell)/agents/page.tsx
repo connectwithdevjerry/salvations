@@ -6,6 +6,7 @@ import { Icon, Tile } from '@/components/ui';
 import { EmptyState } from '@/components/empty-state';
 import { useAgents } from '@/components/agents-context';
 import { SkeletonPage } from '@/components/skeleton';
+import { usePlan } from '@/lib/client/use-plan';
 
 /**
  * Nothing chosen yet.
@@ -18,10 +19,39 @@ import { SkeletonPage } from '@/components/skeleton';
 export default function AgentsIndex({ params }: { params: Promise<{ workspaceId: string }> }) {
   const { workspaceId } = use(params);
   const { agents } = useAgents();
+  const plan = usePlan(workspaceId);
   const count = agents?.length;
 
-  if (count === undefined) {
+  if (count === undefined || plan === undefined) {
     return <div className="page"><SkeletonPage blocks={2} /></div>;
+  }
+
+  // Nothing granted yet: the first step is the plan page, where a trial is
+  // one click and costs nothing. The buttons below would only refuse.
+  if (count === 0 && !plan.active) {
+    const ended = plan.state === 'trial_ended';
+    return (
+      <div className="centered">
+        <div className="panel" style={{ textAlign: 'center' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14 }}>
+            <Tile name="agent" large />
+          </div>
+          <h3 style={{ margin: '0 0 6px', fontSize: 18 }}>
+            {ended ? 'Your free trial has ended' : `Try HIVE free for ${plan.trialDays} days`}
+          </h3>
+          <p className="muted" style={{ margin: '0 0 18px' }}>
+            {ended
+              ? 'Choose a plan to build your team and keep your assistants online.'
+              : 'No card needed. Build your team, connect your tools and see what they can do. Then decide.'}
+          </p>
+          <Link href={`/w/${workspaceId}/billing?then=team`}>
+            <button className="primary lg" type="button" data-tour="create-assistant">
+              {ended ? 'Choose a plan' : 'Start the free trial'}
+            </button>
+          </Link>
+        </div>
+      </div>
+    );
   }
 
   if (count === 0) {

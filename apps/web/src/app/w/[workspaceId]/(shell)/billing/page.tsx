@@ -1,29 +1,35 @@
 'use client';
 
 import { use, useCallback, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { formatPrice, type Plan } from '@salvations/catalog';
 import { api, ws } from '@/lib/client/api';
 import { BrandMark, Icon, TickList } from '@/components/ui';
+import { daysLeft, type PlanState } from '@/lib/client/use-plan';
 
 /**
  * The plan.
  *
- * Card details never touch this page. The Subscribe button starts a session
- * with the processor and sends the browser there; what comes back is an
- * identifier. That is not squeamishness — accepting a card number anywhere in
- * this codebase would put the whole system in PCI-DSS scope, and no amount of
- * care here would take it back out.
+ * Two ways in: a free trial, ten days from the click with no card asked for,
+ * or a subscription. Card details never touch this page. The Subscribe button
+ * starts a session with the processor and sends the browser there; what comes
+ * back is an identifier. Accepting a card number anywhere in this codebase
+ * would put the whole system in PCI-DSS scope, and no amount of care here
+ * would take it back out.
  *
- * When no processor is configured the page says so plainly rather than showing
- * a button that cannot work. A private install charging nobody is a normal
- * thing to be.
+ * `?then=team` or `?then=new` says where the person was going: a trial that
+ * starts sends them straight on to make their assistants.
  */
 
 interface Billing {
   configured: boolean;
   plans: Plan[];
   active: boolean;
+  state: PlanState;
   planId?: string;
+  trialDays: number;
+  trialEndsAt?: string;
+  canStartTrial: boolean;
   subscription?: { status: string; cancelAtPeriodEnd: boolean; currentPeriodEnd?: string };
 }
 
@@ -33,8 +39,10 @@ export default function BillingPage({
   params: Promise<{ workspaceId: string }>;
 }) {
   const { workspaceId } = use(params);
+  const router = useRouter();
+  const [then, setThen] = useState<string | null>(null);
   const [billing, setBilling] = useState<Billing>();
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState<'trial' | 'checkout'>();
   const [agreed, setAgreed] = useState(false);
   const [error, setError] = useState<string>();
 
@@ -45,29 +53,10 @@ export default function BillingPage({
   }, [workspaceId]);
 
   useEffect(() => { reload(); }, [reload]);
+  useEffect(() => { setThen(new URLSearchParams(window.location.search).get('then')); }, []);
 
   if (billing === undefined) {
     return <div className="page"><p className="muted">{error ?? 'Loading…'}</p></div>;
-  }
-
-  if (!billing.configured) {
-    return (
-      <div className="page">
-        <header>
-          <h2>Billing</h2>
-          <p className="lede">This deployment has no payment processor configured.</p>
-        </header>
-        <div className="note">
-          <span className="tile" aria-hidden><Icon name="shield" size={16} /></span>
-          <span>
-            Nothing here is charged and nothing is limited. Set{' '}
-            <span className="mono">STRIPE_SECRET_KEY</span>,{' '}
-            <span className="mono">STRIPE_WEBHOOK_SECRET</span> and{' '}
-            <span className="mono">STRIPE_PRICE_ID</span> together to turn billing on.
-          </span>
-        </div>
-      </div>
-    );
   }
 
   const plan = billing.plans[0];
@@ -75,11 +64,57 @@ export default function BillingPage({
     return <div className="page"><p className="muted">No plan is defined.</p></div>;
   }
 
+  const onward = () => {
+    if (then === 'team' || then === 'new') router.push(`/w/${workspaceId}/agents/${then}`);
+    else reload();
+  };
+
+  async function startTrial() {
+    setBusy('trial');
+    setError(undefined);
+    try {
+      await api.post(`${ws(workspaceId)}/billing/trial`);
+      onward();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Could not start the trial.');
+      setBusy(undefined);
+    }
+  }
+
+  async function subscribe() {
+    setBusy('checkout');
+    setError(undefined);
+    try {
+      const { url } = await api.post<{ url: string }>(`${ws(workspaceId)}/billing`);
+      // A full navigation. The processor hosts the form, and this page never
+      // sees a card number.
+      window.location.assign(url);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Could not start checkout.');
+      setBusy(undefined);
+    }
+  }
+
+  const remaining = daysLeft(billing.trialEndsAt);
+  const subscribed = billing.state === 'subscribed' || billing.state === 'exempt';
+
+  const heading = billing.state === 'subscribed' ? 'Your plan'
+    : billing.state === 'exempt' ? 'Your plan'
+    : billing.state === 'trial' ? `${remaining} ${remaining === 1 ? 'day' : 'days'} left in your free trial`
+    : billing.state === 'trial_ended' ? 'Your free trial has ended'
+    : `Try HIVE free for ${billing.trialDays} days`;
+
+  const lede = billing.state === 'trial'
+    ? `Everything is on until ${new Date(billing.trialEndsAt ?? 0).toLocaleDateString()}. Subscribe any time to keep it that way.`
+    : billing.state === 'trial_ended' ? 'Your assistants and everything they know are still here. Subscribe to bring them back online.'
+    : billing.state === 'none' ? 'No card needed. Build your team, connect your tools, see what they can do. Then decide.'
+    : plan.tagline;
+
   return (
     <div className="page" style={{ maxWidth: 760 }}>
       <header>
-        <h2>{billing.active ? 'Your plan' : 'Bring your agents online'}</h2>
-        <p className="lede">{plan.tagline}</p>
+        <h2>{heading}</h2>
+        <p className="lede">{lede}</p>
       </header>
 
       {error !== undefined && <p className="error">{error}</p>}
@@ -93,63 +128,82 @@ export default function BillingPage({
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 4 }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 4, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 40, fontWeight: 700, letterSpacing: '-0.03em' }}>
             {formatPrice(plan)}
           </span>
           <span className="muted">/ {plan.interval}</span>
+          {billing.canStartTrial && <span className="badge accent">{billing.trialDays} days free first</span>}
           <span className="badge">cancel anytime</span>
         </div>
 
         <TickList items={plan.features} />
 
-        {billing.active ? (
+        {billing.state === 'exempt' && (
+          <p className="muted" style={{ marginTop: 16 }}>
+            This workspace is on the house. Nothing is counted and nothing is charged.
+          </p>
+        )}
+
+        {billing.state === 'subscribed' ? (
           <ActiveSubscription
             workspaceId={workspaceId}
             billing={billing}
             onChanged={reload}
             onError={setError}
           />
-        ) : (
-          <div className="wizard-foot">
-            <label style={{ display: 'flex', gap: 9, alignItems: 'flex-start', fontWeight: 400, margin: 0 }}>
+        ) : !subscribed && (
+          <div className="wizard-foot" style={{ flexWrap: 'wrap', gap: 12 }}>
+            <label style={{ display: 'flex', gap: 9, alignItems: 'flex-start', fontWeight: 400, margin: 0, flex: '1 1 260px' }}>
               <input
                 type="checkbox" style={{ width: 'auto', marginTop: 3 }}
                 checked={agreed} onChange={(e) => setAgreed(e.target.checked)}
               />
               <span className="muted">
-                I agree to the terms of service and privacy policy.
+                I agree to the <a href="/terms" target="_blank" rel="noreferrer">terms of service</a> and{' '}
+                <a href="/privacy" target="_blank" rel="noreferrer">privacy policy</a>.
               </span>
             </label>
-            <button
-              className="primary lg"
-              type="button"
-              // Unchecked is not a validation error to explain afterwards; the
-              // button simply is not available yet.
-              disabled={busy || !agreed}
-              onClick={async () => {
-                setBusy(true);
-                setError(undefined);
-                try {
-                  const { url } = await api.post<{ url: string }>(`${ws(workspaceId)}/billing`);
-                  // A full navigation. The processor hosts the form, and this
-                  // page never sees a card number.
-                  window.location.assign(url);
-                } catch (caught) {
-                  setError(caught instanceof Error ? caught.message : 'Could not start checkout.');
-                  setBusy(false);
-                }
-              }}
-            >
-              {busy ? 'Opening checkout…' : 'Subscribe'} <Icon name="arrow" size={16} />
-            </button>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {billing.canStartTrial && (
+                <button
+                  className="primary lg" type="button"
+                  // Unchecked is not a validation error to explain afterwards;
+                  // the button simply is not available yet.
+                  disabled={busy !== undefined || !agreed}
+                  onClick={() => void startTrial()}
+                >
+                  {busy === 'trial' ? 'Starting…' : 'Start the free trial'} <Icon name="arrow" size={16} />
+                </button>
+              )}
+              {billing.configured ? (
+                <button
+                  className={billing.canStartTrial ? 'lg' : 'primary lg'} type="button"
+                  disabled={busy !== undefined || !agreed}
+                  onClick={() => void subscribe()}
+                >
+                  {busy === 'checkout' ? 'Opening checkout…' : 'Subscribe'} <Icon name="arrow" size={16} />
+                </button>
+              ) : (
+                <button className="lg" type="button" disabled title="Card payments are not open yet">
+                  Subscribe
+                </button>
+              )}
+            </div>
+            {!billing.configured && (
+              <p className="faint" style={{ margin: 0, flexBasis: '100%' }}>
+                Card payments are not open on this deployment yet.
+                {' '}Whoever runs it sets <span className="mono">STRIPE_SECRET_KEY</span>,{' '}
+                <span className="mono">STRIPE_WEBHOOK_SECRET</span> and <span className="mono">STRIPE_PRICE_ID</span> together to open them.
+              </p>
+            )}
           </div>
         )}
       </div>
 
       <p className="faint" style={{ marginTop: 14 }}>
         Payment is handled entirely by the processor. No card details reach this application,
-        and none are stored here.
+        and none are stored here. A trial asks for no card at all.
       </p>
     </div>
   );
@@ -190,7 +244,7 @@ function ActiveSubscription({
         <div className="note" style={{ marginTop: 14 }}>
           <span className="tile" aria-hidden><Icon name="shield" size={16} /></span>
           <span>
-            <strong>A payment did not go through.</strong> Nothing has stopped — the processor
+            <strong>A payment did not go through.</strong> Nothing has stopped: the processor
             is still retrying. Update the card on file before the retries run out.
           </span>
         </div>
@@ -230,7 +284,7 @@ function ActiveSubscription({
               } finally { setBusy(false); }
             }}
           >
-            Cancel subscription
+            Cancel at period end
           </button>
         </div>
       )}

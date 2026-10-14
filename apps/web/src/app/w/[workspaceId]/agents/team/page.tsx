@@ -1,7 +1,8 @@
 'use client';
 
-import { use, useState } from 'react';
+import { use, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { usePlan } from '@/lib/client/use-plan';
 import { CORE_ROLE_IDS, ROLES } from '@salvations/catalog';
 import { api, ws } from '@/lib/client/api';
 import { BrandMark, Icon, Tile } from '@/components/ui';
@@ -16,6 +17,11 @@ import { BrandMark, Icon, Tile } from '@/components/ui';
 export default function TeamPage({ params }: { params: Promise<{ workspaceId: string }> }) {
   const { workspaceId } = use(params);
   const router = useRouter();
+  const plan = usePlan(workspaceId);
+  // Nothing granted yet: the plan page first, and back here once it is.
+  useEffect(() => {
+    if (plan !== undefined && !plan.active) router.replace(`/w/${workspaceId}/billing?then=team`);
+  }, [plan, router, workspaceId]);
   const [chosen, setChosen] = useState<Set<string>>(() => new Set(CORE_ROLE_IDS));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();

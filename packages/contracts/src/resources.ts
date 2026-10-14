@@ -331,29 +331,6 @@ export const approveCapabilitiesSchema = z.object({
   expectedHashes: z.record(z.string(), z.string()),
 });
 
-// ─── Policies ───────────────────────────────────────────────────────────────
-
-export const policyRuleSchema = z.object({
-  id: z.string().max(60),
-  effect: permissionEffectSchema,
-  /** Glob over canonical names — `calendar__*`, `*__delete_*`. */
-  pattern: z.string().min(1).max(200),
-  priority: z.number().int().min(0).max(1000).default(0),
-  /** Absolute rules cannot be overridden by a higher priority elsewhere. */
-  absolute: z.boolean().default(false),
-  reason: descriptionSchema.optional(),
-});
-
-export const upsertPolicySchema = z.object({
-  name: nameSchema,
-  defaultEffect: permissionEffectSchema.default('ask'),
-  rules: z.array(policyRuleSchema).max(200).default([]),
-  appliesTo: z.object({
-    agentIds: z.array(idSchema).max(100).optional(),
-    bindingIds: z.array(idSchema).max(100).optional(),
-  }).optional(),
-});
-
 // ─── Conversations and runs ─────────────────────────────────────────────────
 
 export const createConversationSchema = z.object({
@@ -443,6 +420,37 @@ export const decideApprovalSchema = z.object({
   decision: z.enum(['approve', 'deny']),
   /** For an MRTR question: what the person answered. */
   response: z.unknown().optional(),
+  /**
+   * With `approve`: also write a rule so this tool, on this connection, is
+   * allowed from now on, for the assistant that asked or for every assistant.
+   */
+  remember: z.enum(['agent', 'workspace']).optional(),
+});
+
+// ─── Policies ───────────────────────────────────────────────────────────────
+
+/** Where a set of rules applies. The workspace, or one assistant. */
+export const policyScopeSchema = z.object({
+  type: z.enum(['workspace', 'agent']),
+  id: z.string().trim().min(1).max(80).optional(),
+});
+
+export const policyRuleSchema = z.object({
+  id: z.string().trim().min(1).max(80),
+  /** A connection id, or `*` for any. Absent means any. */
+  bindingId: z.string().trim().min(1).max(120).optional(),
+  /** A tool name, or a glob such as `*` or `send_*`. */
+  capabilityPattern: z.string().trim().min(1).max(200),
+  effect: permissionEffectSchema,
+  priority: z.number().int().min(0).max(1000),
+  constraints: z.object({
+    maxCallsPerRun: z.number().int().min(1).max(10_000).optional(),
+  }).optional(),
+});
+
+export const setPolicySchema = z.object({
+  scope: policyScopeSchema,
+  rules: z.array(policyRuleSchema).max(200),
 });
 
 // ─── Credentials ────────────────────────────────────────────────────────────

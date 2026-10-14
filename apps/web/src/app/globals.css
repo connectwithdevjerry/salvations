@@ -1886,3 +1886,24 @@ button.link { background: none; border: 0; padding: 0; color: var(--accent); fon
 .legal-body a { color: var(--accent); }
 .land-brand { text-decoration: none; color: inherit; }
 @media (max-width: 860px) { .legal .land-links { display: flex; } .legal-body { padding: 32px 16px; } }
+
+/* ─── Rules (the policy editor) ─────────────────────────────────────────── */
+.rules { margin-top: 28px; }
+.rules-scope { flex-wrap: wrap; }
+.rules-scope .chip { display: inline-flex; align-items: center; gap: 6px; }
+.rules-default select { min-width: 120px; }
+.rules-list { display: grid; gap: 8px; }
+.rule-row {
+  display: grid;
+  grid-template-columns: 110px minmax(200px, 1.3fr) minmax(150px, 1.1fr) 92px auto;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 12px;
+  margin: 0;
+}
+.rule-row input, .rule-row select { max-width: none; width: 100%; }
+.rule-row button.ghost { padding: 6px 8px; }
+@media (max-width: 720px) {
+  .rule-row { grid-template-columns: 1fr 1fr; }
+  .rule-row input[list] { grid-column: 1 / -1; }
+}

@@ -144,7 +144,7 @@ export function stepsFor(context: TourContext): readonly TourStep[] {
       id: 'approvals',
       target: 'nav-approvals',
       title: 'Approvals',
-      body: 'Before an assistant sends, deletes or pays for something, it asks you here, or in the Telegram chat with a tap. A dot on this tab means something is waiting.',
+      body: 'Before an assistant sends, deletes or pays for something, it asks you here, or in the Telegram chat with a tap. A dot on this tab means something is waiting. The rules at the bottom of the page decide what asks, what just runs and what never runs, for every assistant or one.',
     },
     {
       id: 'activity',

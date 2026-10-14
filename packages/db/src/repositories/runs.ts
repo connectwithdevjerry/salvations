@@ -315,6 +315,20 @@ export class RunRepository {
   async findApproval(approvalId: string): Promise<ApprovalDoc | null> {
     return this.#approvals.findOne({ _id: approvalId } as never);
   }
+
+  /** The question a run is waiting on, if it is waiting on one. */
+  async pendingApprovalForRun(runId: string): Promise<ApprovalDoc | null> {
+    return this.#approvals.findOne({ runId, decision: null } as never, { sort: { requestedAt: -1 } });
+  }
+
+  /** Records that the question was put to a chat. False when it already had been. */
+  async markAnnounced(approvalId: string, channelId: string, messageRef: string): Promise<boolean> {
+    const result = await this.#approvals.updateOne(
+      { _id: approvalId, $or: [{ announced: null }, { announced: { $exists: false } }] } as never,
+      { $set: { announced: { channelId, messageRef, at: new Date() } } } as never,
+    );
+    return result.matchedCount === 1;
+  }
 }
 
 const isDuplicateKey = (error: unknown): boolean =>

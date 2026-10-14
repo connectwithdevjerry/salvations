@@ -48,9 +48,38 @@ export interface InboundMessage {
   readonly messageRef: string;
 }
 
+/**
+ * A button the person pressed under one of our messages.
+ *
+ * Carries the opaque data the button was made with, never text the person
+ * typed: a choice is an answer to a question we asked, and `data` names the
+ * question. Who pressed it still has to be checked by the caller.
+ */
+export interface InboundChoice {
+  readonly chatRef: string;
+  readonly senderRef: string;
+  readonly senderLabel: string;
+  /** What the button carried, as given to `sendChoices`. */
+  readonly data: string;
+  /** The platform's handle for the press, for acknowledging it. */
+  readonly callbackRef: string;
+  /** The message the buttons were under, so it can be rewritten. */
+  readonly messageRef: string;
+  /** Unique per press, used to drop a redelivery. */
+  readonly deliveryRef: string;
+}
+
+/** One button. */
+export interface Choice {
+  readonly label: string;
+  /** Short and opaque: Telegram allows 64 bytes. */
+  readonly data: string;
+}
+
 /** The result of looking at an inbound HTTP request. */
 export type InboundResult =
   | { readonly kind: 'message'; readonly message: InboundMessage }
+  | { readonly kind: 'choice'; readonly choice: InboundChoice }
   /**
    * Understood, but nothing to do — an edit, a reaction, a bot's own echo, or a
    * platform's liveness ping. Distinct from `rejected` because a platform that
@@ -146,6 +175,20 @@ export interface ChannelAdapter {
    */
   sendDraft?(token: string, chatRef: string, text: string, fetchImpl?: typeof fetch): Promise<string>;
   editDraft?(token: string, chatRef: string, messageRef: string, text: string, fetchImpl?: typeof fetch): Promise<void>;
+
+  /**
+   * A message with buttons under it, for a question with a short answer.
+   *
+   * Returns the message's handle so it can be rewritten once answered.
+   * Absent on a platform without buttons; the caller then asks in words.
+   */
+  sendChoices?(token: string, chatRef: string, text: string, choices: readonly Choice[], fetchImpl?: typeof fetch): Promise<string>;
+
+  /**
+   * Closes a question: acknowledges the press and rewrites the message
+   * without its buttons, so it cannot be answered twice from the chat.
+   */
+  settleChoice?(token: string, choice: InboundChoice, text: string, fetchImpl?: typeof fetch): Promise<void>;
 
   /**
    * Fetches audio the adapter previously referenced.

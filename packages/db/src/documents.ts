@@ -241,6 +241,8 @@ export interface ApprovalDoc extends TenantDoc {
   decidedBy?: string | null;
   decidedAt?: Date | null;
   response?: unknown;
+  /** Set once the question was put to the chat the run came from, so it is asked once. */
+  announced?: { channelId: string; messageRef: string; at: Date } | null;
 }
 
 export interface McpServerBindingDoc extends TenantDoc {

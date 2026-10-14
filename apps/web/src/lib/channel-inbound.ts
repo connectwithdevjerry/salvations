@@ -19,6 +19,7 @@
  * using somebody else's agent, budget and credentials.
  */
 import { ChannelRepository, ConversationRepository, AgentRepository, PlatformDb } from '@salvations/db';
+import { decideFromChat } from './channel-approvals';
 import { spendGate } from './limits';
 import type { ChannelDoc } from '@salvations/db';
 import { channelAdapter, type InboundMessage, type VerifyContext } from '@salvations/channels';
@@ -114,6 +115,25 @@ export async function handleDelivery(
       // a sticker will disable the webhook, which is a far worse outcome than
       // acknowledging something we chose not to act on.
       return plain(200, 'ok');
+
+    case 'choice': {
+      // A press on one of our buttons: an approval decided from the chat.
+      // Claimed like a message, so a redelivered press cannot decide twice.
+      const choice = judged.choice;
+      if (!await channels.claimDelivery(row._id, choice.deliveryRef)) return plain(200, 'ok');
+      if (row.status !== 'connected') return plain(200, 'ok');
+      const outcome = await decideFromChat({ database: handle.db, workspaceId: row.workspaceId, channelId: row._id, choice, repos });
+      const token = await repos.credentials.resolve(row.tokenCredentialId);
+      if (token !== null) {
+        if (adapter.settleChoice !== undefined) {
+          await adapter.settleChoice(token.expose(), choice, outcome.text).catch(() => undefined);
+        } else {
+          await adapter.send(token.expose(), choice.chatRef, outcome.text).catch(() => undefined);
+        }
+      }
+      console.log(JSON.stringify({ at: 'channel-inbound', channel: row._id, press: outcome.decided ? 'decided' : 'refused' }));
+      return plain(200, 'ok');
+    }
 
     case 'message':
       break;

@@ -69,7 +69,7 @@ export function stepsFor(context: TourContext): readonly TourStep[] {
         path: agentPath,
         target: 'ways',
         title: 'Ways to talk',
-        body: `Where ${name} answers: Telegram, Discord or Slack from your phone, this chat in the browser, or out loud on the Speak tab. Pick one here and connect it on the spot.`,
+        body: `Where ${name} answers: Telegram, Discord or Slack from your phone, this chat in the browser, or out loud on the Speak tab. Pick one here and connect it on the spot. Link your own chat account in Settings so it knows it is you.`,
       },
       {
         id: 'documents',
@@ -77,7 +77,7 @@ export function stepsFor(context: TourContext): readonly TourStep[] {
         target: 'tab-documents',
         activate: true,
         title: 'Documents',
-        body: 'Upload what it should know: price lists, policies, a company profile. It answers from these and introduces the business by name.',
+        body: 'Upload what it should know: PDFs, Word files, price lists, policies, a company profile. It answers from these and introduces the business by name.',
       },
       {
         id: 'routine',
@@ -93,7 +93,7 @@ export function stepsFor(context: TourContext): readonly TourStep[] {
         target: 'tab-integrations',
         activate: true,
         title: 'Integrations',
-        body: 'Connect Telegram, Google Workspace and other tools here. Anything that changes something waits for your approval first.',
+        body: 'What it is connected to. Add an app opens the whole catalogue; each connects on the vendor’s own consent screen and can be disconnected here. Anything that changes something waits for your approval first.',
       },
       {
         id: 'model',
@@ -144,7 +144,7 @@ export function stepsFor(context: TourContext): readonly TourStep[] {
       id: 'approvals',
       target: 'nav-approvals',
       title: 'Approvals',
-      body: 'Before an assistant sends, deletes or pays for something, it asks you here. A dot on this tab means something is waiting.',
+      body: 'Before an assistant sends, deletes or pays for something, it asks you here, or in the Telegram chat with a tap. A dot on this tab means something is waiting.',
     },
     {
       id: 'activity',
@@ -157,7 +157,7 @@ export function stepsFor(context: TourContext): readonly TourStep[] {
       target: 'workspace',
       title: 'Your workspace',
       body: context.admin === true
-        ? 'Your workspace name, top right, opens the admin dashboard: spend against the daily cap, the week’s runs, who is in the workspace and the limits. Invite people from there.'
+        ? 'Your workspace name, top right, opens the admin dashboard: spend against the daily cap, the week’s runs, who is in the workspace, and the plan’s limits as meters. A cap reached stops new runs; nothing already running is cut off.'
         : 'Your workspace name, top right, opens Settings: your account, the look of the app, and signing out.',
     },
     {

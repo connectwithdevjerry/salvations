@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { ACCEPTED_UPLOADS } from '@salvations/knowledge';
 import { api, ws } from '@/lib/client/api';
 import { Icon, Tile } from '@/components/ui';
 import { SkeletonRows } from '@/components/skeleton';
@@ -28,7 +29,7 @@ interface Doc {
 }
 interface Hit { documentId: string; title: string; index: number; content: string; score: number }
 
-const ACCEPT = '.txt,.md,.markdown,.html,.htm,.csv,.tsv,.json,text/plain,text/markdown,text/html,text/csv,application/json';
+const ACCEPT = ACCEPTED_UPLOADS;
 
 /**
  * Rendered on its own page and inside an assistant's Documents tab. Knowledge
@@ -76,7 +77,7 @@ export function KnowledgePanel({ workspaceId, embedded = false }: { workspaceId:
             <div>
               <strong>Upload a document</strong>
               <p className="muted" style={{ margin: '2px 0 0' }}>
-                Text, Markdown, HTML, CSV or JSON. Export a PDF or Word file as one of those first.
+                PDF, Word, text, Markdown, HTML, CSV or JSON. A scanned PDF needs OCR first.
               </p>
             </div>
           </div>

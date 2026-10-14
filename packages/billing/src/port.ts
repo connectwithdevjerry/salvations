@@ -69,6 +69,13 @@ export interface PaymentProcessor {
   fetch(externalId: string): Promise<Subscription | undefined>;
 
   /**
+   * Where the person changes the card on file, downloads invoices, or ends
+   * the subscription themselves: the processor's own page, for the customer
+   * behind this subscription, returning to `returnUrl` when they are done.
+   */
+  portalUrl(externalId: string, returnUrl: string): Promise<string>;
+
+  /**
    * Decides what a webhook delivery is.
    *
    * Raw bytes and headers, because the signature is over the bytes — re-

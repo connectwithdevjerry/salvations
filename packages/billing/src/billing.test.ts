@@ -156,3 +156,28 @@ describe('entitlements', () => {
     expect(withinLimit(active, 'agents', ceiling).reason).toContain(String(ceiling));
   });
 });
+
+describe('customer portal', () => {
+  it('finds the customer behind the subscription and opens their portal', async () => {
+    const calls: { url: string; body: string | undefined }[] = [];
+    const fake = async (url: string | URL | Request, init?: RequestInit): Promise<Response> => {
+      calls.push({ url: String(url), body: init?.body === undefined ? undefined : String(init.body) });
+      if (String(url).endsWith('/subscriptions/sub_1')) {
+        return Response.json({ id: 'sub_1', status: 'active', customer: 'cus_9' });
+      }
+      return Response.json({ url: 'https://billing.stripe.com/session/x' });
+    };
+    const stripe = createStripeProcessor({ secretKey: 'sk_test', webhookSecret: SECRET, fetch: fake as typeof fetch });
+    const url = await stripe.portalUrl('sub_1', 'https://hive.example/w/wks_1/billing');
+    expect(url).toBe('https://billing.stripe.com/session/x');
+    expect(calls[1]?.url).toContain('/billing_portal/sessions');
+    expect(calls[1]?.body).toContain('customer=cus_9');
+    expect(calls[1]?.body).toContain('return_url=');
+  });
+
+  it('says so when the subscription has no customer', async () => {
+    const fake = async (): Promise<Response> => Response.json({ id: 'sub_1', status: 'active' });
+    const stripe = createStripeProcessor({ secretKey: 'sk_test', webhookSecret: SECRET, fetch: fake as typeof fetch });
+    await expect(stripe.portalUrl('sub_1', 'https://hive.example')).rejects.toThrow(/no customer/);
+  });
+});

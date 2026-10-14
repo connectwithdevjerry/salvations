@@ -63,6 +63,8 @@ function form(values: Record<string, unknown>, prefix = ''): string {
 interface StripeSubscription {
   id: string;
   status: string;
+  /** The customer id, when the subscription was read rather than received. */
+  customer?: string;
   cancel_at_period_end?: boolean;
   current_period_end?: number;
   metadata?: Record<string, string>;
@@ -153,6 +155,21 @@ export function createStripeProcessor(config: StripeConfig): PaymentProcessor {
         cancel_at_period_end: true,
       });
       return toSubscription(row, row.metadata?.['planId'] ?? 'standard');
+    },
+
+    async portalUrl(externalId: string, returnUrl: string): Promise<string> {
+      // The portal is per customer, and the subscription is the only handle
+      // we keep; one read finds the customer behind it.
+      const row = await call<StripeSubscription>(`/subscriptions/${externalId}`);
+      if (row.customer === undefined) {
+        throw new BillingError('The payment processor has no customer for this subscription.');
+      }
+      const session = await call<{ url?: string }>('/billing_portal/sessions', {
+        customer: row.customer,
+        return_url: returnUrl,
+      });
+      if (session.url === undefined) throw new BillingError('The payment processor did not return a portal URL.');
+      return session.url;
     },
 
     async fetch(externalId: string): Promise<Subscription | undefined> {

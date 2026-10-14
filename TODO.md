@@ -300,6 +300,15 @@ platform exist beside the first three.
       model's request and the tool results left a `tool_use` nobody answered, and the next
       message made every provider reject the history. The assembler now answers it with an
       error result that says so, in the message right after, leaving history append-only
+- [x] Reads run, writes ask: under the workspace default of `ask`, a first-party tool and a
+      verified app's tool that declares itself read-only and not destructive run without a
+      click; everything else, and everything untrusted, still asks. Matches the promise on the
+      landing page and in the walkthrough ("before it sends, deletes or pays")
+- [x] A new message supersedes a run waiting for approval: its question is recorded as declined
+      and the run cancelled, so it cannot wake into the middle of a newer exchange. The chat
+      shows a pending approval after a reload, not only in the stream that first carried it
+- [x] The event stream's change-stream watch and probe declare platform intent, so the tenancy
+      guard no longer reports them on every request
 - [x] The assistant server is an OAuth 2.1 authorization server (RFC 9728/8414/7591/7636/8707):
       Claude.ai and ChatGPT connect by URL, the person consents on `/oauth/authorize` with the
       HIVE login, tokens are opaque and hashed (`oauthGrants`), refresh rotates with family

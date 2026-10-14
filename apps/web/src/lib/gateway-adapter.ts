@@ -7,6 +7,7 @@
  * reaching the runtime.
  */
 import type { Database } from '@salvations/db';
+import { isFirstParty } from './first-party';
 import {
   asId, splitCanonicalName,
   type ApprovalId, type McpBindingId, type McpCapability, type Principal,
@@ -48,7 +49,11 @@ export function createToolGateway(deps: GatewayAdapterDeps): ToolGateway {
   const capabilities = new CapabilityRepository(
     new ScopedDb(deps.db, deps.workspaceId).collection<McpCapabilityDoc>('mcpCapabilities'),
   );
-  const broker = new MongoPermissionBroker(deps.db, deps.workspaceId);
+  const broker = new MongoPermissionBroker(deps.db, deps.workspaceId, {
+    // A first-party binding has no row to read a tier from. Without this it
+    // is judged untrusted, and the assistant asks before remembering anything.
+    trustTierOf: (bindingId) => (isFirstParty(bindingId) ? 'first_party' : undefined),
+  });
   const runs = new RunRepository(deps.db, deps.workspaceId);
   const audit = new AuditRepository(deps.db, deps.workspaceId);
 

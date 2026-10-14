@@ -62,7 +62,9 @@ export function ApprovalPrompt({
 
   const payload = approval.payload;
   const toolName = String(payload['canonicalName'] ?? 'a tool');
-  const reason = typeof payload['reason'] === 'string' ? payload['reason'] : undefined;
+  const raw = typeof payload['reason'] === 'string' ? payload['reason'] : undefined;
+  // A policy's own label ("policy:default") is not a reason a person can read.
+  const reason = raw !== undefined && raw.trim() !== '' && !/^policy\b/i.test(raw.trim()) ? raw : undefined;
 
   return (
     <div className="card" style={{ marginTop: 10 }}>

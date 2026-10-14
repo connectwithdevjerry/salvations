@@ -56,13 +56,27 @@ export function scopesFor(input: BrokerInput): ScopeRef[] {
   return scopes;
 }
 
+export interface BrokerOptions {
+  /**
+   * The trust tier of a binding that has no row.
+   *
+   * A first-party server is synthesised by the host rather than stored, so
+   * the lookup below finds nothing and would call it untrusted: the most
+   * restrictive tier, applied to the servers we wrote ourselves, which is how
+   * "remember" came to ask for approval. The host says which ids are its own.
+   */
+  readonly trustTierOf?: (bindingId: string) => TrustTier | undefined;
+}
+
 export class MongoPermissionBroker {
   readonly #db: Db;
   readonly #workspaceId: string;
+  readonly #options: BrokerOptions;
 
-  constructor(db: Db, workspaceId: string) {
+  constructor(db: Db, workspaceId: string, options: BrokerOptions = {}) {
     this.#db = db;
     this.#workspaceId = workspaceId;
+    this.#options = options;
   }
 
   async decide(input: BrokerInput): Promise<BrokerOutcome> {
@@ -108,6 +122,9 @@ export class MongoPermissionBroker {
    * the most restrictive tier, not the most permissive.
    */
   async #trustTierOf(bindingId: string): Promise<TrustTier> {
+    const known = this.#options.trustTierOf?.(bindingId);
+    if (known !== undefined) return known;
+
     const scoped = new ScopedDb(this.#db, this.#workspaceId);
     const binding = await scoped
       .collection<McpServerBindingDoc>('mcpServerBindings')

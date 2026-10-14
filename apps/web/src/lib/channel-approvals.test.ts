@@ -21,6 +21,13 @@ describe('the question', () => {
     expect(questionOf({ kind: 'tool_call', payload: { capabilityName: 'send_email', reason: 'policy' } }, true))
       .toBe('Before I go on, I need your go-ahead to use send_email.');
   });
+  it('keeps a policy\'s own label to itself', () => {
+    expect(questionOf({ kind: 'tool_call', payload: { capabilityName: 'remember', reason: 'policy:default' } }, true))
+      .toBe('Before I go on, I need your go-ahead to use remember.');
+    expect(questionOf({ kind: 'tool_call', payload: { capabilityName: 'remember', reason: 'policy:ask+annotation_floor' } }, true))
+      .toBe('Before I go on, I need your go-ahead to use remember.');
+  });
+
   it('points at the page when there are no buttons', () => {
     expect(questionOf({ kind: 'tool_call', payload: { capabilityName: 'send_email', reason: 'it sends mail' } }, false))
       .toBe('Before I go on, I need your go-ahead to use send_email. It sends mail. Approve it on the Approvals page.');

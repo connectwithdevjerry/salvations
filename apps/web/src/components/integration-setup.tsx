@@ -5,6 +5,7 @@ import type { CatalogEntry } from '@salvations/catalog';
 import { api, ws } from '@/lib/client/api';
 import { Icon } from '@/components/ui';
 import { SetupSteps, ScopeList, Copyable } from '@/components/setup-steps';
+import { useDialog } from '@/components/dialog';
 
 /**
  * Connecting one integration to one assistant.
@@ -108,6 +109,7 @@ export function IntegrationSetup({
           >
             Re-authorise
           </button>
+          <DisconnectButton workspaceId={workspaceId} binding={binding} entry={entry} busy={busy} setBusy={setBusy} onChanged={onChanged} onError={onError} />
         </div>
       </div>
     );
@@ -183,6 +185,12 @@ function GatewaySetup({
         </div>
       )}
       <ScopeList scopes={entry.scopes} />
+      {connected && !editing && (
+        <div className="row" style={{ justifyContent: 'flex-start', gap: 8 }}>
+          <button type="button" disabled={busy} onClick={() => setEditing(true)}>Change address or token</button>
+          <DisconnectButton workspaceId={workspaceId} binding={binding} entry={entry} busy={busy} setBusy={setBusy} onChanged={onChanged} onError={onError} />
+        </div>
+      )}
       {(!connected || editing) && (
         <>
           <SetupSteps steps={entry.steps} />
@@ -232,9 +240,6 @@ function GatewaySetup({
           </form>
         </>
       )}
-      {connected && !editing && (
-        <div><button type="button" onClick={() => setEditing(true)}>Change address or token</button></div>
-      )}
     </div>
   );
 }
@@ -270,5 +275,51 @@ export function NativeSetupNote({ entry }: { entry: CatalogEntry }) {
         Google says “Access blocked: this app’s request is invalid” when the redirect URI is missing.
       </p>
     </div>
+  );
+}
+
+/* --------------------------------------------------------------- disconnect -- */
+
+/**
+ * Takes the connection away: tokens, tools and all. Asks first, because the
+ * vendor's consent screen is the only way back.
+ */
+function DisconnectButton({
+  workspaceId, binding, entry, busy, setBusy, onChanged, onError,
+}: {
+  workspaceId: string;
+  binding: Binding;
+  entry: CatalogEntry;
+  busy: boolean;
+  setBusy: (busy: boolean) => void;
+  onChanged: () => void;
+  onError: (message: string | undefined) => void;
+}) {
+  const dialog = useDialog();
+  return (
+    <button
+      type="button" className="danger" disabled={busy}
+      onClick={async () => {
+        const sure = await dialog.confirm({
+          title: `Disconnect ${entry.name}?`,
+          body: `This assistant loses ${entry.name}'s tools, and the access you granted is revoked. Connecting again means consenting again.`,
+          confirmLabel: 'Disconnect',
+          danger: true,
+        });
+        if (!sure) return;
+        setBusy(true);
+        onError(undefined);
+        try {
+          await api.del(`${ws(workspaceId)}/mcp/bindings/${binding.id}`);
+          onChanged();
+        } catch (caught) {
+          onError(caught instanceof Error ? caught.message : 'Could not disconnect.');
+        } finally {
+          setBusy(false);
+        }
+      }}
+    >
+      Disconnect
+    </button>
   );
 }

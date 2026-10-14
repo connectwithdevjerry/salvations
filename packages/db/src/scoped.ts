@@ -233,7 +233,9 @@ export type PlatformReason =
   /** Resolving an API key by its prefix, before any workspace is known. */
   | 'api-key-lookup'
   /** Resolving a token our own authorization server issued, by its hash. */
-  | 'oauth-token-lookup';
+  | 'oauth-token-lookup'
+  /** Refreshing vendor tokens that are about to expire, across all workspaces, before a run needs them. */
+  | 'token-refresh';
 
 export class PlatformDb {
   readonly #db: Db;

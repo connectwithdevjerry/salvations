@@ -18,6 +18,7 @@ import { env } from '@/lib/env';
 import { VercelBackgroundTrigger } from '@/lib/trigger';
 import { tickSchedules } from '@/lib/schedule-tick';
 import { refreshStaleWebhooks } from '@/lib/channel-webhook';
+import { refreshExpiringGoogleTokens } from '@/lib/google-workspace';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -97,8 +98,17 @@ async function sweep(): Promise<Response> {
     error: caught instanceof Error ? caught.message : String(caught),
   }));
 
+  // 5. Renew vendor tokens that are about to lapse, so a routine that runs
+  //    tonight does not fail on a grant nobody has exercised for a week.
+  const tokens = await refreshExpiringGoogleTokens(handle.db).catch((caught: unknown) => ({
+    considered: 0,
+    refreshed: 0,
+    failed: 0,
+    error: caught instanceof Error ? caught.message : String(caught),
+  }));
+
   return Response.json(
-    { ...swept, retriggered: orphaned.length, schedules, webhooks },
+    { ...swept, retriggered: orphaned.length, schedules, webhooks, tokens },
     { status: 200 },
   );
 }

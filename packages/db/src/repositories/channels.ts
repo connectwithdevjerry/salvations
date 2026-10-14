@@ -150,10 +150,10 @@ export class ChannelRepository {
   }
 
   /** The address the platform was just told to deliver to. */
-  async recordWebhook(channelId: string, url: string): Promise<void> {
+  async recordWebhook(channelId: string, url: string, spec?: number): Promise<void> {
     await this.#channels.updateOne(
       { _id: channelId } as never,
-      { $set: { webhookUrl: url, updatedAt: new Date() } } as never,
+      { $set: { webhookUrl: url, ...(spec !== undefined ? { webhookSpec: spec } : {}), updatedAt: new Date() } } as never,
     );
   }
 

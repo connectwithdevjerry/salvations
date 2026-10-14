@@ -74,7 +74,12 @@ export const isTerminalEvent = (type: string): boolean => TERMINAL_EVENTS.has(ty
  */
 export async function supportsChangeStreams(db: Db): Promise<boolean> {
   try {
-    const stream = db.collection('runEvents').watch([], { maxAwaitTimeMS: 100 });
+    const stream = db.collection('runEvents').watch([], {
+      maxAwaitTimeMS: 100,
+      // A probe, not a read: it opens and closes. Declared so the tenancy
+      // guard does not report it on every process start.
+      comment: new PlatformDb(db, 'catalog-read').comment,
+    });
     await stream.close();
     return true;
   } catch {
@@ -130,7 +135,9 @@ export class ChangeStreamEventBus extends BaseEventBus {
     // by seq below; a gap could not be.
     const stream = this.collection().watch(
       [{ $match: { operationType: 'insert', 'fullDocument.workspaceId': workspaceId, 'fullDocument.runId': runId } }],
-      { fullDocument: 'updateLookup' },
+      // The workspace filter is in the pipeline above; the comment says so to
+      // the guard, which cannot read a change stream's $match on its own.
+      { fullDocument: 'updateLookup', comment: new PlatformDb(this.db, 'catalog-read').comment },
     );
 
     const abort = () => { void stream.close().catch(() => undefined); };

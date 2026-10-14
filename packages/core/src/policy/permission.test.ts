@@ -46,9 +46,46 @@ function input(over: Partial<PermissionInput> = {}): PermissionInput {
 
 describe('decidePermission — fail closed', () => {
   it('falls back to the workspace default when nothing matches', () => {
-    const d = decidePermission(input());
+    const d = decidePermission(input({ trustTier: 'untrusted' as TrustTier }));
     expect(d.effect).toBe('ask');
     expect(d.reason).toBe('policy:default');
+  });
+
+  it('lets a first-party tool run under a default of ask', () => {
+    // Memory, knowledge, the conversation: ours, scoped to the run. A click
+    // before every recall is not what asking is for.
+    const d = decidePermission(input());
+    expect(d.effect).toBe('allow');
+    expect(d.reason).toBe('policy:default+first_party');
+  });
+
+  it('lets a verified server\'s read-only tool run under a default of ask', () => {
+    const d = decidePermission(input({
+      trustTier: 'verified' as TrustTier,
+      capability: capability({ annotations: { readOnlyHint: true, destructiveHint: false } }),
+    }));
+    expect(d.effect).toBe('allow');
+    expect(d.reason).toBe('policy:default+read_only');
+  });
+
+  it('still asks for a verified server\'s write, and for anything untrusted', () => {
+    const write = decidePermission(input({
+      trustTier: 'verified' as TrustTier,
+      capability: capability({ annotations: { readOnlyHint: false, destructiveHint: false } }),
+    }));
+    expect(write.effect).toBe('ask');
+    const unstated = decidePermission(input({ trustTier: 'verified' as TrustTier }));
+    expect(unstated.effect).toBe('ask');
+    const untrusted = decidePermission(input({
+      trustTier: 'untrusted' as TrustTier,
+      capability: capability({ annotations: { readOnlyHint: true } }),
+    }));
+    expect(untrusted.effect).toBe('ask');
+  });
+
+  it('keeps a default of deny as deny', () => {
+    const d = decidePermission(input({ defaultEffect: 'deny' }));
+    expect(d.effect).toBe('deny');
   });
 
   it('denies a capability whose definition changed after approval', () => {
@@ -143,8 +180,8 @@ describe('decidePermission — effect resolution', () => {
         ])],
       }),
     );
-    expect(d.effect).toBe('ask');
-    expect(d.reason).toBe('policy:default');
+    expect(d.matchedRuleId).toBeUndefined();
+    expect(d.reason).toMatch(/^policy:default/);
   });
 });
 
@@ -217,9 +254,9 @@ describe('decidePermission — constraints', () => {
       { id: 'capped', capabilityPattern: '*', effect: 'allow', priority: 10,
         constraints: { maxCallsPerRun: 2 } },
     ])];
-    expect(decidePermission(input({ policies, callsThisRun: 1 })).effect).toBe('allow');
+    expect(decidePermission(input({ policies, callsThisRun: 1 })).matchedRuleId).toBe('capped');
     // Cap reached: the rule no longer matches, so we fall through to the default.
-    expect(decidePermission(input({ policies, callsThisRun: 2 })).effect).toBe('ask');
+    expect(decidePermission(input({ policies, callsThisRun: 2 })).matchedRuleId).toBeUndefined();
   });
 
   it('applies a rule only when its argument matchers are satisfied', () => {
@@ -227,9 +264,9 @@ describe('decidePermission — constraints', () => {
       { id: 'scoped', capabilityPattern: '*', effect: 'allow', priority: 10,
         constraints: { argMatchers: [{ path: 'team.id', op: 'equals', value: 'eng' }] } },
     ])];
-    expect(decidePermission(input({ policies, args: { team: { id: 'eng' } } })).effect).toBe('allow');
-    expect(decidePermission(input({ policies, args: { team: { id: 'sales' } } })).effect).toBe('ask');
-    expect(decidePermission(input({ policies, args: {} })).effect).toBe('ask');
+    expect(decidePermission(input({ policies, args: { team: { id: 'eng' } } })).matchedRuleId).toBe('scoped');
+    expect(decidePermission(input({ policies, args: { team: { id: 'sales' } } })).matchedRuleId).toBeUndefined();
+    expect(decidePermission(input({ policies, args: {} })).matchedRuleId).toBeUndefined();
   });
 
   it('supports a numeric ceiling matcher', () => {
@@ -237,7 +274,7 @@ describe('decidePermission — constraints', () => {
       { id: 'small', capabilityPattern: '*', effect: 'allow', priority: 10,
         constraints: { argMatchers: [{ path: 'amount', op: 'maxNumber', value: 100 }] } },
     ])];
-    expect(decidePermission(input({ policies, args: { amount: 50 } })).effect).toBe('allow');
-    expect(decidePermission(input({ policies, args: { amount: 500 } })).effect).toBe('ask');
+    expect(decidePermission(input({ policies, args: { amount: 50 } })).matchedRuleId).toBe('small');
+    expect(decidePermission(input({ policies, args: { amount: 500 } })).matchedRuleId).toBeUndefined();
   });
 });

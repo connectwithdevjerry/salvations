@@ -27,6 +27,11 @@ export const GET = workspaceRoute<{ conversationId: string }>(
     // stream is gone. Without it a person sees the vendor's refusal for the
     // second between the run ending and the thread reloading, and then nothing.
     const [latest] = await ctx.repos.runs.listForConversation(params.conversationId, 1);
+    // And the question it is waiting on, so the prompt survives a reload
+    // rather than living only in the stream that first carried it.
+    const waiting = latest?.status.startsWith('waiting_') === true
+      ? await ctx.repos.runs.pendingApprovalForRun(latest._id)
+      : null;
 
     return ok({
       conversation: {
@@ -40,6 +45,7 @@ export const GET = workspaceRoute<{ conversationId: string }>(
         status: latest.status,
         error: latest.error ?? undefined,
         finishedAt: latest.finishedAt?.toISOString(),
+        ...(waiting !== null ? { approvalId: waiting._id } : {}),
       },
       items: docs.map(toMessage).map((m) => ({
         id: m.id,

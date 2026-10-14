@@ -58,6 +58,8 @@ export async function sendUserMessage(
   // sit unanswered, which reads as a bug rather than a cap.
   await assertSpendAllowed(ctx.database, ctx.workspaceId);
 
+  await supersedeWaitingRun(ctx, conversationId);
+
   await ctx.repos.conversations.appendMessage({
     conversationId,
     role: 'user',
@@ -91,6 +93,29 @@ export async function sendUserMessage(
   await new VercelBackgroundTrigger().trigger(asId<RunId>(run._id));
 
   return { runId: run._id, status: run.status, modelBindingId };
+}
+
+/**
+ * A run still waiting for an answer is overtaken by the new message.
+ *
+ * The person moved on: whatever the assistant was asking is answered by what
+ * they said next. Left waiting, the question would sit on the Approvals page
+ * for a run that can no longer continue in order, and a later approval would
+ * wake it into the middle of a newer exchange. The tool call it left
+ * unanswered is answered at the next prompt as a call that never ran.
+ */
+async function supersedeWaitingRun(
+  ctx: Pick<WorkspaceContext, 'repos' | 'principal'>,
+  conversationId: string,
+): Promise<void> {
+  const [latest] = await ctx.repos.runs.listForConversation(conversationId, 1);
+  if (latest === undefined || !latest.status.startsWith('waiting_')) return;
+
+  const waiting = await ctx.repos.runs.pendingApprovalForRun(latest._id);
+  if (waiting !== null) {
+    await ctx.repos.runs.decideApproval(waiting._id, 'deny', actorIdOf(ctx.principal));
+  }
+  await ctx.repos.runs.cancel(latest._id);
 }
 
 /**

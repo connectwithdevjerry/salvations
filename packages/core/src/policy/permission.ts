@@ -148,6 +148,17 @@ function applyAnnotationFloor(
   return { effect, tightened: false };
 }
 
+/** Why a tool may run under a default of `ask`, or undefined when it may not. */
+function readsWithoutAsking(
+  capability: McpCapability,
+  trustTier: TrustTier,
+): 'first_party' | 'read_only' | undefined {
+  if (trustTier === 'first_party') return 'first_party';
+  if (trustTier !== 'verified') return undefined;
+  const ann = capability.annotations ?? {};
+  return ann['readOnlyHint'] === true && ann['destructiveHint'] !== true ? 'read_only' : undefined;
+}
+
 export function decidePermission(input: PermissionInput): PermissionDecision {
   // 1. The capability must be usable at its CURRENT definition hash.
   const blocked = capabilityBlockReason(input.capability);
@@ -198,8 +209,21 @@ export function decidePermission(input: PermissionInput): PermissionDecision {
     return c.rule.effect === 'ask' ? c : best;
   }, undefined);
 
-  const base: PermissionEffect = winner?.rule.effect ?? input.defaultEffect;
-  const reason = winner !== undefined ? `policy:${winner.rule.effect}` : 'policy:default';
+  let base: PermissionEffect = winner?.rule.effect ?? input.defaultEffect;
+  let reason = winner !== undefined ? `policy:${winner.rule.effect}` : 'policy:default';
+
+  // No rule spoke, and the workspace default is to ask. Asking is for what
+  // sends, spends or deletes; a read happens, or every look at the inbox
+  // would wait on a click. What counts as a read is not the server's word
+  // alone: our own servers, and a verified server's tool that says it only
+  // reads and is not destructive. An untrusted server still asks for all.
+  if (winner === undefined && base === 'ask') {
+    const read = readsWithoutAsking(input.capability, input.trustTier);
+    if (read !== undefined) {
+      base = 'allow';
+      reason = `policy:default+${read}`;
+    }
+  }
 
   // 6. Floors may only tighten.
   const floored = applyAnnotationFloor(base, input.capability, input.trustTier);

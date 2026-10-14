@@ -15,7 +15,14 @@ interface Message {
   id: string; seq: number; role: string; content: Block[]; runId?: string; createdAt: string;
 }
 interface ModelBinding { id: string; name: string; providerType: string; modelId: string }
-interface LastRun { id: string; status: string; error?: { code: string; message: string }; finishedAt?: string }
+interface LastRun {
+  id: string;
+  status: string;
+  error?: { code: string; message: string };
+  finishedAt?: string;
+  /** Present while the run waits on a person. */
+  approvalId?: string;
+}
 
 const textOf = (content: Block[]): string =>
   content.filter((b) => b.type === 'text').map((b) => b.text ?? '').join('\n');
@@ -151,6 +158,20 @@ export function ConversationView({
 
           {runId === undefined && lastRun?.status === 'failed' && (
             <RunFailure run={lastRun} workspaceId={workspaceId} />
+          )}
+
+          {runId === undefined && lastRun?.approvalId !== undefined && (
+            <div className="turn assistant">
+              <AgentAvatar color={who.color} size={30} />
+              <div className="turn-body">
+                <ApprovalPrompt
+                  workspaceId={workspaceId}
+                  approvalId={lastRun.approvalId}
+                  // Deciding wakes the run; following it shows the rest of the reply.
+                  onDecided={() => { setLastRun(undefined); setRunId(lastRun.id); }}
+                />
+              </div>
+            </div>
           )}
 
           {runId !== undefined && (

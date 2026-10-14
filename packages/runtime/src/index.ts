@@ -60,3 +60,5 @@ export {
 export type {
   AppendMessage, RecordedStep, RunStateStore, SummariseMessages, ToolInvocationResult,
 } from './state';
+
+export { TRACE, type RunTracer, type StepTrace, type TraceAttribute, type TraceSpan } from './tracing';

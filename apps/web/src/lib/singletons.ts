@@ -14,13 +14,15 @@
 import { McpClientManager } from '@salvations/mcp';
 import { createRegistry } from '@salvations/provider-registry';
 import { createEventBus, type RunEventReader } from '@salvations/db';
-import { InMemoryMetrics } from '@salvations/observability';
+import { InMemoryMetrics, NO_EXPORTER, OtlpSpanExporter, Tracer } from '@salvations/observability';
+import { env } from './env';
 import { db } from './db';
 
 interface Singletons {
   providers?: ReturnType<typeof createRegistry>;
   mcpManager?: McpClientManager;
   metrics?: InMemoryMetrics;
+  tracer?: Tracer;
   eventBus?: Promise<{ bus: RunEventReader; kind: string }>;
 }
 
@@ -39,6 +41,28 @@ export const providers = () => (singletons().providers ??= createRegistry());
 export const mcpManager = () => (singletons().mcpManager ??= new McpClientManager());
 
 export const metrics = () => (singletons().metrics ??= new InMemoryMetrics());
+
+/**
+ * One tracer per process. The executor flushes it before every return, so a
+ * run's spans leave with the invocation that made them.
+ */
+export const tracer = () => (singletons().tracer ??= new Tracer({ exporter: spanExporter() }));
+
+function spanExporter() {
+  const endpoint = env().OTEL_EXPORTER_OTLP_ENDPOINT;
+  if (endpoint === undefined) return NO_EXPORTER;
+  const headers: Record<string, string> = {};
+  for (const pair of (env().OTEL_EXPORTER_OTLP_HEADERS ?? '').split(',')) {
+    const at = pair.indexOf('=');
+    if (at > 0) headers[pair.slice(0, at).trim()] = pair.slice(at + 1).trim();
+  }
+  return new OtlpSpanExporter({
+    endpoint,
+    serviceName: env().OTEL_SERVICE_NAME,
+    headers,
+    onError: (error) => console.log(JSON.stringify({ at: 'otlp', error: error instanceof Error ? error.message : String(error) })),
+  });
+}
 
 /** Probed once per process — see `createEventBus`. */
 export async function eventBus(): Promise<{ bus: RunEventReader; kind: string }> {

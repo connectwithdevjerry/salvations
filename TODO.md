@@ -288,6 +288,10 @@ platform exist beside the first three.
       entry with `native` installs an `in_process` server row; the opener builds the adapter
       for its alias. Google Cloud must list `<PUBLIC_BASE_URL>/api/mcp/callback` as a redirect
       URI and have the Gmail, Calendar and Drive APIs enabled
+- [x] Tool definitions stored verbatim: the capability upsert is a pipeline update, and a JSON
+      Schema's `$schema` key was parsed as an operator, so every first-party server's discovery
+      failed at the write ("the server would not list its tools"). Server-sent values now pass
+      through `$literal`; verified against MongoDB 7, with a server test in `packages/db`
 - [x] The assistant server is an OAuth 2.1 authorization server (RFC 9728/8414/7591/7636/8707):
       Claude.ai and ChatGPT connect by URL, the person consents on `/oauth/authorize` with the
       HIVE login, tokens are opaque and hashed (`oauthGrants`), refresh rotates with family

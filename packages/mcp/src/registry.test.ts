@@ -91,6 +91,16 @@ describe('a binding that cannot be used says why', () => {
     [{}, { url: undefined }, 'no_url', /no URL configured/],
   ];
 
+  it('resolves an in-process server, which has no URL to check', async () => {
+    // Every first-party server, and Google Workspace, is reached this way. A
+    // registry that refused them would list their tools and then call none,
+    // which is exactly what "the tool does not exist" looked like from a chat.
+    const r = registry([{ binding: binding(), server: server({ transport: 'in_process', url: undefined }) }]);
+    const resolved = await r.resolve('ws_1', 'bnd_1');
+    expect(resolved.definition.transport).toBe('in_process');
+    expect(resolved.definition.url).toBeUndefined();
+  });
+
   for (const [b, s, reason, message] of cases) {
     it(`reports ${reason}`, async () => {
       // A silent skip here becomes "the agent just didn't use the tool", which

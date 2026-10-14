@@ -292,6 +292,10 @@ platform exist beside the first three.
       Schema's `$schema` key was parsed as an operator, so every first-party server's discovery
       failed at the write ("the server would not list its tools"). Server-sent values now pass
       through `$literal`; verified against MongoDB 7, with a server test in `packages/db`
+- [x] In-process servers callable: the registry refused every transport but HTTP at call time,
+      so a listed first-party tool answered "no such tool". `in_process` resolves with no URL.
+      The client manager opens an in-process server per operation and closes it after, so a
+      warm process never hands one run's conversation or memory to the next
 - [x] The assistant server is an OAuth 2.1 authorization server (RFC 9728/8414/7591/7636/8707):
       Claude.ai and ChatGPT connect by URL, the person consents on `/oauth/authorize` with the
       HIVE login, tokens are opaque and hashed (`oauthGrants`), refresh rotates with family

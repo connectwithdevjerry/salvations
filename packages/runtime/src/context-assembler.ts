@@ -13,7 +13,7 @@
  * breakpoint, never before it.
  */
 import {
-  artifactsForModel, canonicalJson, fingerprint,
+  artifactsForModel, canonicalJson, fingerprint, textBlock, toolResultBlock, toolUseBlocks,
   type CanonicalMessage, type ContentBlock, type GenerationRequest, type Message,
   type ModelCapabilities, type ProviderKey, type RunContext, type SystemDirective,
   type ToolDeclaration,
@@ -115,6 +115,55 @@ function toCanonical(
   };
 }
 
+/** What the model reads for a tool call the run never answered. */
+export const UNANSWERED_TOOL_CALL =
+  'This call was not completed: the run ended before it could run. Call it again if the result still matters.';
+
+/**
+ * Answers every tool call the history left unanswered.
+ *
+ * A run can end between the model asking for tools and their results being
+ * written: a budget reached in the tool phase, a kill switch, a run that
+ * suspended for approval and was then overtaken by a new message. The
+ * `tool_use` stays in the conversation, and every provider refuses a history
+ * in which one is not answered by the very next message. History is
+ * append-only and the gap is real, so it is answered here, at assembly, with
+ * an error result that says so, rather than rewritten in the store.
+ *
+ * The last message is left alone: an unanswered call there is a tool phase
+ * still owed, and the runtime runs it before any model call.
+ */
+export function answerOrphanedToolCalls(messages: CanonicalMessage[]): number {
+  let answered = 0;
+  for (let i = 0; i < messages.length - 1; i++) {
+    const message = messages[i] as CanonicalMessage;
+    if (message.role !== 'assistant') continue;
+    const asked = toolUseBlocks(message.content).map((block) => block.id);
+    if (asked.length === 0) continue;
+
+    const next = messages[i + 1] as CanonicalMessage;
+    const given = new Set(
+      next.content
+        .filter((block): block is Extract<ContentBlock, { type: 'tool_result' }> => block.type === 'tool_result')
+        .map((block) => block.toolUseId),
+    );
+    const missing = asked.filter((id) => !given.has(id));
+    if (missing.length === 0) continue;
+
+    const results = missing.map((id) =>
+      toolResultBlock(id, [textBlock(UNANSWERED_TOOL_CALL)], { isError: true }));
+    answered += missing.length;
+
+    if (next.role === 'tool') {
+      // Partly answered: the results belong in the message that holds the rest.
+      messages[i + 1] = { ...next, content: [...next.content, ...results] };
+    } else {
+      messages.splice(i + 1, 0, { role: 'tool', content: results });
+    }
+  }
+  return answered;
+}
+
 /**
  * How far apart stable anchors are placed, in messages.
  *
@@ -176,6 +225,7 @@ export function assemblePrompt(input: AssembleInput): AssembledPrompt {
     if (converted.droppedArtifact) droppedArtifacts += 1;
     messages.push(converted.message);
   }
+  answerOrphanedToolCalls(messages);
 
   const breakpointsAfter = breakpointsFor(messages.length, ctx.capabilities);
 

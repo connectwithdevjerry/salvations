@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   canonicalJson, providerKey,
-  type Message, type ModelCapabilities, type RunContext, type SystemDirective,
-  type ToolDeclaration,
+  type GenerationRequest, type Message, type ModelCapabilities, type RunContext,
+  type SystemDirective, type ToolDeclaration,
 } from '@salvations/core';
 import {
   assemblePrompt, estimateTokens, prefixIsPreserved, type AssembleInput,
@@ -181,6 +181,57 @@ describe('history', () => {
       directives: [{ kind: 'identity', text: 'I' }, { kind: 'policy', text: '   ' }],
     }));
     expect(request.system).toHaveLength(1);
+  });
+});
+
+describe('a tool call the run never answered', () => {
+  const asked = (seq: number, ids: string[]): Message => message(seq, {
+    role: 'assistant',
+    content: ids.map((id) => ({ type: 'tool_use', id, name: 'crm__lookup', input: {} })),
+  });
+  const resultsOf = (request: GenerationRequest, index: number) =>
+    (request.messages[index]?.content ?? [])
+      .filter((b) => b.type === 'tool_result')
+      .map((b) => (b as { toolUseId: string; isError: boolean }).toolUseId);
+
+  it('is answered before the message that overtook it', () => {
+    // The run stopped between the model asking and the tool phase writing;
+    // the person then sent another message. Every provider rejects the
+    // history as it stands.
+    const { request } = assemblePrompt(input({
+      messages: [message(0), asked(1, ['tu_1']), message(2)],
+    }));
+
+    expect(request.messages.map((m) => m.role)).toEqual(['user', 'assistant', 'tool', 'user']);
+    expect(resultsOf(request, 2)).toEqual(['tu_1']);
+    expect(request.messages[2]?.content[0]).toMatchObject({ type: 'tool_result', isError: true });
+  });
+
+  it('fills the holes in a tool message that answered only some calls', () => {
+    const partial = message(2, {
+      role: 'tool',
+      content: [{ type: 'tool_result', toolUseId: 'tu_1', content: [{ type: 'text', text: 'ok' }], isError: false }],
+    });
+    const { request } = assemblePrompt(input({
+      messages: [message(0), asked(1, ['tu_1', 'tu_2']), partial, message(3)],
+    }));
+
+    expect(request.messages).toHaveLength(4);
+    expect(resultsOf(request, 2)).toEqual(['tu_1', 'tu_2']);
+  });
+
+  it('leaves a fully answered call, and the last message, alone', () => {
+    const answered = message(2, {
+      role: 'tool',
+      content: [{ type: 'tool_result', toolUseId: 'tu_1', content: [{ type: 'text', text: 'ok' }], isError: false }],
+    });
+    // A call at the end is a tool phase still owed, not an orphan.
+    const { request } = assemblePrompt(input({
+      messages: [message(0), asked(1, ['tu_1']), answered, message(3), asked(4, ['tu_9'])],
+    }));
+
+    expect(request.messages).toHaveLength(5);
+    expect(request.messages.at(-1)?.role).toBe('assistant');
   });
 });
 

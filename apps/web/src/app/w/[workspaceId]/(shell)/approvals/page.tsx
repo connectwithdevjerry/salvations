@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { api, ws } from '@/lib/client/api';
 import { ApprovalPrompt } from '@/components/approval-prompt';
 import { EmptyState } from '@/components/empty-state';
+import { PolicyEditor } from '@/components/policy-editor';
 
 interface Approval {
   id: string; runId: string; kind: string; payload: Record<string, unknown>;
@@ -29,7 +30,7 @@ export default function ApprovalsPage({ params }: { params: Promise<{ workspaceI
       <header>
         <h2>Approvals</h2>
         <p className="lede">
-          Runs waiting on a person. Each one holds no process and costs nothing while it waits.
+          Runs waiting on a person, and the rules that decide what has to wait.
         </p>
       </header>
 
@@ -57,6 +58,8 @@ export default function ApprovalsPage({ params }: { params: Promise<{ workspaceI
           />
         </div>
       ))}
+
+      <PolicyEditor workspaceId={workspaceId} />
     </div>
   );
 }

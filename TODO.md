@@ -169,7 +169,7 @@ was set after Phase 1 and supersedes the "no integrations in Phase 1" line that 
 - [x] Web UI: auth pages, workspace switcher, agent editor, chat with token streaming, run timeline
       (steps · tool calls · usage · cost), MCP install, **capability approval with definition
       diffs**, approval modal, provider/model binding management
-- [ ] Policy editor UI + `/policies` routes
+- [x] Policy editor UI + `/policies` routes (the Rules section of the Approvals page)
 - [x] MCP OAuth consent flow wired end to end (the client exists; the callback route does not)
 - [ ] **(AC-2) (AC-4) (AC-5)** exercised through the UI — needs a live database and real keys
 
@@ -312,6 +312,11 @@ platform exist beside the first three.
 - [x] A Telegram bot registered before button presses were asked for never heard a press, so
       Approve did nothing and said nothing. The webhook is re-registered the moment buttons are
       sent on a stale connection, and on the next inbound message; the daily sweep stays
+- [x] Rules editor: on the Approvals page, one list per scope (every assistant, or one). A rule
+      is an effect (allow, ask, never), an app (any, a built-in, or a connection), a tool name or
+      glob, and an optional per-run cap. The workspace default sits above it. `GET`/`PUT`
+      `/policies?scope=`; admins write, members read. "Allow and stop asking" on an approval
+      card records an allow rule for that tool and connection, for the assistant that asked
 - [x] A first-party binding has no row, so the permission broker judged it untrusted and the
       assistant asked before remembering anything, three times for one request. The host now
       tells the broker which ids are its own; a policy's own label ("policy:default") is no
@@ -397,7 +402,8 @@ Both were assessed and neither fits a request-shaped deployment, so neither is h
 - [ ] 🔒 **stdio transport, sandboxed** — container, read-only rootfs, no ambient credentials,
       egress allowlist, CPU/memory/PID caps; first-party + verified tiers only
 - [ ] Platform MCP catalog (`workspaceId: null`) + one-click install
-- [ ] `trustTier`-driven approval defaults; scoped remembered decisions (R14)
+- [x] `trustTier`-driven approval defaults; scoped remembered decisions (R14): reads run under
+      `ask` by tier and annotation, and "Allow and stop asking" writes an agent-scoped rule
 
 ## Phase 4 — Separate worker service ⚓
 

@@ -39,7 +39,7 @@ export function ApprovalPrompt({
       .catch(() => undefined);
   }, [workspaceId, approvalId]);
 
-  async function decide(decision: 'approve' | 'deny') {
+  async function decide(decision: 'approve' | 'deny', remember?: 'agent') {
     setBusy(true);
     setError(undefined);
     try {
@@ -48,6 +48,9 @@ export function ApprovalPrompt({
         ...(approval?.kind === 'mrtr_input' && decision === 'approve'
           ? { response: answer }
           : {}),
+        // A rule for this tool on this connection, for the assistant that
+        // asked. Written by the server before the run is woken.
+        ...(remember !== undefined ? { remember } : {}),
       });
       onDecided();
     } catch (caught) {
@@ -93,10 +96,15 @@ export function ApprovalPrompt({
       )}
 
       {error !== undefined && <p className="error">{error}</p>}
-      <div style={{ display: 'flex', gap: 8 }}>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         <button className="primary" disabled={busy} onClick={() => void decide('approve')}>
           {approval.kind === 'mrtr_input' ? 'Send answer' : 'Allow once'}
         </button>
+        {approval.kind === 'tool_call' && (
+          <button disabled={busy} onClick={() => void decide('approve', 'agent')} title="Allow, and write a rule so this assistant is not asked again for this tool">
+            Allow and stop asking
+          </button>
+        )}
         <button className="danger" disabled={busy} onClick={() => void decide('deny')}>
           Deny
         </button>

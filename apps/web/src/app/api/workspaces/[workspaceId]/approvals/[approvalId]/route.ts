@@ -8,7 +8,9 @@
  */
 import { decideApprovalSchema } from '@salvations/contracts';
 import { asId, type RunId } from '@salvations/core';
-import { MongoRunQueue } from '@salvations/db';
+import { MongoRunQueue, PolicyRepository } from '@salvations/db';
+import { requirePermission } from '@/lib/principal';
+import { rememberAllow } from '@/lib/policy-rules';
 import { errorResponse, jsonBody, ok } from '@/lib/http';
 import { workspaceRoute } from '@/lib/route';
 import { actorIdOf } from '@/lib/principal';
@@ -40,6 +42,20 @@ export const POST = workspaceRoute<{ approvalId: string }>(
     const run = await ctx.repos.runs.findById(approval.runId);
     if (run === null || !run.status.startsWith('waiting_')) {
       return errorResponse(409, 'conflict', 'That run has moved on. Ask the assistant again if you still want this.');
+    }
+
+    // Remembered before it is decided: a rule that failed to write should
+    // not leave the person believing they will not be asked again.
+    if (input.remember !== undefined && input.decision === 'approve' && approval.kind === 'tool_call') {
+      requirePermission(ctx.principal, 'policies:write');
+      const payload = approval.payload as { bindingId?: string; capabilityName?: string };
+      if (typeof payload.bindingId !== 'string' || typeof payload.capabilityName !== 'string') {
+        return errorResponse(422, 'invalid', 'This question does not name a tool that a rule could cover.');
+      }
+      const scope = input.remember === 'agent' ? { type: 'agent' as const, id: run.agentId } : { type: 'workspace' as const };
+      const policies = new PolicyRepository(ctx.database, ctx.workspaceId);
+      const current = (await policies.get(scope))?.rules ?? [];
+      await policies.setRules(scope, rememberAllow(current, payload.bindingId, payload.capabilityName), actorIdOf(ctx.principal));
     }
 
     await ctx.repos.runs.decideApproval(

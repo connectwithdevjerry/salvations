@@ -16,6 +16,7 @@ import { ingestDocument } from '@/lib/knowledge-service';
 import { readZip, textOf } from '@/lib/zip';
 import { planImport, type ImportPlan } from '@/lib/openclaw-import';
 import { AGENT_COLORS } from '@/lib/agent-colors';
+import { countGate } from '@/lib/limits';
 
 export const runtime = 'nodejs';
 export const maxDuration = 120;
@@ -58,6 +59,8 @@ export const POST = workspaceRoute('agents:write', async (ctx) => {
 
   const actor = actorIdOf(ctx.principal);
   const agents = new AgentRepository(ctx.database, ctx.workspaceId);
+  const room = await countGate(ctx.database, ctx.workspaceId, 'agents', await agents.count());
+  if (!room.allowed) return errorResponse(422, 'limit_reached', room.reason ?? 'Your plan has no room for another assistant.');
   const agent = await agents.create({
     slug: plan.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'imported',
     name: plan.name,

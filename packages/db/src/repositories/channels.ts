@@ -50,6 +50,11 @@ export class ChannelRepository {
     this.#events = scoped.collection<ChannelEventDoc>('channelEvents');
   }
 
+  /** How many connections exist, for the plan's ceiling. */
+  async count(): Promise<number> {
+    return this.#channels.countDocuments({});
+  }
+
   async list(): Promise<ChannelDoc[]> {
     return this.#channels.find({});
   }

@@ -15,6 +15,7 @@ import { WorkspaceRepository, AgentRepository, type AgentDoc, type ConversationD
 import { errorResponse, jsonBody, ok } from '@/lib/http';
 import { workspaceRoute, type WorkspaceContext } from '@/lib/route';
 import { actorIdOf } from '@/lib/principal';
+import { countGate } from '@/lib/limits';
 
 export const runtime = 'nodejs';
 
@@ -88,6 +89,9 @@ export const POST = workspaceRoute('agents:write', async (ctx) => {
 
   // A job from the team catalogue: the role writes the instructions and
   // brings its routines. The wizard's "blank" choice sends no roleId.
+  const room = await countGate(ctx.database, ctx.workspaceId, 'agents', await repo.count());
+  if (!room.allowed) return errorResponse(422, 'limit_reached', room.reason ?? 'Your plan has no room for another assistant.');
+
   if (input.roleId !== undefined) {
     const role = roleById(input.roleId);
     if (role === undefined) return errorResponse(422, 'validation_failed', 'That role does not exist.');

@@ -8,7 +8,9 @@
  * of a few hundred small rows.
  */
 import { AuditRepository, ModelBindingRepository, ScopedDb, WorkspaceRepository } from '@salvations/db';
-import type { AgentDoc, ChannelDoc } from '@salvations/db';
+import type { AgentDoc, ChannelDoc, McpServerBindingDoc } from '@salvations/db';
+import { entitlements } from '@/lib/billing';
+import { monthOf } from '@/lib/limits';
 import { ok } from '@/lib/http';
 import { workspaceRoute } from '@/lib/route';
 
@@ -22,7 +24,7 @@ export const GET = workspaceRoute('workspace:manage', async (ctx) => {
   const scoped = new ScopedDb(ctx.database, ctx.workspaceId);
   const since = new Date(Date.now() - WINDOW_DAYS * DAY_MS);
 
-  const [workspace, agents, channels, providers, bindings, pending, runs, days, spendToday, audit] = await Promise.all([
+  const [workspace, agents, channels, providers, bindings, pending, runs, days, spendToday, audit, plan, apps, spendMonth] = await Promise.all([
     new WorkspaceRepository(ctx.database).findById(ctx.workspaceId),
     scoped.collection<AgentDoc>('agents').find({ isArchived: false } as never, { projection: { name: 1 } }),
     scoped.collection<ChannelDoc>('channels').countDocuments({} as never),
@@ -33,6 +35,9 @@ export const GET = workspaceRoute('workspace:manage', async (ctx) => {
     ctx.repos.usage.listDays(SPEND_DAYS * 8),
     ctx.repos.usage.spendOnDay(),
     new AuditRepository(ctx.database, ctx.workspaceId).list(20),
+    entitlements(ctx.database, ctx.workspaceId),
+    scoped.collection<McpServerBindingDoc>('mcpServerBindings').countDocuments({} as never),
+    ctx.repos.usage.spendInMonth(monthOf()),
   ]);
 
   // Runs by outcome and by assistant, over the window.
@@ -102,6 +107,13 @@ export const GET = workspaceRoute('workspace:manage', async (ctx) => {
       byAgent: [...byAgent.entries()]
         .map(([id, row]) => ({ id, name: agentName.get(id) ?? 'Removed assistant', ...row }))
         .sort((a, b) => b.runs - a.runs),
+    },
+    plan: {
+      id: plan.planId,
+      configured: !plan.unconfigured,
+      active: plan.active,
+      limits: plan.limits,
+      used: { agents: agents.length, channels, mcpServers: apps, monthUsd: spendMonth },
     },
     audit: audit.map((entry) => ({
       id: entry._id,

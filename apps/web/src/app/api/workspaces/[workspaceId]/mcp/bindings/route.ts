@@ -149,6 +149,13 @@ export const POST = workspaceRoute('mcp:install', async (ctx) => {
     createdAt: new Date(),
   } as never);
 
+  // A native entry has nothing to discover yet: its server is ours, and it
+  // lists its tools once the person has consented on the vendor's screen,
+  // which the authorise step begins. Asking now would only record a failure.
+  if (entry?.native !== undefined) {
+    return ok({ id: binding._id, alias: binding.alias, status: 'pending_auth', capabilities: 0 }, 201);
+  }
+
   /*
    * Discover immediately.
    *

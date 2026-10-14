@@ -81,7 +81,10 @@ export default function SignUpPage() {
           </button>
         </form>
 
-        <p className="muted" style={{ margin: '16px 0 0', textAlign: 'center' }}>
+        <p className="faint" style={{ margin: '14px 0 0', textAlign: 'center', fontSize: 12.5 }}>
+          By creating an account you agree to the <Link href="/terms">terms</Link> and the <Link href="/privacy">privacy policy</Link>.
+        </p>
+        <p className="muted" style={{ margin: '10px 0 0', textAlign: 'center' }}>
           Already have one? <Link href="/signin">Sign in</Link>
         </p>
       </div>

@@ -303,7 +303,7 @@ export default async function Home() {
 
       <footer className="land-foot">
         <BrandMark />
-        <nav aria-label="Footer"><a href="#how">How it works</a><a href="#integrations">Integrations</a><a href="#security">Security</a><a href="#pricing">Pricing</a><Link href="/signin">Sign in</Link></nav>
+        <nav aria-label="Footer"><a href="#how">How it works</a><a href="#integrations">Integrations</a><a href="#security">Security</a><a href="#pricing">Pricing</a><Link href="/privacy">Privacy</Link><Link href="/terms">Terms</Link><Link href="/signin">Sign in</Link></nav>
         <p className="faint">© {new Date().getFullYear()} Yashayah. Your data stays yours.</p>
       </footer>
     </div>

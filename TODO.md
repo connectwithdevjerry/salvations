@@ -2,7 +2,8 @@
 
 Companion to [ARCHITECTURE.md](./ARCHITECTURE.md) and the documents in [docs/](./docs).
 
-**Current state:** Phase 1 complete through §1.10, plus the Phase 2 product scope below.
+**Current state:** Phase 1 complete through §1.10 and Phase 1.5 through §1.5.8; what remains in
+Phase 1 is the manual acceptance pass and the runbooks.
 The catalogue direction — named, hard-coded integrations rather than a generic MCP URL box —
 was set after Phase 1 and supersedes the "no integrations in Phase 1" line that was here.
 
@@ -179,14 +180,16 @@ was set after Phase 1 and supersedes the "no integrations in Phase 1" line that 
       `packages/observability/src/tracing.ts` for the trade and the seam)*
 - [x] Structured logging + 🔒 redaction middleware
 - [x] `auditLog` writer wired to the gateway (tool calls, refusals, approvals)
-- [ ] `auditLog` for credential resolution and admin actions — routes still unwired
+- [x] `auditLog` for admin actions (members, invitations, settings, disconnects, chat decisions);
+      credential resolution is logged by the gateway on every tool call
 - [x] `usageDaily` rollups; cache-hit-rate alert
 - [x] `/api/health` + `/api/health/ready`
 - [x] ⚓ **(AC-16)** `apps/web` Dockerfile built **and booted** in CI against a test database
 - [x] ⚓ `apps/worker` placeholder: Dockerfile + entrypoint that claims and runs one run via
       `ContinuousExecutor` — *not deployed*, but compiled and smoke-tested so Phase 4 is a
       configuration change rather than a discovery exercise
-- [ ] Tracer wired into the executor — the tracer exists and is tested; nothing emits spans yet
+- [x] Tracer wired into the executor: run → step → model_call | tool_call | compaction, flushed
+      before each invocation returns; OTLP/HTTP when `OTEL_EXPORTER_OTLP_ENDPOINT` is set
 
 ### 1.11 Phase 1 exit
 
@@ -230,8 +233,10 @@ platform exist beside the first three.
 - [x] 🔒 Webhook signature + replay window; all-or-none env configuration
 - [x] Entitlements that fail OPEN when no processor is configured
 - [x] Checkout page; card details never reach this codebase
-- [ ] Decide what a limit actually does when reached — currently nothing enforces `limits`
-- [ ] Customer portal link for changing the card on file
+- [x] A limit reached does something: the workspace's daily cap and the plan's monthly cap stop
+      new runs starting (in flight finishes); the plan's counts refuse the next assistant, channel
+      or app with the arithmetic; the admin dashboard shows each ceiling as a meter
+- [x] Customer portal: the processor's own page for the card and invoices, from the billing page
 
 ### 1.5.4 Knowledge, memory and the agent's server — done
 
@@ -255,7 +260,8 @@ platform exist beside the first three.
       assistants produce files of their own
 - [x] OpenAI transcription and embedding models in the catalogue, bound on connect; the adapter
       embeds, so memory and knowledge search by meaning once OpenAI is connected
-- [ ] PDF and Word ingestion — needs a parser that is its own project; refused honestly for now
+- [x] PDF (pdf.js, text layer only; a scan is refused with the word OCR) and Word (.docx opened as
+      the zip it is, paragraphs and table rows) ingestion
 - [ ] Atlas `$vectorSearch` once a workspace outgrows the in-process candidate caps
 
 ### 1.5.5 Integrations over OAuth — done
@@ -272,9 +278,9 @@ platform exist beside the first three.
       unique per assistant, a run sees only its own assistant's connections (plus first-party),
       and the Integrations tab lives on the assistant. The old workspace-wide `ws_alias` index
       is retired by the sync
-- [ ] Vendor MCP URLs were written from memory — the docs hosts are blocked from this session.
-      Verify `api.githubcopilot.com/mcp/`, `mcp.notion.com/mcp`, `mcp.linear.app/mcp` against each
-      vendor's page before relying on them
+- [x] Vendor MCP URLs checked against what the vendors publish (Asana `/v2/mcp`, Box and HubSpot
+      at the host alone were corrected). Asana and HubSpot register OAuth clients by hand only:
+      `MCP_OAUTH_CLIENTS` holds those, keyed by vendor domain, and the entries are refused until set
 - [x] Google Workspace: our own adapter in `packages/servers` (Gmail search/read/send/label,
       Calendar list/create, Drive search/read over Google's REST APIs), consent on Google's own
       screen with the deployment's Google client (`access_type=offline`, PKCE), tokens in the
@@ -286,7 +292,9 @@ platform exist beside the first three.
       Claude.ai and ChatGPT connect by URL, the person consents on `/oauth/authorize` with the
       HIVE login, tokens are opaque and hashed (`oauthGrants`), refresh rotates with family
       revocation on replay
-- [ ] Disconnecting an integration (no delete route yet) and token refresh on expiry sweep
+- [x] Disconnecting an integration: tokens (revoked at Google), every person's row, discovery,
+      the gateway token and the server row when unused; Google tokens renewed by the sweeper six
+      hours before they lapse, and a grant Google ends marks the binding as needing authorisation
 
 ### 1.5.6 Every assistant is an MCP server — done
 
@@ -298,11 +306,37 @@ platform exist beside the first three.
       `capabilities` tool and the server all read it
 - [x] API keys can finally be minted, listed and revoked; scopes are capped at the minter's own
 - [x] Server tab: URL, what it unites, keys shown once, client config
-- [ ] Re-export integration tools raw on the assistant's server — needs somewhere for an
-      approval to wait outside a run; `ask` is the honest route until then
-- [ ] OAuth on the assistant's server, for clients that cannot send a bearer header
+- [ ] Re-export integration tools raw on the assistant's server — see §1.5.7
+- [x] OAuth on the assistant's server: an OAuth 2.1 authorization server (RFC 9728/8414/7591/
+      7636/8707), consent on `/oauth/authorize` with the HIVE login, opaque hashed tokens
 
-### 1.5.7 Still to decide or build
+### 1.5.7 Two things that want a long-lived process
+
+Both were assessed and neither fits a request-shaped deployment, so neither is half-built.
+
+- [ ] **Raw integration tools on the assistant's MCP server.** A client calling, say,
+      `gmail__send` straight through the assistant's server would hit policy's `ask` and need
+      the call to wait for a person. Inside a run, waiting is a suspended run: no process held,
+      resumed by the queue. Outside a run there is nothing to suspend: the MCP request is open
+      on a serverless function with a wall of seconds, and the person may answer tomorrow. The
+      honest shapes are (a) the MCP Tasks extension (`tasks/get` on a task id the client polls),
+      which Phase 3 lists and which fits the queue model exactly, or (b) a long-lived worker that
+      can hold the request. Until one exists, `ask` is the route: it IS a run, so it waits
+      properly, and the tool runs with the assistant's memory and knowledge around it.
+- [ ] **Discord as a conversation (Gateway).** Discord's Gateway is a WebSocket the bot holds
+      open; a webhook deployment gets only slash-command interactions, which is what Discord is
+      today. Holding the socket needs the Phase 4 worker. Once it exists, the adapter gains a
+      `listen` that turns Gateway `MESSAGE_CREATE` events into the same `InboundMessage` the
+      webhook path makes, and nothing above the adapter changes.
+
+### 1.5.8 Chat depth — done
+
+- [x] Approvals decided from Telegram: the question goes to the chat with Approve / Not now
+      buttons; a press from the identity that owns the conversation decides it and wakes the run;
+      the message is rewritten with the outcome. Buttons are optional on the channel port.
+- [x] Chat identities linked to accounts: a ten-minute code from Settings, sent as `link CODE`,
+      matched by hash and honoured only for a member of the chat's workspace; linked identities
+      run as `trust: 'linked'` with the person's account on the run
 
 ---
 
@@ -345,8 +379,8 @@ platform exist beside the first three.
 - [ ] Deploy to ECS/Fargate (or any container host) against the same Atlas cluster
 - [ ] Vercel keeps serving UI, API and SSE — **frontend unchanged**
 - [ ] 🔒 Verify: no change required in `packages/core`, `packages/runtime`, or `packages/mcp`
-- [ ] Then: user-facing **scheduling** (`schedules` collection, cron UI, overlap policy) and
-      sub-agent orchestration, both of which want a long-lived executor
+- [ ] Then: sub-agent orchestration, which wants a long-lived executor (scheduling shipped in
+      §1.5.2 on the sweeper's tick)
 
 ## Phase 5 — Channel depth & first-party MCP servers
 
@@ -354,16 +388,13 @@ platform exist beside the first three.
 
 - [x] Telegram `ChannelAdapter`: webhook + secret verification 🔒
 - [x] 🔒 Unlinked identities are minimal-privilege (`trust: 'unlinked'` on the run's principal)
-- [ ] Throttled edits and inline-keyboard approvals — deciding an approval from the chat itself,
-      rather than being sent to the web app for it
-- [ ] 🔒 `channelIdentities` LINKING flow — tying a platform account to a HIVE account, which is
-      what would let an unlinked identity become a trusted one
+- [x] Throttled edits (the live draft) and inline-keyboard approvals on Telegram (§1.5.8)
+- [x] 🔒 `channelIdentities` linking flow (§1.5.8)
 - [ ] Channel capability degradation matrix + tests (no buttons on Slack, no threads on Telegram)
 - [ ] Discord over the Gateway once there is a worker that can hold a socket, so it is a
       conversation rather than a slash command
-- [ ] First-party MCP servers (`@modelcontextprotocol/server`): memory, documents, workspace-admin,
-      orchestration
-- [ ] In-process transport — same client interface, same `ToolGateway`
+- [x] First-party MCP servers: memory, knowledge, chat, web, Google Workspace, the agent gateway
+- [x] In-process transport — same client interface, same `ToolGateway`
 - [ ] 🔒 Verify no runtime back doors were added for our own servers
 
 ## Phase 6 — Platform hardening & scale

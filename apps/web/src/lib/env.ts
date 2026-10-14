@@ -54,6 +54,15 @@ const schema = z.object({
     }
   }),
 
+  /**
+   * Where traces go: an OpenTelemetry collector's OTLP/HTTP endpoint, and
+   * any headers it wants (comma-separated key=value pairs). Without an
+   * endpoint, spans are collected per run and dropped, which costs nothing.
+   */
+  OTEL_EXPORTER_OTLP_ENDPOINT: z.string().url().optional(),
+  OTEL_EXPORTER_OTLP_HEADERS: z.string().optional(),
+  OTEL_SERVICE_NAME: z.string().min(1).default('hive'),
+
   CREDENTIAL_KEK: z.string().min(1, 'CREDENTIAL_KEK is required'),
   CREDENTIAL_KEK_VERSION: z.coerce.number().int().positive().default(1),
   /** Set by Vercel for scheduled invocations; the sweep accepts it as an alternative to the HMAC. */

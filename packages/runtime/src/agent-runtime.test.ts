@@ -8,6 +8,7 @@ import {
 import { AgentRuntime, pendingToolCalls, type ResolvedRun } from './agent-runtime';
 import { LoopDetector } from './loop-detection';
 import type { AppendMessage, RecordedStep, RunStateStore, ToolInvocationResult } from './state';
+import type { RunTracer, StepTrace, TraceSpan } from './tracing';
 
 const MODEL = providerKey('test', 'model-x');
 
@@ -434,5 +435,53 @@ describe('provider artifacts', () => {
 
     expect(store.messages.at(-1)?.providerArtifacts)
       .toEqual({ [MODEL]: { thinking: 'opaque' } });
+  });
+});
+
+describe('what a step traces', () => {
+  function traced(): { trace: StepTrace; spans: { name: string; attributes: Record<string, unknown>; ended: boolean; error?: string }[] } {
+    const spans: { name: string; attributes: Record<string, unknown>; ended: boolean; error?: string }[] = [];
+    const make = (name: string, attributes: Record<string, unknown>): TraceSpan => {
+      const record = { name, attributes: { ...attributes }, ended: false } as (typeof spans)[number];
+      spans.push(record);
+      return {
+        setAttribute: (key, value) => { record.attributes[key] = value; },
+        recordError: (error) => { record.error = error instanceof Error ? error.name : 'unknown'; },
+        end: () => { record.ended = true; },
+      };
+    };
+    const tracer: RunTracer = {
+      startTrace: (name, options) => make(name, options?.attributes ?? {}),
+      startSpan: (_parent, name, options) => make(name, options?.attributes ?? {}),
+      flush: async () => undefined,
+    };
+    return { trace: { tracer, span: tracer.startTrace('salvations.step') }, spans };
+  }
+
+  it('opens a model_call span with the usage on it', async () => {
+    seq = 0;
+    const store = new FakeStore([message('user', text('hello'))]);
+    const p = provider([finish(text('hi'), { ...emptyUsage, inputTokens: 12, outputTokens: 3 })]);
+    const { trace, spans } = traced();
+    await runtimeWith(store, gateway(() => okResult(''))).stepOnce(resolved(p), signal, trace);
+    const call = spans.find((s) => s.name === 'salvations.model_call');
+    expect(call?.ended).toBe(true);
+    expect(call?.attributes['model.input_tokens']).toBe(12);
+    expect(call?.attributes['model.output_tokens']).toBe(3);
+    expect(call?.attributes['model.finish_reason']).toBe('end_turn');
+  });
+
+  it('opens a tool_call span that says how many calls ran and how the phase ended', async () => {
+    seq = 0;
+    const store = new FakeStore([
+      message('user', text('book it')),
+      message('assistant', [toolUse('t1', 'calendar__create')]),
+    ]);
+    const { trace, spans } = traced();
+    await runtimeWith(store, gateway(() => okResult('booked'))).stepOnce(resolved(provider()), signal, trace);
+    const phase = spans.find((s) => s.name === 'salvations.tool_call');
+    expect(phase?.attributes['tool.calls']).toBe(1);
+    expect(phase?.attributes['tool.outcome']).toBe('complete');
+    expect(phase?.ended).toBe(true);
   });
 });

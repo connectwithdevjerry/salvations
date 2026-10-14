@@ -40,7 +40,7 @@ import { discoverAndRecord } from './discovery-service';
 // because the services the container composes need them too, and importing the
 // container from those services was a cycle.
 export { providers, mcpManager, metrics, eventBus, keyProvider } from './singletons';
-import { keyProvider, mcpManager, metrics, providers } from './singletons';
+import { keyProvider, mcpManager, metrics, providers, tracer } from './singletons';
 
 // ─── MCP bindings ───────────────────────────────────────────────────────────
 
@@ -250,6 +250,7 @@ export async function executor(): Promise<SlicedExecutor> {
     openSession: (run, token) => openSession(handle.db, run, token, leaseMs),
     trigger: (runId: RunId) => trigger.trigger(runId),
     metrics: new ExecutionMetricsRecorder(metrics()),
+    tracer: tracer(),
   });
 }
 

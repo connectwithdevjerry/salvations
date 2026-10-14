@@ -22,6 +22,7 @@ import { LoopDetector, NEVER_STOPPED, type KillSwitch } from './loop-detection';
 import { ModelCallError, ModelCaller, type ModelAttempt, type PublishEvent } from './model-call';
 import { ToolPhaseRunner, type CompletedCall, type RequestedCall } from './tool-phase';
 import type { RunStateStore, SummariseMessages } from './state';
+import { TRACE, type StepTrace, type TraceSpan } from './tracing';
 
 export type StopReason = 'budget' | 'loop' | 'kill_switch' | 'model_error' | 'compaction_stuck';
 
@@ -83,7 +84,7 @@ export class AgentRuntime {
     this.#now = deps.now ?? (() => Date.now());
   }
 
-  async stepOnce(resolved: ResolvedRun, signal: AbortSignal): Promise<StepOutcome> {
+  async stepOnce(resolved: ResolvedRun, signal: AbortSignal, trace?: StepTrace): Promise<StepOutcome> {
     const { ctx } = resolved;
     const meter = new BudgetMeter(ctx.budget, ctx.consumed, {
       now: this.#now,
@@ -112,17 +113,17 @@ export class AgentRuntime {
     //    and is owed their results before it can say anything else.
     const pending = pendingToolCalls(messages);
     if (pending !== undefined) {
-      return this.#toolPhase(resolved, meter, pending, messages);
+      return this.#toolPhase(resolved, meter, pending, messages, trace);
     }
 
     // 4. Compaction is its own step. Doing it inline would make one step both
     //    two model calls and unresumable halfway.
     const plan = planCompaction(messages, ctx.capabilities, this.#deps.compaction);
     if (plan.needed) {
-      return this.#compact(meter, plan, signal);
+      return this.#compact(meter, plan, signal, trace);
     }
 
-    return this.#modelCall(resolved, meter, messages, signal);
+    return this.#modelCall(resolved, meter, messages, signal, trace);
   }
 
   async #modelCall(
@@ -130,9 +131,13 @@ export class AgentRuntime {
     meter: BudgetMeter,
     messages: readonly Message[],
     signal: AbortSignal,
+    trace?: StepTrace,
   ): Promise<StepOutcome> {
     const { ctx } = resolved;
     const started = this.#now();
+    const span = trace?.tracer.startSpan(trace.span, TRACE.modelCall, {
+      attributes: { 'model.key': String(ctx.providerKey), 'run.step_seq': ctx.stepSeq },
+    });
 
     const available = await this.#deps.gateway.listAvailable(ctx);
     const selection = selectCapabilities({
@@ -174,10 +179,20 @@ export class AgentRuntime {
         error: { code: 'model_call_failed', message },
       });
       await this.#deps.store.saveConsumption(meter.consumed, meter.usage);
+      span?.recordError(error);
+      span?.end();
       return this.#stop('model_error', message, messages, meter);
     }
 
     meter.recordUsage(result.usage);
+    if (span !== undefined) {
+      span.setAttribute('model.finish_reason', result.finishReason);
+      span.setAttribute('model.input_tokens', result.usage.inputTokens);
+      span.setAttribute('model.output_tokens', result.usage.outputTokens);
+      span.setAttribute('model.cache_read_tokens', result.usage.cacheReadTokens);
+      span.setAttribute('model.latency_ms', result.latencyMs);
+      span.end();
+    }
 
     const appended = await this.#deps.store.appendMessage({
       role: 'assistant',
@@ -212,6 +227,7 @@ export class AgentRuntime {
     meter: BudgetMeter,
     calls: readonly RequestedCall[],
     messages: readonly Message[],
+    trace?: StepTrace,
   ): Promise<StepOutcome> {
     const { ctx } = resolved;
     const started = this.#now();
@@ -236,7 +252,16 @@ export class AgentRuntime {
     const already = new Map<string, CompletedCall>();
     for (const [id, result] of persisted) already.set(id, result as CompletedCall);
 
+    const toolSpan = trace?.tracer.startSpan(trace.span, TRACE.toolCall, {
+      attributes: { 'tool.calls': calls.length, 'tool.already_done': already.size, 'run.step_seq': ctx.stepSeq },
+    });
     const outcome = await runner.run(calls, ctx, already);
+    if (toolSpan !== undefined) {
+      toolSpan.setAttribute('tool.outcome', outcome.kind);
+      if (outcome.kind === 'refused') toolSpan.recordError(new Error('loop_detected'));
+      if (outcome.kind === 'suspended') toolSpan.setAttribute('tool.suspend_reason', outcome.reason);
+      toolSpan.end();
+    }
 
     if (outcome.kind === 'refused') {
       // The loop is answered IN the conversation, so the model reads why and
@@ -287,8 +312,12 @@ export class AgentRuntime {
     meter: BudgetMeter,
     plan: ReturnType<typeof planCompaction>,
     signal: AbortSignal,
+    trace?: StepTrace,
   ): Promise<StepOutcome> {
     const started = this.#now();
+    const span: TraceSpan | undefined = trace?.tracer.startSpan(trace.span, TRACE.compaction, {
+      attributes: { 'compaction.messages': plan.toSummarise.length },
+    });
     const summarise = this.#deps.summarise;
 
     // A summariser that is down must not take the run with it: a rough summary
@@ -325,6 +354,11 @@ export class AgentRuntime {
       latencyMs: this.#now() - started,
     });
     await this.#deps.store.saveConsumption(meter.consumed, meter.usage);
+    if (span !== undefined) {
+      span.setAttribute('compaction.tokens_before', result.estimatedTokensBefore);
+      span.setAttribute('compaction.tokens_after', result.estimatedTokensAfter);
+      span.end();
+    }
 
     return { kind: 'continue', did: 'compaction' };
   }

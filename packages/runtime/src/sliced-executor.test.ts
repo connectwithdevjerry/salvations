@@ -7,6 +7,7 @@ import {
 import { WallClockDeadline, assertReserveFits } from './deadline';
 import { SlicedExecutor, type ExecutionMetrics, type SlicedExecutorDeps } from './sliced-executor';
 import type { AgentRuntime, ResolvedRun, StepOutcome } from './agent-runtime';
+import type { RunTracer, TraceSpan } from './tracing';
 
 class LeaseLostError extends Error {
   constructor(runId: string) {
@@ -531,5 +532,70 @@ describe('the deadline', () => {
     const d = new WallClockDeadline(100, { now: () => clock });
     clock += 5_000;
     expect(d.remainingMs()).toBe(0);
+  });
+});
+
+/** A tracer that keeps every span, so the shape of a run's trace can be read back. */
+class FakeTracer implements RunTracer {
+  readonly spans: { name: string; parent?: string; attributes: Record<string, unknown>; ended: boolean; error?: string }[] = [];
+  flushes = 0;
+
+  #span(name: string, parent: string | undefined, attributes: Record<string, unknown>): TraceSpan & { id: string } {
+    const record = { name, ...(parent !== undefined ? { parent } : {}), attributes: { ...attributes }, ended: false } as (typeof this.spans)[number];
+    this.spans.push(record);
+    const id = `${name}#${this.spans.length}`;
+    return {
+      id,
+      setAttribute: (key, value) => { record.attributes[key] = value; },
+      recordError: (error) => { record.error = error instanceof Error ? error.name : 'unknown'; },
+      end: () => { record.ended = true; },
+    };
+  }
+
+  startTrace(name: string, options: { attributes?: Record<string, unknown> } = {}) { return this.#span(name, undefined, options.attributes ?? {}); }
+  startSpan(parent: TraceSpan, name: string, options: { attributes?: Record<string, unknown> } = {}) {
+    return this.#span(name, (parent as unknown as { id: string }).id, options.attributes ?? {});
+  }
+  async flush() { this.flushes += 1; }
+}
+
+describe('the trace of a run', () => {
+  it('is one run span with a step span per step, all ended and flushed before the executor returns', async () => {
+    const tracer = new FakeTracer();
+    const h = harness([CONTINUE, CONTINUE, FINISHED], { tracer });
+    const outcome = await h.executor.execute('run_1' as RunId, h.deadline(300_000));
+    expect(outcome.kind).toBe('finished');
+
+    const [root, ...steps] = tracer.spans;
+    expect(root?.name).toBe('salvations.run');
+    expect(root?.attributes['run.id']).toBe('run_1');
+    expect(root?.attributes['run.outcome']).toBe('finished');
+    expect(root?.ended).toBe(true);
+    expect(steps.map((s) => s.name)).toEqual(['salvations.step', 'salvations.step', 'salvations.step']);
+    expect(steps.every((s) => s.parent === 'salvations.run#1' && s.ended)).toBe(true);
+    expect(steps.map((s) => s.attributes['step.kind'])).toEqual(['continue', 'continue', 'finished']);
+    expect(tracer.flushes).toBe(1);
+  });
+
+  it('marks the step and the run when a step throws, and still flushes', async () => {
+    const tracer = new FakeTracer();
+    let clock = 1_000_000;
+    const queue = new FakeQueue(run(), () => clock);
+    const executor = new SlicedExecutor({
+      queue,
+      openSession: async () => ({
+        runtime: { stepOnce: async () => { throw new TypeError('boom'); } } as unknown as AgentRuntime,
+        resolved: {} as ResolvedRun,
+      }),
+      tracer,
+      now: () => { clock += 1; return clock; },
+    });
+    const outcome = await executor.execute('run_1' as RunId, new WallClockDeadline(300_000, { now: () => clock }));
+    expect(outcome.kind).toBe('finished');
+    const step = tracer.spans.find((s) => s.name === 'salvations.step');
+    expect(step?.error).toBe('TypeError');
+    expect(step?.ended).toBe(true);
+    expect(tracer.spans[0]?.attributes['run.outcome']).toBe('finished');
+    expect(tracer.flushes).toBe(1);
   });
 });

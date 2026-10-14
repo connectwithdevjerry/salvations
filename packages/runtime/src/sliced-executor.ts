@@ -21,6 +21,7 @@ import type {
 } from '@salvations/core';
 import type { AgentRuntime, ResolvedRun, StepOutcome } from './agent-runtime';
 import { DEFAULT_RESERVE_MS, assertReserveFits } from './deadline';
+import { TRACE, type RunTracer, type TraceSpan } from './tracing';
 
 /** Raised by a lease-guarded write whose lease is gone. */
 export const isLeaseLost = (error: unknown): boolean =>
@@ -45,6 +46,8 @@ export interface SlicedExecutorDeps {
   /** Wakes another slice. Absent means the sweeper is the only liveness path. */
   trigger?(runId: RunId): Promise<void>;
   readonly metrics?: ExecutionMetrics;
+  /** One trace per run, a span per step. Flushed before every return. */
+  readonly tracer?: RunTracer;
   readonly owner?: string;
   readonly leaseMs?: number;
   readonly reserveMs?: number;
@@ -112,7 +115,35 @@ export class SlicedExecutor implements RunExecutor {
   }
 
   async #drive(run: Run, token: LeaseToken, deadline: Deadline): Promise<ExecOutcome> {
+    const tracer = this.#deps.tracer;
+    const root = tracer?.startTrace(TRACE.run, {
+      attributes: {
+        'run.id': String(run.id), 'workspace.id': String(run.workspaceId), 'agent.id': String(run.agentId),
+        'run.attempt': run.attempts,
+      },
+    });
+    let outcome: ExecOutcome | undefined;
+    try {
+      outcome = await this.#loop(run, token, deadline, root);
+      return outcome;
+    } catch (error) {
+      root?.recordError(error);
+      throw error;
+    } finally {
+      // The trace is shipped here and nowhere else: a serverless invocation
+      // can be frozen the moment it answers, and a flush left for later is a
+      // flush that never happens.
+      if (root !== undefined) {
+        root.setAttribute('run.outcome', outcome?.kind ?? 'threw');
+        root.end();
+      }
+      await tracer?.flush();
+    }
+  }
+
+  async #loop(run: Run, token: LeaseToken, deadline: Deadline, root: TraceSpan | undefined): Promise<ExecOutcome> {
     const id = run.id;
+    const tracer = this.#deps.tracer;
     let session: ExecutionSession;
     try {
       session = await this.#deps.openSession(run, token);
@@ -154,10 +185,18 @@ export class SlicedExecutor implements RunExecutor {
       }
 
       const startedStep = this.#now();
+      const stepSpan = tracer !== undefined && root !== undefined
+        ? tracer.startSpan(root, TRACE.step, { attributes: { 'step.index': steps } })
+        : undefined;
       let step: StepOutcome;
       try {
-        step = await session.runtime.stepOnce(session.resolved, signal);
+        step = await session.runtime.stepOnce(
+          session.resolved, signal,
+          ...(tracer !== undefined && stepSpan !== undefined ? [{ tracer, span: stepSpan }] : []),
+        );
       } catch (error) {
+        stepSpan?.recordError(error);
+        stepSpan?.end();
         if (isLeaseLost(error)) {
           // The step itself discovered it: a lease-guarded write refused.
           this.#deps.metrics?.leaseLost(String(id));
@@ -168,6 +207,13 @@ export class SlicedExecutor implements RunExecutor {
 
       steps += 1;
       this.#deps.metrics?.stepCompleted(String(id), step.kind, this.#now() - startedStep);
+      if (stepSpan !== undefined) {
+        stepSpan.setAttribute('step.kind', step.kind);
+        if (step.kind === 'continue') stepSpan.setAttribute('step.did', step.did);
+        if (step.kind === 'suspended') stepSpan.setAttribute('step.reason', step.reason);
+        if (step.kind === 'stopped') stepSpan.setAttribute('step.reason', step.reason);
+        stepSpan.end();
+      }
 
       switch (step.kind) {
         case 'continue':

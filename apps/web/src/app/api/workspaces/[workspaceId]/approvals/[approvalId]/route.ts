@@ -34,6 +34,13 @@ export const POST = workspaceRoute<{ approvalId: string }>(
         'This request expired. The run has to be started again.',
       );
     }
+    // A run that is no longer waiting cannot take an answer: it was overtaken
+    // by a newer message, or ended. Waking it would resume into the middle
+    // of a later exchange.
+    const run = await ctx.repos.runs.findById(approval.runId);
+    if (run === null || !run.status.startsWith('waiting_')) {
+      return errorResponse(409, 'conflict', 'That run has moved on. Ask the assistant again if you still want this.');
+    }
 
     await ctx.repos.runs.decideApproval(
       params.approvalId,

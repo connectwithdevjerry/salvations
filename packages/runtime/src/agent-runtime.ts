@@ -116,6 +116,16 @@ export class AgentRuntime {
       return this.#toolPhase(resolved, meter, pending, messages, trace);
     }
 
+    // 3b. Nothing left to answer. The last live message is the assistant's
+    //     own and asks for no tools: a run woken after its conversation moved
+    //     on, or resumed after its answer was already written. A model call
+    //     here would send a history no provider accepts.
+    const last = messages.filter((m) => m.supersededBy === undefined).at(-1);
+    if (last !== undefined && last.role === 'assistant') {
+      await this.#deps.publish?.('run_finished', { finishReason: 'end_turn' });
+      return { kind: 'finished', text: messageText(last.content) };
+    }
+
     // 4. Compaction is its own step. Doing it inline would make one step both
     //    two model calls and unresumable halfway.
     const plan = planCompaction(messages, ctx.capabilities, this.#deps.compaction);

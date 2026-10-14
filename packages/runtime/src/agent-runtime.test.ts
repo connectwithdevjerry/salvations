@@ -175,6 +175,21 @@ describe('one step does one thing', () => {
     expect(store.steps.map((s) => s.type)).toEqual(['model_call']);
   });
 
+  it('finishes without a model call when the assistant already had the last word', async () => {
+    // A run woken after its conversation moved on: the history ends with an
+    // assistant message that asks for nothing. Every provider refuses such a
+    // history, so the run ends with what was said rather than asking again.
+    seq = 0;
+    const store = new FakeStore([message('user', text('hello')), message('assistant', text('all done'))]);
+
+    const outcome = await runtimeWith(store, gateway(() => okResult('')))
+      .stepOnce(resolved(provider()), signal);
+
+    expect(outcome).toEqual({ kind: 'finished', text: 'all done' });
+    expect(store.steps).toEqual([]);
+    expect(store.messages).toHaveLength(2);
+  });
+
   it('stops after the model call when tools were requested', async () => {
     // One step is ONE model call or ONE tool phase. Doing both would make the
     // step unresumable halfway through.
@@ -376,9 +391,11 @@ describe('stopping conditions', () => {
 });
 
 describe('compaction is its own step', () => {
+  // An odd count, so the history ends on the person's turn: one ending on
+  // the assistant's has nothing to answer and finishes before compacting.
   const long = (): Message[] => {
     seq = 0;
-    return Array.from({ length: 40 }, (_, i) =>
+    return Array.from({ length: 41 }, (_, i) =>
       ({ ...message(i % 2 === 0 ? 'user' : 'assistant', text('x'.repeat(400))),
          tokenEstimate: 100 }));
   };

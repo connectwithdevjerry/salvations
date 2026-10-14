@@ -15,6 +15,7 @@ import { asId, type RunId } from '@salvations/core';
 import { AuditRepository, MongoRunQueue, type ApprovalDoc, type Database } from '@salvations/db';
 import type { InboundChoice } from '@salvations/channels';
 import { channelTargetOf, isTarget, type Delivery } from './channel-delivery';
+import { WEBHOOK_SPEC, registerWebhook } from './channel-webhook';
 import { db } from './db';
 import { VercelBackgroundTrigger } from './trigger';
 import { repositories, type Repos } from './repositories';
@@ -70,6 +71,12 @@ export async function announcePendingApproval(runId: string): Promise<Delivery> 
 
     const { adapter, token, chatRef, row } = target;
     const canPress = approval.kind === 'tool_call' && adapter.sendChoices !== undefined;
+    // Buttons are only worth sending if a press can reach us. A bot registered
+    // before presses were asked for is re-pointed first; the daily sweep
+    // would get there too, but not before this question.
+    if (canPress && (row.webhookSpec ?? 1) !== WEBHOOK_SPEC) {
+      await registerWebhook(handle.db, row).catch(() => undefined);
+    }
     const text = questionOf(approval, canPress);
     const messageRef = canPress && adapter.sendChoices !== undefined
       ? await adapter.sendChoices(token, chatRef, text, [
@@ -114,6 +121,9 @@ export async function decideFromChat(input: {
 
   const run = await repos.runs.findById(approval.runId);
   if (run === null) return { text: 'That run is gone.', decided: false };
+  if (!run.status.startsWith('waiting_')) {
+    return { text: 'That moment has passed; I moved on with what you said next. Ask me again if you still want it.', decided: false };
+  }
   const identity = await repos.channels.findIdentityByConversation(run.conversationId);
   if (identity === null || identity.channelId !== channelId || identity.externalUserId !== choice.senderRef) {
     return { text: 'Only the person who asked can decide this.', decided: false };

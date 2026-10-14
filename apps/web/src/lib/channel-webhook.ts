@@ -23,6 +23,17 @@ import { repositories } from './repositories';
 export const webhookUrl = (type: string, channelDocId: string): string =>
   `${env().PUBLIC_BASE_URL.replace(/\/$/, '')}/api/channels/${type}/${channelDocId}`;
 
+/**
+ * What our registration asks the platform for, as a version.
+ *
+ * Bumped when the registration changes shape (a new kind of update, a new
+ * secret), so every bot registered under the old shape is re-pointed by the
+ * next sweep rather than left waiting for the address to change.
+ *   1: messages
+ *   2: messages and button presses
+ */
+export const WEBHOOK_SPEC = 2;
+
 /** The host this deployment calls its own. */
 const ownHost = (): string => new URL(env().PUBLIC_BASE_URL).host.toLowerCase();
 
@@ -55,7 +66,7 @@ export async function registerWebhook(database: Database, row: ChannelDoc): Prom
 
   const url = webhookUrl(row.type, row._id);
   await adapter.register(token.expose(), { webhookUrl: url, webhookSecret: secret?.expose() ?? '' });
-  await new ChannelRepository(database, row.workspaceId).recordWebhook(row._id, url);
+  await new ChannelRepository(database, row.workspaceId).recordWebhook(row._id, url, WEBHOOK_SPEC);
   return url;
 }
 
@@ -79,7 +90,8 @@ export async function refreshStaleWebhooks(database: Database): Promise<WebhookR
 
   let updated = 0;
   let failed = 0;
-  const stale = rows.filter((row) => row.webhookUrl !== webhookUrl(row.type, row._id));
+  const stale = rows.filter((row) =>
+    row.webhookUrl !== webhookUrl(row.type, row._id) || (row.webhookSpec ?? 1) !== WEBHOOK_SPEC);
   for (const row of stale) {
     try {
       await registerWebhook(database, row);

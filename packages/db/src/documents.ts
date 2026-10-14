@@ -355,6 +355,8 @@ export interface ChannelDoc extends TenantDoc {
    * leaving them delivering to the old one.
    */
   webhookUrl?: string | null;
+  /** Which version of our registration the platform holds: what updates we asked for. */
+  webhookSpec?: number | null;
   health: {
     lastOkAt?: Date | null;
     lastDeliveryAt?: Date | null;

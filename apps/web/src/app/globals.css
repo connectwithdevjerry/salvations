@@ -1874,3 +1874,15 @@ button.link { background: none; border: 0; padding: 0; color: var(--accent); fon
   .vl-bar { flex-wrap: wrap; }
 }
 @media (prefers-reduced-motion: reduce) { .vl-start.live { animation: none; } }
+
+/* ---------------------------------------------------------------- legal -- */
+.legal-body { max-width: 760px; margin: 0 auto; padding: 48px 28px 40px; line-height: 1.65; }
+.legal-body h1 { font-size: clamp(30px, 4vw, 42px); letter-spacing: -0.025em; margin: 0 0 6px; }
+.legal-body h2 { font-size: 20px; margin: 34px 0 8px; letter-spacing: -0.01em; }
+.legal-body p, .legal-body li { font-size: 15.5px; color: var(--text); }
+.legal-body .legal-lede { font-size: 18px; color: var(--muted); margin: 18px 0 8px; }
+.legal-body ul { padding-left: 20px; }
+.legal-body li { margin: 6px 0; }
+.legal-body a { color: var(--accent); }
+.land-brand { text-decoration: none; color: inherit; }
+@media (max-width: 860px) { .legal .land-links { display: flex; } .legal-body { padding: 32px 16px; } }

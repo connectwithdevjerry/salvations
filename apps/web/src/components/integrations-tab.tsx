@@ -68,7 +68,11 @@ export function IntegrationsTab({ workspaceId, agentId }: { workspaceId: string;
       const tools = Number(query.get('tools') ?? '0');
       setNotice(`${connected} is connected — ${tools} ${tools === 1 ? 'tool' : 'tools'} available to this assistant.`);
     } else if (failed !== null) {
-      setError(CALLBACK_ERRORS[failed] ?? 'That connection could not be completed.');
+      // The server's own words, when the callback had them: "the Gmail API
+      // is not enabled" is a fix; "would not list its tools" is a shrug.
+      const detail = query.get('detail');
+      const base = CALLBACK_ERRORS[failed] ?? 'That connection could not be completed.';
+      setError(detail !== null && detail !== '' ? `${base} The server said: ${detail}` : base);
     }
     if (connected !== null || failed !== null) router.replace(`/w/${workspaceId}/agents/${agentId}?tab=integrations`);
   }, [router, workspaceId, agentId]);

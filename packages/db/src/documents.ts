@@ -702,7 +702,7 @@ export interface IdentityDoc extends BaseDoc {
 
 export interface AuthChallengeDoc extends BaseDoc {
   userId: string;
-  kind: 'email_verification' | 'password_reset';
+  kind: 'email_verification' | 'password_reset' | 'chat_link';
   /** Hashed, like every other bearer value. */
   tokenHash: string;
   expiresAt: Date;

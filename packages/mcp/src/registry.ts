@@ -208,6 +208,9 @@ function assertUsable(binding: BindingRecord, server: ServerRecord): void {
       binding.id, 'errored', `The ${binding.alias} server is in an error state.`,
     );
   }
+  // An in-process server is ours, reached over a linked transport the host
+  // opens; it has no URL and nothing more to check.
+  if (server.transport === 'in_process') return;
   if (server.transport !== 'streamable_http') {
     // stdio spawns a process with our filesystem and network. It is gated
     // behind sandboxing, not behind a configuration flag.

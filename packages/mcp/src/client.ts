@@ -271,6 +271,31 @@ export class McpClientManager {
       throw new CircuitOpenError(definition.bindingId, breaker.consecutiveFailures);
     }
 
+    // An in-process server is built for the run that asked: its tools close
+    // over that run's conversation and agent. The scope key does not say
+    // which run, so a kept connection would hand the next run on this process
+    // the previous run's memory. Opened for the operation, closed after.
+    if (definition.transport === 'in_process') {
+      let connected: ConnectedClient;
+      try {
+        connected = await createClient(definition, scope, options);
+      } catch (error) {
+        this.#recordFailure(definition.bindingId, breaker, error);
+        throw error;
+      }
+      try {
+        const result = await operation(connected.client);
+        breaker.recordSuccess();
+        this.#health.set(definition.bindingId, { lastOkAt: new Date() });
+        return result;
+      } catch (error) {
+        this.#recordFailure(definition.bindingId, breaker, error);
+        throw error;
+      } finally {
+        await connected.close().catch(() => undefined);
+      }
+    }
+
     let entry: Entry;
     try {
       entry = await this.acquire(definition, scope, options);

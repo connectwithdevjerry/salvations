@@ -86,7 +86,15 @@ export interface CatalogEntry {
    * vendor's own consent screen; every tool the server offers is then the
    * agents' to call. Hard-coded so nobody has to find the URL in a docs page.
    */
-  readonly mcp?: { readonly url: string };
+  readonly mcp?: {
+    readonly url: string;
+    /**
+     * Set when the vendor registers OAuth clients by hand only: no client
+     * metadata document, no dynamic registration. The deployment must hold a
+     * client for this domain before the entry can be connected.
+     */
+    readonly registeredClient?: string;
+  };
   /**
    * Served by an adapter of ours, in this process, on the vendor's own REST
    * APIs — for a vendor that publishes no MCP server. Consent is the vendor's

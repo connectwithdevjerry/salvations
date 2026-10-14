@@ -22,6 +22,7 @@ import { workspaceRoute } from '@/lib/route';
 import { discoverAndRecord } from '@/lib/discovery-service';
 import { actorIdOf } from '@/lib/principal';
 import { countGate } from '@/lib/limits';
+import { hasRegisteredClient } from '@/lib/oauth-config';
 
 export const runtime = 'nodejs';
 
@@ -78,6 +79,13 @@ export const POST = workspaceRoute('mcp:install', async (ctx) => {
   }
   if (entry !== undefined && entry.mcp === undefined && entry.native === undefined) {
     return errorResponse(422, 'unsupported', `${entry.name} is not reached over MCP.`);
+  }
+  if (entry?.mcp?.registeredClient !== undefined && !hasRegisteredClient(entry.mcp.registeredClient)) {
+    return errorResponse(
+      422, 'unsupported',
+      `${entry.name} registers apps by hand, and this deployment has none for it yet. `
+      + `Whoever runs it creates one in ${entry.name}’s developer console and sets MCP_OAUTH_CLIENTS.`,
+    );
   }
 
   // A native entry is served by an adapter of ours in this process; its

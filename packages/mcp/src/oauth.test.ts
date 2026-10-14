@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  AuthorizationStateMismatchError, InMemoryOAuthCredentialStore, PENDING_AUTHORIZATION_TTL_MS,
-  ScopedOAuthProvider, beginAuthorization, clientMetadataDocument, completeAuthorization,
-  type OAuthClientConfig,
+  AuthorizationStateMismatchError, InMemoryOAuthCredentialStore, PENDING_AUTHORIZATION_TTL_MS, ScopedOAuthProvider, beginAuthorization, clientMetadataDocument, completeAuthorization, type OAuthClientConfig, registeredClientFor,
 } from './oauth';
 import { userScope, workspaceScope } from './scope';
 
@@ -134,6 +132,31 @@ describe('client identity', () => {
   it('refuses to serve a document when no metadata URL is configured', () => {
     const { clientMetadataUrl: _omitted, ...rest } = CONFIG;
     expect(() => clientMetadataDocument(rest)).toThrow(/no document to serve/);
+  });
+});
+
+describe('a client registered by hand', () => {
+  const clients = { 'asana.com': { client_id: 'asana_app', client_secret: 's3cret' } };
+
+  it('covers the vendor domain and its subdomains, and nothing else', () => {
+    expect(registeredClientFor(clients, 'https://mcp.asana.com')?.client_id).toBe('asana_app');
+    expect(registeredClientFor(clients, 'https://app.asana.com/-/oauth')?.client_id).toBe('asana_app');
+    expect(registeredClientFor(clients, 'https://asana.com')?.client_id).toBe('asana_app');
+    expect(registeredClientFor(clients, 'https://notasana.com')).toBeUndefined();
+    expect(registeredClientFor(clients, 'https://mcp.linear.app')).toBeUndefined();
+    expect(registeredClientFor(clients, 'not a url')).toBeUndefined();
+    expect(registeredClientFor(undefined, 'https://mcp.asana.com')).toBeUndefined();
+  });
+
+  it('is what the provider presents for that issuer, ahead of anything stored', async () => {
+    const store = new InMemoryOAuthCredentialStore();
+    const provider = providerFor(store, { ...CONFIG, registeredClients: clients });
+    await provider.saveClientInformation({ client_id: 'stored' } as never, { issuer: 'https://mcp.asana.com' } as never);
+    const info = await provider.clientInformation({ issuer: 'https://mcp.asana.com' } as never);
+    expect(info?.client_id).toBe('asana_app');
+    expect((info as { client_secret?: string }).client_secret).toBe('s3cret');
+    const other = await provider.clientInformation({ issuer: 'https://mcp.linear.app' } as never);
+    expect(other).toBeUndefined();
   });
 });
 

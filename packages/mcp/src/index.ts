@@ -19,11 +19,20 @@ export {
 } from './gateway';
 
 export {
-  AuthorizationRequiredError, AuthorizationStateMismatchError, InMemoryOAuthCredentialStore,
-  PENDING_AUTHORIZATION_TTL_MS, ScopedOAuthProvider, beginAuthorization, clientMetadataDocument,
+  AuthorizationRequiredError,
+  AuthorizationStateMismatchError,
+  InMemoryOAuthCredentialStore,
+  PENDING_AUTHORIZATION_TTL_MS,
+  ScopedOAuthProvider,
+  beginAuthorization,
+  clientMetadataDocument,
   completeAuthorization,
-  type BeginAuthorizationResult, type OAuthClientConfig, type OAuthCredentialStore,
+  type BeginAuthorizationResult,
+  type OAuthClientConfig,
+  type OAuthCredentialStore,
   type PendingAuthorization,
+  registeredClientFor,
+  type RegisteredClient,
 } from './oauth';
 
 export {

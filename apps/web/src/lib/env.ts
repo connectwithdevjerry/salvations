@@ -35,6 +35,25 @@ const schema = z.object({
   GOOGLE_WORKSPACE_CLIENT_ID: z.string().min(1).optional(),
   GOOGLE_WORKSPACE_CLIENT_SECRET: z.string().min(1).optional(),
 
+  /**
+   * OAuth clients registered by hand with vendors whose MCP servers accept
+   * neither a client metadata document nor dynamic registration (Asana,
+   * HubSpot). JSON, keyed by the vendor's domain:
+   *   {"asana.com":{"client_id":"…","client_secret":"…"},"hubspot.com":{…}}
+   * Each vendor's developer console issues the pair; the redirect URI to
+   * register there is <PUBLIC_BASE_URL>/api/mcp/callback.
+   */
+  MCP_OAUTH_CLIENTS: z.string().optional().transform((raw, ctx) => {
+    if (raw === undefined || raw.trim() === '') return undefined;
+    try {
+      const parsed = z.record(z.string().min(1), z.object({ client_id: z.string().min(1), client_secret: z.string().min(1).optional() })).parse(JSON.parse(raw));
+      return parsed;
+    } catch {
+      ctx.addIssue({ code: 'custom', message: 'MCP_OAUTH_CLIENTS must be JSON of the form {"vendor.com":{"client_id":"…","client_secret":"…"}}' });
+      return z.NEVER;
+    }
+  }),
+
   CREDENTIAL_KEK: z.string().min(1, 'CREDENTIAL_KEK is required'),
   CREDENTIAL_KEK_VERSION: z.coerce.number().int().positive().default(1),
   /** Set by Vercel for scheduled invocations; the sweep accepts it as an alternative to the HMAC. */

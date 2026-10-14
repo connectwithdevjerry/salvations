@@ -17,7 +17,7 @@ import { KnowledgeRepository } from '@salvations/db';
 import type { Database, KnowledgeChunkDoc, KnowledgeDocumentDoc } from '@salvations/db';
 import {
   MAX_CHUNKS_PER_DOCUMENT, MAX_DOCUMENT_BYTES, SUPPORTED_FORMATS, UnsupportedDocumentError,
-  chunkText, extractText, kindOf, rankChunks, similarityOf,
+  chunkText, extractDocument, kindOf, rankChunks, similarityOf,
 } from '@salvations/knowledge';
 import type { KnowledgeSource } from '@salvations/servers';
 import { embedderFor, type Embedder } from './memory-service';
@@ -44,14 +44,13 @@ export async function ingestDocument(input: IngestInput): Promise<IngestOutcome>
   const kind = kindOf(input.fileName, input.mimeType);
   if (kind === undefined) {
     throw Errors.validation(
-      `"${input.fileName}" is not a format that can be read. Upload ${SUPPORTED_FORMATS} — `
-      + 'a PDF or Word document can be exported as one of those first.',
+      `"${input.fileName}" is not a format that can be read. Upload ${SUPPORTED_FORMATS}.`,
     );
   }
 
   let text: string;
   try {
-    text = extractText(input.bytes, kind).trim();
+    text = (await extractDocument(input.bytes, kind)).trim();
   } catch (caught) {
     if (caught instanceof UnsupportedDocumentError) throw Errors.validation(caught.message);
     throw caught;

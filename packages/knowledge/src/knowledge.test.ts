@@ -16,9 +16,12 @@ describe('reading uploads', () => {
     expect(kindOf('blob', 'text/plain; charset=utf-8')).toBe('text');
   });
 
-  it('does not guess at a format it cannot read', () => {
-    expect(kindOf('deck.pdf', 'application/pdf')).toBeUndefined();
-    expect(kindOf('report.docx', undefined)).toBeUndefined();
+  it('knows PDF and Word by name or by declared type, and guesses at nothing else', () => {
+    expect(kindOf('deck.pdf', 'application/pdf')).toBe('pdf');
+    expect(kindOf('report.docx', undefined)).toBe('docx');
+    expect(kindOf('upload', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')).toBe('docx');
+    expect(kindOf('setup.exe', 'application/octet-stream')).toBeUndefined();
+    expect(kindOf('old.doc', 'application/msword')).toBeUndefined();
   });
 
   it('refuses binary that wears a text extension', () => {

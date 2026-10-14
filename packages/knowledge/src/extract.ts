@@ -1,14 +1,18 @@
 /**
  * Getting text out of what was uploaded.
  *
- * Only text-shaped formats, deliberately. A PDF or a Word file needs a parser
- * that is its own project, and a half-working one produces documents that
- * LOOK ingested and answer nothing — the worst outcome, because the person
- * believes the agent has read something it has not. Refusing says so at
- * upload time, with the fix in the message.
+ * Text-shaped formats are decoded here. PDF and Word go through their own
+ * extractors, each of which refuses by name when the file is not what its
+ * extension says, or when a PDF turns out to be a scan with no text in it.
+ * A document that LOOKS ingested and answers nothing is the worst outcome,
+ * because the person believes the agent has read something it has not; so
+ * every path either yields the words or says why it cannot.
  */
+import { extractDocx, NotAWordDocumentError } from './office';
+import { extractPdf, NotAPdfError } from './pdf';
 
 export type TextKind = 'text' | 'markdown' | 'html' | 'csv' | 'json';
+export type DocumentKind = TextKind | 'pdf' | 'docx';
 
 export class UnsupportedDocumentError extends Error {
   constructor(detail: string) {
@@ -17,15 +21,17 @@ export class UnsupportedDocumentError extends Error {
   }
 }
 
-const BY_EXTENSION: Readonly<Record<string, TextKind>> = {
+const BY_EXTENSION: Readonly<Record<string, DocumentKind>> = {
   txt: 'text', text: 'text', log: 'text',
   md: 'markdown', markdown: 'markdown', mdx: 'markdown',
   html: 'html', htm: 'html',
   csv: 'csv', tsv: 'csv',
   json: 'json',
+  pdf: 'pdf',
+  docx: 'docx',
 };
 
-const BY_MIME: Readonly<Record<string, TextKind>> = {
+const BY_MIME: Readonly<Record<string, DocumentKind>> = {
   'text/plain': 'text',
   'text/markdown': 'markdown',
   'text/x-markdown': 'markdown',
@@ -33,10 +39,18 @@ const BY_MIME: Readonly<Record<string, TextKind>> = {
   'text/csv': 'csv',
   'text/tab-separated-values': 'csv',
   'application/json': 'json',
+  'application/pdf': 'pdf',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
 };
 
 /** Formats named in the refusal, so the message doubles as the instructions. */
-export const SUPPORTED_FORMATS = 'plain text, Markdown, HTML, CSV or JSON';
+export const SUPPORTED_FORMATS = 'PDF, Word (.docx), plain text, Markdown, HTML, CSV or JSON';
+
+/** The `accept` list for a file input, from the same table the server reads. */
+export const ACCEPTED_UPLOADS = [
+  ...Object.keys(BY_EXTENSION).map((e) => `.${e}`),
+  ...Object.keys(BY_MIME),
+].join(',');
 
 /**
  * Which kind of text this is, from the name first and the declared type second.
@@ -45,7 +59,7 @@ export const SUPPORTED_FORMATS = 'plain text, Markdown, HTML, CSV or JSON';
  * anything they do not recognise, and Markdown is something they mostly do
  * not. Undefined means "not something we can read", never a guess.
  */
-export function kindOf(fileName: string, mimeType: string | undefined): TextKind | undefined {
+export function kindOf(fileName: string, mimeType: string | undefined): DocumentKind | undefined {
   const extension = fileName.toLowerCase().match(/\.([a-z0-9]+)$/)?.[1];
   if (extension !== undefined && BY_EXTENSION[extension] !== undefined) {
     return BY_EXTENSION[extension];
@@ -67,8 +81,7 @@ export function extractText(bytes: Uint8Array, kind: TextKind): string {
     text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
   } catch {
     throw new UnsupportedDocumentError(
-      `That file is not text. Upload ${SUPPORTED_FORMATS} — a PDF or Word document `
-      + 'can be exported as one of those first.',
+      `That file is not text. Upload ${SUPPORTED_FORMATS}.`,
     );
   }
 
@@ -82,6 +95,42 @@ export function extractText(bytes: Uint8Array, kind: TextKind): string {
 
   const normalised = text.replace(/\r\n?/g, '\n').replace(/^\uFEFF/, '');
   return kind === 'html' ? stripHtml(normalised) : normalised;
+}
+
+/**
+ * Text from any upload we read, by kind.
+ *
+ * The binary formats' own errors become the one refusal type the service
+ * turns into a message, so a .docx that is really a .doc, or a PDF that is
+ * a photograph of a page, are explained the same way a binary .txt is.
+ */
+export async function extractDocument(bytes: Uint8Array, kind: DocumentKind): Promise<string> {
+  if (kind === 'pdf') {
+    let text: string;
+    try {
+      text = await extractPdf(bytes);
+    } catch (caught) {
+      if (caught instanceof NotAPdfError) throw new UnsupportedDocumentError(caught.message);
+      throw caught;
+    }
+    if (text === '') {
+      throw new UnsupportedDocumentError(
+        'That PDF has no text in it, only images of pages. Run it through OCR, or export the original as a PDF with text.',
+      );
+    }
+    return text;
+  }
+  if (kind === 'docx') {
+    try {
+      return extractDocx(bytes);
+    } catch (caught) {
+      if (caught instanceof NotAWordDocumentError) {
+        throw new UnsupportedDocumentError(`${caught.message} An older .doc file can be saved as .docx in Word first.`);
+      }
+      throw caught;
+    }
+  }
+  return extractText(bytes, kind);
 }
 
 /**

@@ -175,6 +175,14 @@ export class CapabilityRepository {
     // An aggregation-pipeline update, because approval must be decided FROM the
     // stored hash in the same write that replaces it. Expressions in a $set
     // stage see the pre-update document, so `$definitionHash` is the old value.
+    //
+    // Every value that came from the server goes through `$literal`. In a
+    // pipeline the server's values are otherwise PARSED, not stored: a JSON
+    // Schema carries `$schema` (and may carry `$ref` and `$defs`), which the
+    // pipeline reads as an operator and rejects the whole write for, and a
+    // description beginning with `$` would be read as a field path and stored
+    // as nothing. Both are the server's data, and the server does not get to
+    // choose how this write is parsed.
     await this.#collection.updateOne(
       { bindingId, scopeKey, kind: cap.kind, name: cap.name },
       [
@@ -183,13 +191,13 @@ export class CapabilityRepository {
             bindingId,
             scopeKey,
             kind: cap.kind,
-            name: cap.name,
-            canonicalName: cap.canonicalName,
-            title: cap.title ?? null,
-            description: cap.description ?? null,
-            inputSchema: cap.inputSchema ?? null,
-            outputSchema: cap.outputSchema ?? null,
-            annotations: cap.annotations ?? null,
+            name: { $literal: cap.name },
+            canonicalName: { $literal: cap.canonicalName },
+            title: { $literal: cap.title ?? null },
+            description: { $literal: cap.description ?? null },
+            inputSchema: { $literal: cap.inputSchema ?? null },
+            outputSchema: { $literal: cap.outputSchema ?? null },
+            annotations: { $literal: cap.annotations ?? null },
             definitionHash: hash,
             firstSeenAt: { $ifNull: ['$firstSeenAt', now] },
             lastSeenAt: now,

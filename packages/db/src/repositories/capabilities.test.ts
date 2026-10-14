@@ -88,8 +88,9 @@ function fakeScoped(seed: Record<string, unknown>[] = []) {
 
   const evaluate = (expr: unknown, doc: Record<string, unknown>): unknown => {
     if (typeof expr === 'string' && expr.startsWith('$')) return doc[expr.slice(1)];
-    if (expr === null || typeof expr !== 'object' || Array.isArray(expr)) return expr;
+    if (expr === null || typeof expr !== 'object' || Array.isArray(expr) || expr instanceof Date) return expr;
     const obj = expr as Record<string, unknown>;
+    if ('$literal' in obj) return obj['$literal'];
     if ('$ifNull' in obj) {
       const [a, b] = obj['$ifNull'] as [unknown, unknown];
       const v = evaluate(a, doc);
@@ -107,7 +108,12 @@ function fakeScoped(seed: Record<string, unknown>[] = []) {
       const parts = (obj['$mergeObjects'] as unknown[]).map((p) => evaluate(p, doc));
       return Object.assign({}, ...parts.map((p) => (p === null || p === undefined ? {} : p)));
     }
-    return expr;
+    // What the real server does with any other object whose keys start with
+    // `$`: it refuses the write. Mirrored here so the fake cannot pass what
+    // the database would reject.
+    const dollar = Object.keys(obj).find((k) => k.startsWith('$'));
+    if (dollar !== undefined) throw new Error(`Unrecognized expression '${dollar}'`);
+    return Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, evaluate(v, doc)]));
   };
 
   const collection = {
@@ -235,6 +241,29 @@ describe('reconcile — approval invalidation is atomic (AC-7)', () => {
     // Soft, not hard: history must stay explainable after a server changes.
     expect(docs[0]!['removedAt']).toBeInstanceOf(Date);
     expect(capabilityBlockReason(asCapability(docs[0]!))).toBe('removed');
+  });
+
+  it('stores the server\'s schema and text verbatim, dollar signs included', async () => {
+    // A JSON Schema carries `$schema`, and may carry `$ref` and `$defs`. The
+    // upsert is a pipeline, where a bare object with such a key is parsed as an
+    // operator and the whole write refused — which is exactly how Google
+    // Workspace came back with "the server would not list its tools".
+    const { collection, docs } = fakeScoped();
+    const repo = new CapabilityRepository(collection);
+    const inputSchema = {
+      type: 'object',
+      properties: { query: { $ref: '#/$defs/q' } },
+      $defs: { q: { type: 'string' } },
+      $schema: 'https://json-schema.org/draft/2020-12/schema',
+    };
+
+    const diff = await repo.reconcile('mcb_1', 'workspace', [
+      tool({ inputSchema, description: '$5 per call. Searches mail.' }),
+    ], new Date());
+
+    expect(diff.added).toEqual(['linear__create_issue']);
+    expect(docs[0]?.['inputSchema']).toEqual(inputSchema);
+    expect(docs[0]?.['description']).toBe('$5 per call. Searches mail.');
   });
 
   it('preserves firstSeenAt across rediscovery', async () => {

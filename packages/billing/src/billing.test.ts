@@ -1,7 +1,7 @@
 import { createHmac } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { createStripeProcessor, encodeForm } from './stripe';
-import { entitlementsOf, withinLimit, UNCONFIGURED } from './entitlements';
+import { entitlementsOf, trialEntitlements, withinLimit, TRIAL_DAYS, UNCONFIGURED } from './entitlements';
 import type { Subscription } from './port';
 
 const SECRET = 'whsec_test';
@@ -119,10 +119,28 @@ describe('entitlements', () => {
     currentPeriodEnd: undefined, cancelAtPeriodEnd: false, ...over,
   });
 
-  it('allows everything when no processor is configured', () => {
-    // A deployment nobody has been asked to pay for must not lock people out of
-    // their own data.
+  it('allows everything for an exempt workspace', () => {
     expect(withinLimit(UNCONFIGURED, 'agents', 10_000).allowed).toBe(true);
+    expect(UNCONFIGURED.state).toBe('exempt');
+  });
+
+  it('grants the default plan during a trial, and nothing after it', () => {
+    const endsAt = new Date('2026-10-24T00:00:00Z');
+    const during = trialEntitlements({ endsAt }, new Date('2026-10-20T00:00:00Z'));
+    expect(during.active).toBe(true);
+    expect(during.state).toBe('trial');
+    expect(during.limits?.agents).toBeGreaterThan(0);
+    expect(withinLimit(during, 'agents', 0).allowed).toBe(true);
+
+    const after = trialEntitlements({ endsAt }, new Date('2026-10-24T00:00:01Z'));
+    expect(after.active).toBe(false);
+    expect(after.state).toBe('trial_ended');
+    expect(withinLimit(after, 'agents', 0).reason).toMatch(/free trial has ended/);
+  });
+
+  it('tells a workspace that never started what to do', () => {
+    expect(withinLimit(entitlementsOf(undefined), 'agents', 0).reason).toMatch(/Start your 10-day free trial/);
+    expect(TRIAL_DAYS).toBe(10);
   });
 
   it('keeps a past_due workspace running', () => {

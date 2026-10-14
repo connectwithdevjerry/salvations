@@ -120,6 +120,7 @@ export class WorkspaceRepository {
         joinedAt: now,
       } as never],
       invitations: [],
+      trial: null,
       createdBy: input.createdBy,
       createdAt: now,
       updatedAt: now,
@@ -128,6 +129,22 @@ export class WorkspaceRepository {
 
     await this.#scoped(id).insertOne(doc as never);
     return doc;
+  }
+
+  /**
+   * Starts the free trial, once.
+   *
+   * The filter is what makes it once: a workspace whose trial is already
+   * recorded matches nothing, whoever asks and however many times.
+   */
+  async startTrial(workspaceId: string, startedBy: string, days: number): Promise<{ endsAt: Date } | undefined> {
+    const now = new Date();
+    const endsAt = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
+    const result = await this.#scoped(workspaceId).updateOne(
+      { _id: workspaceId, $or: [{ trial: null }, { trial: { $exists: false } }] } as never,
+      { $set: { trial: { startedAt: now, endsAt, startedBy }, updatedAt: now } } as never,
+    );
+    return result.matchedCount === 1 ? { endsAt } : undefined;
   }
 
   /** A new name, from the settings page. */

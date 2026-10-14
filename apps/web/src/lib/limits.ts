@@ -18,13 +18,15 @@
  */
 import { Errors } from '@salvations/core';
 import { WorkspaceRepository, type Database } from '@salvations/db';
-import { withinLimit, type Entitlements, type LimitName } from '@salvations/billing';
+import { inactiveReason, withinLimit, type Entitlements, type LimitName } from '@salvations/billing';
 import { entitlements } from './billing';
 import { repositories } from './repositories';
 
 export interface Gate {
   readonly allowed: boolean;
   readonly reason?: string;
+  /** Refused for want of a plan, not a cap: the answer is the Billing page. */
+  readonly paymentRequired?: boolean;
 }
 
 const OPEN: Gate = Object.freeze({ allowed: true });
@@ -58,7 +60,7 @@ export async function spendGate(database: Database, workspaceId: string): Promis
 
   const plan = await entitlements(database, workspaceId);
   if (plan.unconfigured) return OPEN;
-  if (!plan.active) return { allowed: false, reason: 'This workspace has no active subscription. Choose a plan on the Billing page.' };
+  if (!plan.active) return { allowed: false, reason: inactiveReason(plan), paymentRequired: true };
   const monthlyCap = plan.limits?.monthlyUsdCap;
   if (monthlyCap !== undefined) {
     const month = await repos.usage.spendInMonth(monthOf());
@@ -75,7 +77,9 @@ export async function spendGate(database: Database, workspaceId: string): Promis
 /** The same check, thrown: for code paths whose caller maps errors to responses. */
 export async function assertSpendAllowed(database: Database, workspaceId: string): Promise<void> {
   const gate = await spendGate(database, workspaceId);
-  if (!gate.allowed) throw Errors.budgetExhausted(gate.reason ?? 'The spend cap has been reached.');
+  if (gate.allowed) return;
+  if (gate.paymentRequired === true) throw Errors.paymentRequired(gate.reason ?? 'This workspace has no plan.');
+  throw Errors.budgetExhausted(gate.reason ?? 'The spend cap has been reached.');
 }
 
 /**

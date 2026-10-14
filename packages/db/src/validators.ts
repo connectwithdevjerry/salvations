@@ -57,6 +57,11 @@ export const VALIDATORS: Partial<Record<CollectionName, JsonSchema>> = {
           },
         },
       },
+      trial: nullable({
+        bsonType: 'object',
+        required: ['startedAt', 'endsAt', 'startedBy'],
+        properties: { startedAt: date, endsAt: date, startedBy: str },
+      }),
       createdAt: date,
     },
   },

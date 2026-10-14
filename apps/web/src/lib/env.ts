@@ -104,6 +104,12 @@ const schema = z.object({
   STRIPE_WEBHOOK_SECRET: z.string().min(1).optional(),
   /** The processor's id for the plan's price. Differs between test and live. */
   STRIPE_PRICE_ID: z.string().min(1).optional(),
+  /**
+   * Workspace ids that are never asked to pay: the operator's own, a partner's.
+   * Comma-separated. Everyone else starts a free trial or subscribes.
+   */
+  COMPLIMENTARY_WORKSPACES: z.string().optional().transform((raw) =>
+    new Set((raw ?? '').split(',').map((id) => id.trim()).filter((id) => id !== ''))),
 
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
 }).refine(

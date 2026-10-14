@@ -6,7 +6,7 @@
  * subject entirely rather than showing a broken upgrade button.
  */
 import { PLANS, planById, DEFAULT_PLAN_ID } from '@salvations/catalog';
-import { BillingError } from '@salvations/billing';
+import { BillingError, TRIAL_DAYS } from '@salvations/billing';
 import { SubscriptionRepository, UserRepository } from '@salvations/db';
 import { errorResponse, ok } from '@/lib/http';
 import { workspaceRoute } from '@/lib/route';
@@ -24,6 +24,11 @@ export const GET = workspaceRoute('workspace:read', async (ctx) => {
     plans: PLANS,
     active: granted.active,
     planId: granted.planId,
+    state: granted.state,
+    trialDays: TRIAL_DAYS,
+    ...(granted.trialEndsAt !== undefined ? { trialEndsAt: granted.trialEndsAt.toISOString() } : {}),
+    // Once, and only before anything else has been granted.
+    canStartTrial: granted.state === 'none',
     ...(row !== null ? {
       subscription: {
         status: row.status,

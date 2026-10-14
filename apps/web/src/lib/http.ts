@@ -25,6 +25,7 @@ const STATUS_BY_CODE: Readonly<Record<ErrorCode, number>> = Object.freeze({
   // exists.
   tenant_violation: 404,
   budget_exhausted: 429,
+  payment_required: 402,
   capability_not_approved: 403,
   capability_changed: 409,
   permission_denied: 403,

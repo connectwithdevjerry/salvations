@@ -3,7 +3,7 @@ import { UNCONFIGURED, type Entitlements } from '@salvations/billing';
 import { countGateFor, monthOf } from './limits';
 
 const plan: Entitlements = {
-  planId: 'standard', active: true, unconfigured: false,
+  planId: 'standard', active: true, unconfigured: false, state: 'subscribed',
   limits: { agents: 3, channels: 2, mcpServers: 5, monthlyUsdCap: 250 },
 };
 

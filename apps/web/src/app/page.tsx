@@ -282,7 +282,8 @@ export default async function Home() {
               <li><Icon name="check" size={14} />Bring your own model key; pay the vendor directly</li>
               <li><Icon name="check" size={14} />Bring an assistant you already have, in a minute</li>
             </ul>
-            <Link href="/signup"><button className="primary lg" type="button">Start free</button></Link>
+            <Link href="/signup"><button className="primary lg" type="button">Start your free trial</button></Link>
+            <p className="muted" style={{ margin: '10px 0 0', fontSize: 13 }}>10 days free, no card needed. Then by the month, cancel anytime.</p>
           </div>
           <div className="land-plan custom">
             <p className="kicker">Done for you</p>

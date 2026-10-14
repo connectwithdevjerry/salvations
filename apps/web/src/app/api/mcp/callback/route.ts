@@ -130,7 +130,7 @@ export async function GET(request: Request): Promise<Response> {
   });
 
   if (outcome.error !== undefined) {
-    return back(pending.workspaceId, { error: 'mcp_discovery', alias: binding.alias }, binding.agentId);
+    return back(pending.workspaceId, { error: 'mcp_discovery', alias: binding.alias, detail: outcome.error.slice(0, 240) }, binding.agentId);
   }
   return back(pending.workspaceId, { connected: binding.alias, tools: String(outcome.total) }, binding.agentId);
 }
@@ -185,7 +185,7 @@ async function finishGoogle(
   });
   void request;
   if (outcome.error !== undefined) {
-    return back(pending.workspaceId, { error: 'mcp_discovery', alias: binding.alias }, binding.agentId);
+    return back(pending.workspaceId, { error: 'mcp_discovery', alias: binding.alias, detail: outcome.error.slice(0, 240) }, binding.agentId);
   }
   return back(pending.workspaceId, { connected: binding.alias, tools: String(outcome.total) }, binding.agentId);
 }

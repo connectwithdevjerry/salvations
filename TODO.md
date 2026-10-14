@@ -155,7 +155,7 @@ was set after Phase 1 and supersedes the "no integrations in Phase 1" line that 
 - [x] 🔒 **(AC-9)** kill executor mid-run **and** force a lease steal → completes once, no duplicate
       side effects
 - [x] Metrics: slice-yield rate, sweeper reclaims, lease losses, step durations
-- [ ] Bind the executor in `/api/internal/execute` — needs the composition root, which lands
+- [x] Bind the executor in `/api/internal/execute` — needs the composition root, which lands
       with §1.9
 
 ### 1.9 API, streaming & web
@@ -170,7 +170,7 @@ was set after Phase 1 and supersedes the "no integrations in Phase 1" line that 
       (steps · tool calls · usage · cost), MCP install, **capability approval with definition
       diffs**, approval modal, provider/model binding management
 - [ ] Policy editor UI + `/policies` routes
-- [ ] MCP OAuth consent flow wired end to end (the client exists; the callback route does not)
+- [x] MCP OAuth consent flow wired end to end (the client exists; the callback route does not)
 - [ ] **(AC-2) (AC-4) (AC-5)** exercised through the UI — needs a live database and real keys
 
 ### 1.10 Observability & containers

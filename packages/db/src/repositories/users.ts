@@ -172,6 +172,17 @@ export class UserRepository {
     return this.#challenges().findOne({ userId, kind, consumedAt: null, expiresAt: { $gt: new Date() } });
   }
 
+  /**
+   * The open challenge a presented token belongs to, whoever's it is.
+   *
+   * For a code typed somewhere that does not know the person: a chat. The
+   * hash is the whole lookup, so a guess costs a database read and nothing
+   * more, and the window and the consumption still apply.
+   */
+  async findOpenChallengeByToken(kind: AuthChallengeDoc['kind'], tokenHash: string): Promise<AuthChallengeDoc | null> {
+    return this.#challenges().findOne({ kind, tokenHash, consumedAt: null, expiresAt: { $gt: new Date() } });
+  }
+
   /** A wrong guess. Returns how many there have been. */
   async recordChallengeAttempt(challengeId: string): Promise<number> {
     const updated = await this.#challenges().findOneAndUpdate(

@@ -220,6 +220,21 @@ export class ChannelRepository {
   }
 
   /** The conversation a person's messages belong to, if they have written before. */
+  async findIdentityById(identityId: string): Promise<ChannelIdentityDoc | null> {
+    return this.#identities.findOne({ _id: identityId } as never);
+  }
+
+  /** Ties a platform account to a HIVE account, or cuts the tie with null. */
+  async setIdentityUser(identityId: string, userId: string | null): Promise<boolean> {
+    const result = await this.#identities.updateOne({ _id: identityId } as never, { $set: { userId } } as never);
+    return result.matchedCount === 1;
+  }
+
+  /** Every platform account tied to this person in this workspace. */
+  async listIdentitiesForUser(userId: string): Promise<ChannelIdentityDoc[]> {
+    return this.#identities.find({ userId } as never, { sort: { lastSeenAt: -1 } });
+  }
+
   async findIdentity(channelId: string, externalUserId: string): Promise<ChannelIdentityDoc | null> {
     return this.#identities.findOne({ channelId, externalUserId } as never);
   }

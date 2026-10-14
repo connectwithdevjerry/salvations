@@ -19,6 +19,7 @@
  * using somebody else's agent, budget and credentials.
  */
 import { ChannelRepository, ConversationRepository, AgentRepository, PlatformDb } from '@salvations/db';
+import { linkFromChat } from './chat-link';
 import { decideFromChat } from './channel-approvals';
 import { spendGate } from './limits';
 import type { ChannelDoc } from '@salvations/db';
@@ -167,6 +168,15 @@ export async function handleDelivery(
     // workspace's model budget and every credential its agent can reach.
     if (row.verifiedChatRef !== null && row.verifiedChatRef !== message.chatRef) {
       await reply(row, message.chatRef, 'This bot is already connected to another chat.', repos);
+      return plain(200, 'ok');
+    }
+
+    // A link code is answered and goes no further: it is not a message for
+    // the assistant, and a run on it would be a run on a password.
+    const link = await linkFromChat({ database: handle.db, row, message, channels });
+    if (link !== undefined) {
+      await reply(row, message.chatRef, link.text, repos);
+      console.log(JSON.stringify({ at: 'channel-inbound', channel: row._id, link: link.linked ? 'linked' : 'refused' }));
       return plain(200, 'ok');
     }
 

@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { Icon, Tile } from '@/components/ui';
 import { ThemePicker } from '@/components/theme-picker';
 import { useWalkthrough } from '@/components/walkthrough';
+import { Copyable } from '@/components/setup-steps';
 
 interface Workspace { id: string; name: string; role: string }
 
@@ -156,6 +157,9 @@ export default function SettingsPage({
         </>
       )}
 
+      <p className="eyebrow" style={{ marginTop: 26 }}>Chat accounts</p>
+      <ChatAccounts workspaceId={workspaceId} />
+
       <p className="eyebrow" style={{ marginTop: 26 }}>Your data</p>
       <div className="card">
         <p className="muted" style={{ margin: 0 }}>
@@ -228,6 +232,84 @@ function VerifyEmail({ email, onVerified }: { email: string; onVerified: () => v
           <Icon name="check" size={15} /> {busy ? 'Sending…' : 'Send me a code'}
         </button>
       )}
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------- chat accounts -- */
+
+interface ChatIdentity { id: string; channel: string; label: string; lastSeenAt: string }
+
+/**
+ * The Telegram (or Discord, or Slack) accounts that are this person.
+ *
+ * Until a chat account is linked, the assistant treats whoever is behind it
+ * as a stranger who can reach the bot. A code from here, sent in the chat,
+ * makes it theirs: their runs carry their account, and what they ask is
+ * treated as theirs.
+ */
+function ChatAccounts({ workspaceId }: { workspaceId: string }) {
+  const [items, setItems] = useState<ChatIdentity[]>([]);
+  const [code, setCode] = useState<{ code: string; expiresAt: string }>();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string>();
+
+  const reload = () => {
+    void api.get<{ items: ChatIdentity[] }>(`/api/workspaces/${workspaceId}/identities`)
+      .then((r) => setItems(r.items)).catch(() => undefined);
+  };
+  useEffect(reload, [workspaceId]);
+
+  return (
+    <div className="card">
+      <p className="muted" style={{ margin: '0 0 10px' }}>
+        Link your chat account so the assistant knows it is you. Until then, a message from a
+        chat is treated as coming from a stranger who can reach the bot.
+      </p>
+      {items.length > 0 && (
+        <div className="stack" style={{ gap: 6, marginBottom: 12 }}>
+          {items.map((item) => (
+            <div key={item.id} className="row">
+              <span><strong>{item.label}</strong> <span className="muted">on {item.channel}</span></span>
+              <button
+                type="button" className="ghost" disabled={busy}
+                onClick={async () => {
+                  setBusy(true);
+                  try { await api.del(`/api/workspaces/${workspaceId}/identities/${item.id}`); reload(); } catch (caught) {
+                    setError(caught instanceof ApiError ? caught.message : 'Could not unlink.');
+                  } finally { setBusy(false); }
+                }}
+              >
+                Unlink
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+      {code === undefined ? (
+        <button
+          type="button" disabled={busy}
+          onClick={async () => {
+            setBusy(true); setError(undefined);
+            try {
+              setCode(await api.post<{ code: string; expiresAt: string }>(`/api/workspaces/${workspaceId}/identities`));
+            } catch (caught) {
+              setError(caught instanceof ApiError ? caught.message : 'Could not make a code.');
+            } finally { setBusy(false); }
+          }}
+        >
+          Link a chat account
+        </button>
+      ) : (
+        <div className="stack" style={{ gap: 8 }}>
+          <Copyable value={`link ${code.code}`} label="Send this to the assistant in the chat" />
+          <span className="faint">
+            Good until {new Date(code.expiresAt).toLocaleTimeString()}. Say hello first if you never have, then send it.
+          </span>
+          <div><button type="button" className="ghost" onClick={() => { setCode(undefined); reload(); }}>Done</button></div>
+        </div>
+      )}
+      {error !== undefined && <p className="error" style={{ margin: '8px 0 0' }}>{error}</p>}
     </div>
   );
 }

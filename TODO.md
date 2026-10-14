@@ -309,6 +309,12 @@ platform exist beside the first three.
       shows a pending approval after a reload, not only in the stream that first carried it
 - [x] The event stream's change-stream watch and probe declare platform intent, so the tenancy
       guard no longer reports them on every request
+- [x] A Telegram bot registered before button presses were asked for never heard a press, so
+      Approve did nothing and said nothing. The webhook is re-registered the moment buttons are
+      sent on a stale connection, and on the next inbound message; the daily sweep stays
+- [x] A run woken after its conversation moved on finishes with what it last said instead of
+      calling the model with a history that ends on its own turn; an approval for a run that is
+      no longer waiting is refused, on the page and in the chat
 - [x] The assistant server is an OAuth 2.1 authorization server (RFC 9728/8414/7591/7636/8707):
       Claude.ai and ChatGPT connect by URL, the person consents on `/oauth/authorize` with the
       HIVE login, tokens are opaque and hashed (`oauthGrants`), refresh rotates with family

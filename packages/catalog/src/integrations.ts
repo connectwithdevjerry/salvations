@@ -176,6 +176,8 @@ function vendor(input: {
   readonly docs: string;
   readonly reads: string;
   readonly writes: string;
+  /** The vendor's domain, when it issues OAuth clients by hand only. */
+  readonly registeredClient?: string;
 }): CatalogEntry {
   return {
     id: input.id,
@@ -186,12 +188,20 @@ function vendor(input: {
     setup: 'mcp',
     accent: input.accent,
     docs: input.docs,
-    mcp: { url: input.url },
-    steps: [{
-      title: 'Connect over MCP',
-      body: `${input.name} is reached through its own MCP server, which asks you to authorise it on `
-        + `${input.name}’s consent screen. We never hold a password or a token you typed.`,
-    }],
+    mcp: { url: input.url, ...(input.registeredClient !== undefined ? { registeredClient: input.registeredClient } : {}) },
+    steps: [
+      ...(input.registeredClient !== undefined ? [{
+        title: 'An app registered with the vendor',
+        body: `${input.name} does not register clients on the fly. Whoever runs this deployment creates an app `
+          + `in ${input.name}’s developer console with the callback address above, and sets its client id and secret `
+          + `as MCP_OAUTH_CLIENTS under "${input.registeredClient}". Until then this connection is not offered.`,
+      }] : []),
+      {
+        title: 'Connect over MCP',
+        body: `${input.name} is reached through its own MCP server, which asks you to authorise it on `
+          + `${input.name}’s consent screen. We never hold a password or a token you typed.`,
+      },
+    ],
     scopes: [
       { label: input.reads, scope: 'read', writes: false },
       { label: input.writes, scope: 'write', writes: true },
@@ -200,16 +210,16 @@ function vendor(input: {
 }
 
 const VENDORS: readonly CatalogEntry[] = [
-  vendor({ id: 'atlassian', name: 'Jira & Confluence', summary: 'Issues, boards and the pages your team writes.', category: 'Product & code', accent: '#0052CC', url: 'https://mcp.atlassian.com/v2/mcp', docs: 'https://support.atlassian.com/atlassian-ai-gateway/docs/get-started-with-the-atlassian-remote-mcp-server/', reads: 'Read issues, boards and pages', writes: 'Create and update issues and pages' }),
-  vendor({ id: 'asana', name: 'Asana', summary: 'Tasks, projects and who is doing what.', category: 'Work & docs', accent: '#F06A6A', url: 'https://mcp.asana.com/mcp', docs: 'https://developers.asana.com/docs/using-asanas-model-control-protocol-mcp-server', reads: 'Read tasks and projects', writes: 'Create and update tasks' }),
+  vendor({ id: 'atlassian', name: 'Jira & Confluence', summary: 'Issues, boards and the pages your team writes.', category: 'Product & code', accent: '#0052CC', url: 'https://mcp.atlassian.com/v2/mcp', docs: 'https://support.atlassian.com/atlassian-rovo-mcp-server/docs/getting-started-with-the-atlassian-remote-mcp-server/', reads: 'Read issues, boards and pages', writes: 'Create and update issues and pages' }),
+  vendor({ id: 'asana', name: 'Asana', summary: 'Tasks, projects and who is doing what.', category: 'Work & docs', accent: '#F06A6A', url: 'https://mcp.asana.com/v2/mcp', docs: 'https://developers.asana.com/docs/using-asanas-mcp-server', reads: 'Read tasks and projects', writes: 'Create and update tasks', registeredClient: 'asana.com' }),
   vendor({ id: 'monday', name: 'monday.com', summary: 'Boards, items and the status of everything.', category: 'Work & docs', accent: '#FF3D57', url: 'https://mcp.monday.com/mcp', docs: 'https://developer.monday.com/apps/docs/mondaycom-mcp-integration', reads: 'Read boards and items', writes: 'Create and update items' }),
-  vendor({ id: 'box', name: 'Box', summary: 'Files, folders and sharing.', category: 'Email, calendar & files', accent: '#0061D5', url: 'https://mcp.box.com/mcp', docs: 'https://developer.box.com/guides/box-mcp/remote/', reads: 'Search and read files', writes: 'Create, move and share files' }),
+  vendor({ id: 'box', name: 'Box', summary: 'Files, folders and sharing.', category: 'Email, calendar & files', accent: '#0061D5', url: 'https://mcp.box.com', docs: 'https://developer.box.com/guides/box-mcp/remote/', reads: 'Search and read files', writes: 'Create, move and share files' }),
   vendor({ id: 'stripe', name: 'Stripe', summary: 'Customers, payments, invoices and subscriptions.', category: 'Money & sales', accent: '#635BFF', url: 'https://mcp.stripe.com', docs: 'https://docs.stripe.com/mcp', reads: 'Read customers, payments and invoices', writes: 'Create customers, invoices and payment links' }),
   vendor({ id: 'paypal', name: 'PayPal', summary: 'Invoices, orders and payments.', category: 'Money & sales', accent: '#003087', url: 'https://mcp.paypal.com/mcp', docs: 'https://developer.paypal.com/tools/mcp-server/', reads: 'Read invoices, orders and payments', writes: 'Create and send invoices' }),
   vendor({ id: 'square', name: 'Square', summary: 'Catalogue, orders, payments and customers.', category: 'Money & sales', accent: '#006AFF', url: 'https://mcp.squareup.com/mcp', docs: 'https://developer.squareup.com/docs/mcp', reads: 'Read catalogue, orders and customers', writes: 'Create orders and customers' }),
-  vendor({ id: 'hubspot', name: 'HubSpot', summary: 'Contacts, companies and deals.', category: 'Money & sales', accent: '#FF7A59', url: 'https://mcp.hubspot.com/anthropic', docs: 'https://developers.hubspot.com/mcp', reads: 'Read contacts, companies and deals', writes: 'Create and update contacts and deals' }),
+  vendor({ id: 'hubspot', name: 'HubSpot', summary: 'Contacts, companies and deals.', category: 'Money & sales', accent: '#FF7A59', url: 'https://mcp.hubspot.com', docs: 'https://developers.hubspot.com/docs/apps/developer-platform/build-apps/integrate-with-the-remote-hubspot-mcp-server', reads: 'Read contacts, companies and deals', writes: 'Create and update contacts and deals', registeredClient: 'hubspot.com' }),
   vendor({ id: 'intercom', name: 'Intercom', summary: 'Conversations, contacts and help-centre articles.', category: 'Support', accent: '#1F8DED', url: 'https://mcp.intercom.com/mcp', docs: 'https://developers.intercom.com/docs/guides/mcp', reads: 'Search conversations and contacts', writes: 'Reply and update contacts' }),
-  vendor({ id: 'canva', name: 'Canva', summary: 'Designs: make, edit and export.', category: 'Design & content', accent: '#00C4CC', url: 'https://mcp.canva.com/mcp', docs: 'https://www.canva.dev/docs/connect/canva-mcp-server-setup/', reads: 'Read your designs', writes: 'Create, edit and export designs' }),
+  vendor({ id: 'canva', name: 'Canva', summary: 'Designs: make, edit and export.', category: 'Design & content', accent: '#00C4CC', url: 'https://mcp.canva.com/mcp', docs: 'https://canva.dev/docs/mcp/', reads: 'Read your designs', writes: 'Create, edit and export designs' }),
   vendor({ id: 'figma', name: 'Figma', summary: 'Design files and their context.', category: 'Design & content', accent: '#A259FF', url: 'https://mcp.figma.com/mcp', docs: 'https://developers.figma.com/docs/figma-mcp-server/remote-server-installation', reads: 'Read design files', writes: 'Create and update design content' }),
   vendor({ id: 'sentry', name: 'Sentry', summary: 'Errors, issues and releases.', category: 'Product & code', accent: '#7B61FF', url: 'https://mcp.sentry.dev/mcp', docs: 'https://docs.sentry.io/product/sentry-mcp/', reads: 'Read issues and errors', writes: 'Update and resolve issues' }),
   vendor({ id: 'vercel', name: 'Vercel', summary: 'Projects, deployments and logs.', category: 'Product & code', accent: '#9CA3AF', url: 'https://mcp.vercel.com', docs: 'https://vercel.com/docs/mcp/vercel-mcp', reads: 'Read projects, deployments and logs', writes: 'Manage projects and deployments' }),

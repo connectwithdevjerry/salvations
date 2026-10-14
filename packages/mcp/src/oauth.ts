@@ -91,6 +91,38 @@ export interface OAuthClientConfig {
   readonly scope?: string;
   readonly logoUri?: string;
   readonly contacts?: readonly string[];
+  /**
+   * Clients registered by hand with vendors that offer neither CIMD nor
+   * dynamic registration, keyed by the vendor's domain. A key matches an
+   * authorization server whose host is that domain or ends in it, so
+   * "asana.com" covers both mcp.asana.com and app.asana.com. The secret is
+   * presented at the token endpoint; it is configuration, never stored.
+   */
+  readonly registeredClients?: Readonly<Record<string, RegisteredClient>>;
+}
+
+export interface RegisteredClient {
+  readonly client_id: string;
+  readonly client_secret?: string;
+}
+
+/** The registered client that covers an issuer, if any. */
+export function registeredClientFor(
+  clients: Readonly<Record<string, RegisteredClient>> | undefined,
+  issuer: string | undefined,
+): RegisteredClient | undefined {
+  if (clients === undefined || issuer === undefined || issuer === '') return undefined;
+  let host: string;
+  try {
+    host = new URL(issuer).hostname.toLowerCase();
+  } catch {
+    return undefined;
+  }
+  for (const [domain, client] of Object.entries(clients)) {
+    const key = domain.toLowerCase();
+    if (host === key || host.endsWith(`.${key}`)) return client;
+  }
+  return undefined;
 }
 
 /** How long an unfinished authorization stays valid. */
@@ -259,6 +291,16 @@ export class ScopedOAuthProvider implements OAuthClientProvider {
   async clientInformation(
     ctx?: OAuthClientInformationContext,
   ): Promise<StoredOAuthClientInformation | undefined> {
+    // A client registered by hand with this vendor wins: the vendor will not
+    // register one for us, and a stored registration cannot exist.
+    const registered = registeredClientFor(this.#config.registeredClients, ctx?.issuer);
+    if (registered !== undefined) {
+      return {
+        client_id: registered.client_id,
+        ...(registered.client_secret !== undefined ? { client_secret: registered.client_secret } : {}),
+        ...(ctx?.issuer !== undefined ? { issuer: ctx.issuer } : {}),
+      } as StoredOAuthClientInformation;
+    }
     // Client identifiers are unique to the authorization server that issued
     // them (RFC 6749 §2.2), so they are keyed by issuer as well as by scope.
     return this.#store.loadClient(this.#scopeKey, ctx?.issuer ?? '');

@@ -6,7 +6,7 @@
  * URL as its `client_id`. If the two could drift, an authorization server would
  * read one identity and be handed another.
  */
-import type { OAuthClientConfig } from '@salvations/mcp';
+import type { OAuthClientConfig, RegisteredClient } from '@salvations/mcp';
 import { env } from './env';
 
 /** Where the client metadata document lives. This string IS the client_id. */
@@ -42,5 +42,20 @@ export function oauthClientConfig(): OAuthClientConfig {
     redirectUri: `${base}${OAUTH_CALLBACK_PATH}`,
     clientName: 'HIVE',
     clientUri: base,
+    ...(registeredClients() !== undefined ? { registeredClients: registeredClients() as Record<string, RegisteredClient> } : {}),
   };
 }
+
+/** The hand-registered clients, with absent secrets left out rather than set to undefined. */
+function registeredClients(): Record<string, RegisteredClient> | undefined {
+  const raw = env().MCP_OAUTH_CLIENTS;
+  if (raw === undefined) return undefined;
+  const out: Record<string, RegisteredClient> = {};
+  for (const [domain, client] of Object.entries(raw)) {
+    out[domain] = { client_id: client.client_id, ...(client.client_secret !== undefined ? { client_secret: client.client_secret } : {}) };
+  }
+  return out;
+}
+
+/** Whether a client has been registered for a vendor domain, for the catalogue to check before offering a connection. */
+export const hasRegisteredClient = (domain: string): boolean => env().MCP_OAUTH_CLIENTS?.[domain] !== undefined;

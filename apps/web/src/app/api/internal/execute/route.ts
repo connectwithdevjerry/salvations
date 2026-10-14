@@ -15,6 +15,7 @@ import { asId, type RunId } from '@salvations/core';
 import { env } from '@/lib/env';
 import { executor } from '@/lib/container';
 import { deliverFinishedRun } from '@/lib/channel-delivery';
+import { announcePendingApproval } from '@/lib/channel-approvals';
 import { openLiveReply } from '@/lib/channel-live';
 
 export const runtime = 'nodejs';
@@ -86,6 +87,10 @@ export async function POST(request: Request): Promise<Response> {
   // `outcome.runId` and not the hint: the queue hands out whatever most
   // deserves to run, which is usually but not always the run we were told
   // about. Using the hint would deliver one person's answer to another.
+  // A run that stopped to ask has its question carried to the chat it came
+  // from, with buttons where the platform has them.
+  if (outcome.kind === 'suspended') await announcePendingApproval(String(outcome.runId));
+
   const delivery = outcome.kind === 'finished'
     // The draft belongs to the hinted run; it is rewritten only if that is
     // the run that finished, never with another run's answer.

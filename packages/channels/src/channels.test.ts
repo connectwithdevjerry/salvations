@@ -85,7 +85,7 @@ describe('telegram', () => {
     await telegramAdapter.register('123:ABC', CONTEXT, impl);
 
     const body = JSON.parse(String(calls[0]?.init.body)) as Record<string, unknown>;
-    expect(body['allowed_updates']).toEqual(['message']);
+    expect(body['allowed_updates']).toEqual(['message', 'callback_query']);
     expect(body['secret_token']).toBe(CONTEXT.webhookSecret);
   });
 
@@ -119,6 +119,49 @@ describe('telegram', () => {
       message: {
         chatRef: '-100', senderRef: '9', senderLabel: '@ada', text: 'hello', messageRef: '42',
       },
+    });
+  });
+
+  describe('buttons', () => {
+    it('reads a press on one of our buttons, with who pressed and what it carried', () => {
+      const result = telegramAdapter.receive(
+        JSON.stringify({ update_id: 2, callback_query: {
+          id: '777', from: { id: 9, is_bot: false, username: 'ada' },
+          message: { message_id: 50, chat: { id: -100, type: 'private' } }, data: 'a:apr_1:y',
+        } }),
+        withSecret(CONTEXT.webhookSecret),
+        CONTEXT,
+      );
+      expect(result).toEqual({
+        kind: 'choice',
+        choice: { chatRef: '-100', senderRef: '9', senderLabel: '@ada', data: 'a:apr_1:y', callbackRef: '777', messageRef: '50', deliveryRef: 'press:777' },
+      });
+    });
+
+    it('ignores a press with nothing to act on', () => {
+      const result = telegramAdapter.receive(
+        JSON.stringify({ update_id: 2, callback_query: { id: '778', from: { id: 9, is_bot: false } } }),
+        withSecret(CONTEXT.webhookSecret),
+        CONTEXT,
+      );
+      expect(result.kind).toBe('ignored');
+    });
+
+    it('sends the question with an inline keyboard and hands back the message', async () => {
+      const { impl, calls } = stubFetch({ ok: true, result: { message_id: 51 } });
+      const ref = await telegramAdapter.sendChoices?.('123:ABC', '-100', 'Go ahead?', [{ label: 'Approve', data: 'a:apr_1:y' }, { label: 'Not now', data: 'a:apr_1:n' }], impl);
+      expect(ref).toBe('51');
+      const body = JSON.parse(String(calls[0]?.init.body)) as { reply_markup: { inline_keyboard: { text: string; callback_data: string }[][] } };
+      expect(body.reply_markup.inline_keyboard[0]?.map((b) => b.callback_data)).toEqual(['a:apr_1:y', 'a:apr_1:n']);
+    });
+
+    it('settles a press: acknowledges it and rewrites the message without buttons', async () => {
+      const { impl, calls } = stubFetch({ ok: true, result: true });
+      await telegramAdapter.settleChoice?.('123:ABC', { chatRef: '-100', senderRef: '9', senderLabel: '@ada', data: 'x', callbackRef: '777', messageRef: '50', deliveryRef: 'press:777' }, 'Approved.', impl);
+      expect(calls.map((c) => c.url.split('/').pop())).toEqual(['answerCallbackQuery', 'editMessageText']);
+      const edit = JSON.parse(String(calls[1]?.init.body)) as Record<string, unknown>;
+      expect(edit['message_id']).toBe(50);
+      expect(edit['reply_markup']).toBeUndefined();
     });
   });
 

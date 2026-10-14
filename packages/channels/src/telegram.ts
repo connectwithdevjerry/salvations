@@ -11,7 +11,7 @@
  */
 import {
   ChannelError,
-  type ChannelAdapter, type ChannelIdentity, type InboundAudio, type InboundResult,
+  type ChannelAdapter, type ChannelIdentity, type Choice, type InboundAudio, type InboundChoice, type InboundResult,
 } from './port';
 import { timingSafeEqualString } from './compare';
 
@@ -31,6 +31,13 @@ interface TelegramVoice {
   mime_type?: string;
   duration?: number;
   file_size?: number;
+}
+
+interface TelegramCallbackQuery {
+  id: string;
+  from: TelegramUser;
+  message?: { message_id: number; chat?: { id: number; type: string } };
+  data?: string;
 }
 
 interface TelegramMessage {
@@ -126,9 +133,10 @@ export const telegramAdapter: ChannelAdapter = {
     await call(token, 'setWebhook', {
       url: context.webhookUrl,
       secret_token: context.webhookSecret,
-      // Only what we act on. Asking for everything means paying to parse edits,
-      // reactions and membership changes we immediately discard.
-      allowed_updates: ['message'],
+      // Only what we act on: messages, and presses on our own buttons. Asking
+      // for everything means paying to parse edits, reactions and membership
+      // changes we immediately discard.
+      allowed_updates: ['message', 'callback_query'],
       // A bot token can only serve one webhook. Someone reconnecting after a
       // failed attempt should not be told the bot is busy with itself.
       drop_pending_updates: true,
@@ -145,11 +153,31 @@ export const telegramAdapter: ChannelAdapter = {
       return { kind: 'rejected', reason: 'The delivery did not carry this connection\'s secret.' };
     }
 
-    let update: { message?: TelegramMessage };
+    let update: { message?: TelegramMessage; callback_query?: TelegramCallbackQuery };
     try {
-      update = JSON.parse(raw) as { message?: TelegramMessage };
+      update = JSON.parse(raw) as { message?: TelegramMessage; callback_query?: TelegramCallbackQuery };
     } catch {
       return { kind: 'rejected', reason: 'The delivery was not JSON.' };
+    }
+
+    // A press on one of our buttons. The data is ours; who pressed is theirs
+    // to say and ours to check.
+    const pressed = update.callback_query;
+    if (pressed !== undefined) {
+      const chat = pressed.message?.chat;
+      if (chat === undefined || pressed.data === undefined || pressed.message === undefined) {
+        return { kind: 'ignored', reason: 'A button press with nothing to act on.' };
+      }
+      const choice: InboundChoice = {
+        chatRef: String(chat.id),
+        senderRef: String(pressed.from.id),
+        senderLabel: pressed.from.username !== undefined ? `@${pressed.from.username}` : pressed.from.first_name ?? String(pressed.from.id),
+        data: pressed.data,
+        callbackRef: pressed.id,
+        messageRef: String(pressed.message.message_id),
+        deliveryRef: `press:${pressed.id}`,
+      };
+      return { kind: 'choice', choice };
     }
 
     const message = update.message;
@@ -200,6 +228,30 @@ export const telegramAdapter: ChannelAdapter = {
   async send(token, chatRef, text, fetchImpl = globalThis.fetch): Promise<void> {
     for (const part of chunk(text)) {
       await call(token, 'sendMessage', { chat_id: chatRef, text: part }, fetchImpl);
+    }
+  },
+
+  async sendChoices(token, chatRef, text, choices: readonly Choice[], fetchImpl = globalThis.fetch): Promise<string> {
+    const sent = await call<{ message_id: number }>(token, 'sendMessage', {
+      chat_id: chatRef,
+      text: chunk(text)[0] ?? text,
+      reply_markup: { inline_keyboard: [choices.map((c) => ({ text: c.label, callback_data: c.data }))] },
+    }, fetchImpl);
+    return String(sent.message_id);
+  },
+
+  async settleChoice(token, choice, text, fetchImpl = globalThis.fetch): Promise<void> {
+    // The acknowledgement stops the button's spinner; without it Telegram
+    // shows the press as hanging for a while. Best effort: a press that was
+    // already acknowledged is answered with an error we do not need.
+    await call(token, 'answerCallbackQuery', { callback_query_id: choice.callbackRef }, fetchImpl).catch(() => undefined);
+    try {
+      await call(token, 'editMessageText', {
+        chat_id: choice.chatRef, message_id: Number(choice.messageRef), text: chunk(text)[0] ?? text,
+      }, fetchImpl);
+    } catch (caught) {
+      if (caught instanceof ChannelError && /not modified/i.test(caught.message)) return;
+      throw caught;
     }
   },
 

@@ -140,7 +140,7 @@ export default async function Home() {
               ))}
             </div>
           </Feature>
-          <Feature title="Nothing happens without you" body="Before it sends, deletes or pays for anything, it asks. One tap approves. Everything it did stays in Activity.">
+          <Feature title="Nothing happens without you" body="Before it sends, deletes or pays for anything, it asks, here or right in the Telegram chat. One tap approves. Everything it did stays in Activity.">
             <div className="mock-approval">
               <Icon name="shield" size={14} />
               <span>Wants to <strong>archive 14 messages</strong> in Gmail.</span>
@@ -212,7 +212,7 @@ export default async function Home() {
               ))}
             </div>
           </Step>
-          <Step n={2} title="HIVE learns your business" body="Drop in the documents that answer the questions you get asked twice a day: prices, policies, the company profile. It searches them before it guesses, and says which page it drew on.">
+          <Step n={2} title="HIVE learns your business" body="Drop in the documents that answer the questions you get asked twice a day: PDFs, Word files, price lists, policies, the company profile. It searches them before it guesses, and says which page it drew on.">
             <div className="mock-graph" aria-hidden>
               <span className="mock-node core">HIVE</span>
               <span className="mock-node n1">Price list</span>
@@ -234,7 +234,7 @@ export default async function Home() {
       <section className="land-section">
         <p className="kicker">For the whole team</p>
         <h2>It lives where your team already works.</h2>
-        <p className="land-sub">Invite people, give each a role, set a daily spend cap, and see every run, what it did and what it cost.</p>
+        <p className="land-sub">Invite people, give each a role, link their chat accounts so the assistant knows who is asking, set a daily spend cap that actually stops new runs, and see every run, what it did and what it cost.</p>
         <div className="land-table-wrap">
           <table className="mock-table">
             <thead><tr><th>Run</th><th>Assistant</th><th>Trigger</th><th>Cost</th><th>Status</th></tr></thead>
@@ -263,7 +263,8 @@ export default async function Home() {
           <li><Icon name="key" size={16} /><span><strong>Your keys, encrypted.</strong> Envelope-encrypted in your own database, never shown again.</span></li>
           <li><Icon name="shield" size={16} /><span><strong>Approval first.</strong> Anything that writes, sends, spends or deletes waits for you.</span></li>
           <li><Icon name="agent" size={16} /><span><strong>Your own sign-in.</strong> No identity vendor, no data broker. Google is optional and direct.</span></li>
-          <li><Icon name="pulse" size={16} /><span><strong>Everything on the record.</strong> Every run and every admin action in an audit trail you own.</span></li>
+          <li><Icon name="pulse" size={16} /><span><strong>Everything on the record.</strong> Every run and every admin action in an audit trail you own, and a trace per run for your own collector.</span></li>
+          <li><Icon name="plug" size={16} /><span><strong>Yours to take back.</strong> Disconnect an app and its tokens are revoked at the vendor, not just forgotten here.</span></li>
         </ul>
       </section>
 

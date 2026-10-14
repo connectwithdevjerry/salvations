@@ -240,8 +240,8 @@ platform exist beside the first three.
 
 ### 1.5.4 Knowledge, memory and the agent's server — done
 
-- [x] `packages/knowledge` — text extraction (text, Markdown, HTML, CSV, JSON; PDF/Word refused
-      with the fix in the message), paragraph-first chunking with overlap, two-signal ranking
+- [x] `packages/knowledge` — text extraction (text, Markdown, HTML, CSV, JSON, PDF, Word), paragraph-first
+      chunking with overlap, two-signal ranking
 - [x] `knowledgeDocuments` / `knowledgeChunks` — workspace-scoped, compound text index for
       lexical candidates, bounded vector scan for semantic ones, unique-per-content
 - [x] First-party `knowledge` server: `search`, `documents`, `read` — read-only by construction
@@ -350,7 +350,7 @@ Both were assessed and neither fits a request-shaped deployment, so neither is h
 - [ ] Atlas Search (lexical) index on chunk content
 - [ ] **`$rankFusion`** hybrid retrieval — native, server-side RRF (requires MongoDB 8.1+)
 - [ ] Resumable ingestion pipeline: fetch → extract → chunk → embed → index, per-stage checkpoints
-- [ ] Extractors: PDF, DOCX, HTML, Markdown, plain text
+- [x] Extractors: PDF, DOCX, HTML, Markdown, plain text (shipped in §1.5.4)
 - [ ] Embedding model bindings (`role: 'embedding'`) through the same provider abstraction
 - [ ] Bitemporal `memoryEntries` (supersede, never update) + `memory_write` run steps
 - [ ] Ingest from MCP resources (`sourceType: 'mcp_resource'`)

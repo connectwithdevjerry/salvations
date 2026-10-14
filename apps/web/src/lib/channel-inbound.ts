@@ -19,6 +19,7 @@
  * using somebody else's agent, budget and credentials.
  */
 import { ChannelRepository, ConversationRepository, AgentRepository, PlatformDb } from '@salvations/db';
+import { spendGate } from './limits';
 import type { ChannelDoc } from '@salvations/db';
 import { channelAdapter, type InboundMessage, type VerifyContext } from '@salvations/channels';
 import { NO_EAR, transcribeAudio } from './transcribe';
@@ -260,6 +261,13 @@ async function startRun(
       + 'Add one on the Models page and try again.',
       repos,
     );
+    return undefined;
+  }
+
+  // A cap reached is said in the chat, in the same words the web app uses.
+  const gate = await spendGate(database, row.workspaceId);
+  if (!gate.allowed) {
+    await reply(row, message.chatRef, `I can't take this on right now. ${gate.reason ?? ''}`.trim(), repos);
     return undefined;
   }
 

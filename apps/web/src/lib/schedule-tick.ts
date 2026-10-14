@@ -17,6 +17,7 @@ import {
   type ScheduleDoc,
 } from '@salvations/db';
 import { dueBetween, parseCron } from '@salvations/schedule';
+import { spendGate } from './limits';
 import { DEFAULT_BUDGET, asId, type RunId, type WorkspaceId } from '@salvations/core';
 import { db } from './db';
 import { repositories } from './container';
@@ -106,6 +107,8 @@ async function startRun(
   if (agent === null) {
     throw new Error('This schedule points at an agent that no longer exists.');
   }
+  const gate = await spendGate(database, schedule.workspaceId);
+  if (!gate.allowed) throw new Error(gate.reason ?? 'The spend cap has been reached.');
 
   // A new conversation per occurrence, not one thread growing for ever. A daily
   // job appending to the same conversation reaches a context that costs more to

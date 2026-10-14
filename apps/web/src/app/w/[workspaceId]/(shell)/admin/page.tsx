@@ -35,6 +35,11 @@ interface Overview {
     windowDays: number; total: number; byStatus: Record<string, number>;
     byAgent: { id: string; name: string; runs: number; costUsd: number; failed: number }[];
   };
+  plan?: {
+    id?: string; configured: boolean; active: boolean;
+    limits?: { agents: number; channels: number; mcpServers: number; monthlyUsdCap: number };
+    used: { agents: number; channels: number; mcpServers: number; monthUsd: number };
+  };
   audit: { id: string; action: string; actor: { type: string; id?: string | null }; subject: { type: string; id?: string | null }; at: string }[];
 }
 
@@ -117,6 +122,8 @@ export default function AdminPage({ params }: { params: Promise<{ workspaceId: s
           <span className="faint">{counts.members} {counts.members === 1 ? 'person' : 'people'} · {counts.providers} {counts.providers === 1 ? 'provider' : 'providers'} · {counts.channels} {counts.channels === 1 ? 'channel' : 'channels'}</span>
         </div>
       </div>
+
+      {overview.plan?.configured === true && <PlanCard plan={overview.plan} workspaceId={workspaceId} />}
 
       <div className="two-up">
         <section className="card">
@@ -418,6 +425,60 @@ function Limits({
           {saved && <span className="muted">Saved.</span>}
         </div>
       </form>
+    </section>
+  );
+}
+
+/* --------------------------------------------------------------------- plan -- */
+
+/**
+ * What the plan allows against what is used.
+ *
+ * Shown only where billing is configured: on a deployment that charges
+ * nobody there is no ceiling to show. Each row is a meter, red at the limit,
+ * because the limit is what the next "add" will be refused against.
+ */
+function PlanCard({ plan, workspaceId }: { plan: NonNullable<Overview['plan']>; workspaceId: string }) {
+  const limits = plan.limits;
+  const rows: { label: string; used: number; cap: number | undefined; money?: boolean }[] = [
+    { label: 'Assistants', used: plan.used.agents, cap: limits?.agents },
+    { label: 'Channels', used: plan.used.channels, cap: limits?.channels },
+    { label: 'Connected apps', used: plan.used.mcpServers, cap: limits?.mcpServers },
+    { label: 'Spend this month', used: plan.used.monthUsd, cap: limits?.monthlyUsdCap, money: true },
+  ];
+  return (
+    <section className="card" style={{ marginBottom: 18 }}>
+      <div className="section-head" style={{ marginTop: 0 }}>
+        <div>
+          <p className="eyebrow" style={{ margin: 0 }}>Plan</p>
+          <h3 style={{ margin: '2px 0 0', fontSize: 16 }}>
+            {plan.active ? `${plan.id ?? 'Your plan'}, active` : 'No active subscription'}
+          </h3>
+        </div>
+        <Link href={`/w/${workspaceId}/billing`}><button type="button">Billing</button></Link>
+      </div>
+      {!plan.active && (
+        <p className="muted" style={{ margin: '8px 0 0' }}>
+          Nothing new can start until a plan is chosen. What is already running finishes.
+        </p>
+      )}
+      <div className="plan-rows">
+        {rows.map((row) => {
+          const share = row.cap === undefined || row.cap === 0 ? 0 : row.used / row.cap;
+          const show = (n: number) => (row.money === true ? usd(n) : String(n));
+          return (
+            <div key={row.label} className="plan-row">
+              <span>{row.label}</span>
+              <span className="meter" aria-hidden>
+                <span style={{ width: `${Math.min(100, share * 100)}%` }} className={share >= 1 ? 'danger' : share >= 0.8 ? 'warn' : ''} />
+              </span>
+              <span className={`mono${share >= 1 ? ' danger' : ''}`}>
+                {show(row.used)}{row.cap !== undefined ? ` of ${show(row.cap)}` : ''}
+              </span>
+            </div>
+          );
+        })}
+      </div>
     </section>
   );
 }

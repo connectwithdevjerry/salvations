@@ -9,6 +9,7 @@
  * timed out.
  */
 import { AgentRepository, type AgentDoc } from '@salvations/db';
+import { assertSpendAllowed } from './limits';
 import {
   DEFAULT_BUDGET, Errors, asId, clampBudget, type Principal, type RunId,
 } from '@salvations/core';
@@ -52,6 +53,10 @@ export async function sendUserMessage(
   }
 
   const modelBindingId = await usableModel(ctx, conversationId, input.modelBindingId, conversation.modelBindingId, agent);
+
+  // Before the message is written: a message with no run behind it would
+  // sit unanswered, which reads as a bug rather than a cap.
+  await assertSpendAllowed(ctx.database, ctx.workspaceId);
 
   await ctx.repos.conversations.appendMessage({
     conversationId,

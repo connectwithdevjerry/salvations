@@ -16,6 +16,7 @@ import { actorIdOf } from '@/lib/principal';
 import { randomBytes } from 'node:crypto';
 import { connectCode } from '@/lib/connect-code';
 import { CONNECT_CODE_TTL_MS, webhookUrl } from '@/lib/channel-inbound';
+import { countGate } from '@/lib/limits';
 
 export const runtime = 'nodejs';
 
@@ -66,6 +67,9 @@ export const POST = workspaceRoute('channels:write', async (ctx) => {
 
   const agent = await new AgentRepository(ctx.database, ctx.workspaceId).findById(input.agentId);
   if (agent === null) return errorResponse(404, 'not_found', 'That agent does not exist.');
+
+  const room = await countGate(ctx.database, ctx.workspaceId, 'channels', await ctx.repos.channels.count());
+  if (!room.allowed) return errorResponse(422, 'limit_reached', room.reason ?? 'Your plan has no room for another channel.');
 
   // Optional. Left out, the channel follows the agent's model role, which is
   // what lets a channel be connected before any model exists.

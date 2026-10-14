@@ -1421,8 +1421,14 @@ td > .vendor-note { margin-top: 3px; white-space: nowrap; }
 .stat-value.warn { color: var(--warn); }
 /* How much of today's cap is gone. */
 .meter { display: block; height: 4px; border-radius: 999px; background: var(--border); overflow: hidden; margin-top: 6px; }
+.plan-rows { display: grid; gap: 10px; margin-top: 12px; }
+.plan-row { display: grid; grid-template-columns: 150px 1fr auto; gap: 14px; align-items: center; font-size: 13.5px; }
+.plan-row .meter { margin-top: 0; }
+.plan-row .danger { color: var(--danger); }
+@media (max-width: 640px) { .plan-row { grid-template-columns: 1fr auto; } .plan-row .meter { grid-column: 1 / -1; } }
 .meter > span { display: block; height: 100%; background: var(--accent); border-radius: 999px; transition: width 300ms ease; }
 .meter > span.warn { background: var(--warn); }
+.meter > span.danger { background: var(--danger); }
 .bars { display: flex; align-items: flex-end; gap: 6px; height: 140px; }
 .bar { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; gap: 4px; min-width: 0; }
 .bar > span { display: block; width: 100%; max-width: 28px; background: var(--accent); border-radius: 4px 4px 2px 2px; transition: height 300ms ease; }

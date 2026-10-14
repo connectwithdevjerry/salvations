@@ -114,6 +114,12 @@ export class UsageRepository {
     return rows.reduce((total, row) => total + (row.costUsd ?? 0), 0);
   }
 
+  /** Spend across a calendar month (`YYYY-MM`), for the plan's monthly cap. */
+  async spendInMonth(month: string): Promise<number> {
+    const rows = await this.#collection.find({ day: { $regex: `^${month}-` } } as never);
+    return rows.reduce((total, row) => total + (row.costUsd ?? 0), 0);
+  }
+
   listDays(limit = 30): Promise<UsageDailyDoc[]> {
     return this.#collection.find({} as never, { sort: { day: -1 }, limit });
   }

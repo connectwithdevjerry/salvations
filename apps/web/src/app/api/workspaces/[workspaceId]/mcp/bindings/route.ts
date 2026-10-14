@@ -21,6 +21,7 @@ import { errorResponse, jsonBody, ok } from '@/lib/http';
 import { workspaceRoute } from '@/lib/route';
 import { discoverAndRecord } from '@/lib/discovery-service';
 import { actorIdOf } from '@/lib/principal';
+import { countGate } from '@/lib/limits';
 
 export const runtime = 'nodejs';
 
@@ -86,6 +87,9 @@ export const POST = workspaceRoute('mcp:install', async (ctx) => {
 
   const agent = await new AgentRepository(ctx.database, ctx.workspaceId).findById(input.agentId);
   if (agent === null) return errorResponse(404, 'not_found', 'Assistant not found.');
+
+  const room = await countGate(ctx.database, ctx.workspaceId, 'mcpServers', await bindings.countDocuments({} as never));
+  if (!room.allowed) return errorResponse(422, 'limit_reached', room.reason ?? 'Your plan has no room for another connected app.');
 
   // The alias is unique per assistant, which is what makes its canonical tool
   // names collision-free by construction rather than by a runtime check.

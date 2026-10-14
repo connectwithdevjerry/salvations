@@ -11,6 +11,8 @@ import { errorResponse, jsonBody, ok } from '@/lib/http';
 import { workspaceRoute } from '@/lib/route';
 import { actorIdOf } from '@/lib/principal';
 import { createAssistantFromRole } from '@/lib/agent-team';
+import { countGate } from '@/lib/limits';
+import { AgentRepository } from '@salvations/db';
 
 export const runtime = 'nodejs';
 
@@ -20,6 +22,10 @@ export const POST = workspaceRoute('agents:write', async (ctx) => {
   const input = await jsonBody(ctx.request, schema);
   const roles = [...new Set(input.roleIds)].map((id) => roleById(id));
   if (roles.some((r) => r === undefined)) return errorResponse(422, 'validation_failed', 'One of those roles does not exist.');
+
+  const current = await new AgentRepository(ctx.database, ctx.workspaceId).count();
+  const room = await countGate(ctx.database, ctx.workspaceId, 'agents', current, roles.length);
+  if (!room.allowed) return errorResponse(422, 'limit_reached', room.reason ?? 'Your plan has no room for this team.');
 
   const made = [];
   for (const role of roles) {

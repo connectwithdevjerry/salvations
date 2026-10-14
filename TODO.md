@@ -296,6 +296,10 @@ platform exist beside the first three.
       so a listed first-party tool answered "no such tool". `in_process` resolves with no URL.
       The client manager opens an in-process server per operation and closes it after, so a
       warm process never hands one run's conversation or memory to the next
+- [x] An unanswered tool call is answered at prompt assembly: a run that ended between the
+      model's request and the tool results left a `tool_use` nobody answered, and the next
+      message made every provider reject the history. The assembler now answers it with an
+      error result that says so, in the message right after, leaving history append-only
 - [x] The assistant server is an OAuth 2.1 authorization server (RFC 9728/8414/7591/7636/8707):
       Claude.ai and ChatGPT connect by URL, the person consents on `/oauth/authorize` with the
       HIVE login, tokens are opaque and hashed (`oauthGrants`), refresh rotates with family

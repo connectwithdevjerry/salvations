@@ -196,6 +196,25 @@ function ActiveSubscription({
         </div>
       )}
 
+      <div className="row" style={{ justifyContent: 'flex-start', gap: 8, marginTop: 14 }}>
+        <button
+          type="button" disabled={busy}
+          onClick={async () => {
+            setBusy(true);
+            try {
+              const { url } = await api.post<{ url: string }>(`${ws(workspaceId)}/billing/portal`);
+              window.location.assign(url);
+            } catch (caught) {
+              onError(caught instanceof Error ? caught.message : 'Could not open the billing portal.');
+              setBusy(false);
+            }
+          }}
+        >
+          Change card or see invoices
+        </button>
+        <span className="faint">Opens the processor&apos;s own page. You come back here when done.</span>
+      </div>
+
       {subscription?.cancelAtPeriodEnd !== true && (
         <div className="wizard-foot">
           <span className="faint">You keep everything until the period ends.</span>

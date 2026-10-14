@@ -312,6 +312,10 @@ platform exist beside the first three.
 - [x] A Telegram bot registered before button presses were asked for never heard a press, so
       Approve did nothing and said nothing. The webhook is re-registered the moment buttons are
       sent on a stale connection, and on the next inbound message; the daily sweep stays
+- [x] A first-party binding has no row, so the permission broker judged it untrusted and the
+      assistant asked before remembering anything, three times for one request. The host now
+      tells the broker which ids are its own; a policy's own label ("policy:default") is no
+      longer shown to people as a reason
 - [x] A run woken after its conversation moved on finishes with what it last said instead of
       calling the model with a history that ends on its own turn; an approval for a run that is
       no longer waiting is refused, on the page and in the chat

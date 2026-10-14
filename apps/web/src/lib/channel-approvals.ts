@@ -37,7 +37,7 @@ export function questionOf(approval: Pick<ApprovalDoc, 'kind' | 'payload'>, canP
   const payload = (approval.payload ?? {}) as { capabilityName?: string; canonicalName?: string; reason?: string; question?: string };
   if (approval.kind === 'tool_call') {
     const tool = payload.capabilityName ?? payload.canonicalName ?? 'a tool that changes something';
-    const why = payload.reason !== undefined && payload.reason !== '' && payload.reason !== 'policy' ? ` ${sentence(payload.reason)}` : '';
+    const why = isForPeople(payload.reason) ? ` ${sentence(payload.reason as string)}` : '';
     return canPress
       ? `Before I go on, I need your go-ahead to use ${tool}.${why}`
       : `Before I go on, I need your go-ahead to use ${tool}.${why} Approve it on the Approvals page.`;
@@ -45,6 +45,10 @@ export function questionOf(approval: Pick<ApprovalDoc, 'kind' | 'payload'>, canP
   const asked = payload.question !== undefined && payload.question !== '' ? ` ${sentence(payload.question)}` : '';
   return `I need something from you before I can go on.${asked} Answer on the Approvals page.`;
 }
+
+/** A policy's own name for its decision ("policy:default") is not a reason a person can read. */
+export const isForPeople = (reason: string | undefined): boolean =>
+  reason !== undefined && reason.trim() !== '' && !/^policy\b/i.test(reason.trim());
 
 const sentence = (text: string): string => {
   const trimmed = text.trim();

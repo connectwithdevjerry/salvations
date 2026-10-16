@@ -305,11 +305,46 @@ export class RunRepository {
     return result.matchedCount === 1;
   }
 
+  /**
+   * The questions still worth answering.
+   *
+   * An undecided approval is not the same as a live one: it may have
+   * expired, or its run may have been cancelled, superseded by a newer
+   * message, or failed while it waited. Those are closed here, as the list
+   * is read, so the page and the badge never show a question that cannot
+   * be answered, and "approve all" never meets a wall of "already gone".
+   */
   async pendingApprovals(limit = 50): Promise<ApprovalDoc[]> {
-    return this.#approvals.find(
+    const undecided: ApprovalDoc[] = await this.#approvals.find(
       { decision: null } as never,
-      { sort: { requestedAt: -1 }, limit },
+      { sort: { requestedAt: -1 }, limit: limit * 2 },
     );
+    if (undecided.length === 0) return [];
+
+    const now = Date.now();
+    const runIds = [...new Set(undecided.map((a) => a.runId))];
+    const runs: RunDoc[] = await this.#runs.find({ _id: { $in: runIds } } as never, { projection: { _id: 1, status: 1 } });
+    const waiting = new Set(runs.filter((r) => r.status.startsWith('waiting_')).map((r) => r._id));
+
+    const live: ApprovalDoc[] = [];
+    const stale: { id: string; why: string }[] = [];
+    for (const approval of undecided) {
+      if (approval.expiresAt.getTime() <= now) stale.push({ id: approval._id, why: 'system:expired' });
+      else if (!waiting.has(approval.runId)) stale.push({ id: approval._id, why: 'system:run_moved_on' });
+      else live.push(approval);
+    }
+
+    // Closed as denied by the system, with the reason as the decider: the
+    // run cannot take an answer any more, and an approval left open would
+    // be listed again next time.
+    for (const { id, why } of stale) {
+      await this.#approvals.updateOne(
+        { _id: id, decision: null } as never,
+        { $set: { decision: 'deny', decidedBy: why, decidedAt: new Date() } } as never,
+      );
+    }
+
+    return live.slice(0, limit);
   }
 
   async findApproval(approvalId: string): Promise<ApprovalDoc | null> {

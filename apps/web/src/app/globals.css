@@ -1601,6 +1601,15 @@ td.danger { color: var(--danger); }
 .mock-voice-log { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; align-items: start; letter-spacing: 0; font-size: 12px; line-height: 1.5; }
 .mock-voice-log span { color: #5b7aa6; text-transform: uppercase; font-size: 10px; letter-spacing: 0.1em; padding-top: 3px; }
 .mock-voice-log p { margin: 0; }
+.mock-voice-idle { color: #5b7aa6; }
+.mock-voice-core { transition: transform 80ms linear; }
+.live-voice.listening .mock-voice-ring { animation: spin 1.6s linear infinite; }
+.live-voice.speaking .mock-voice-ring { border-top-color: #60a5fa; border-right-color: #60a5fa; }
+.live-voice.speaking .mock-voice-bars span { background: #60a5fa; }
+.mock-voice-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.mock-voice-actions button { font-family: var(--sans); letter-spacing: 0; font-size: 13px; }
+.mock-voice-note { margin: 0; color: #5b7aa6; letter-spacing: 0; font-family: var(--sans); font-size: 12px; line-height: 1.4; flex: 1; min-width: 180px; }
+@media (prefers-reduced-motion: reduce) { .live-voice.listening .mock-voice-ring { animation: none; } .mock-voice-core { transition: none; } }
 .land-security { display: grid; grid-template-columns: 1fr 1.2fr; gap: 40px; align-items: start; }
 .land-security ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
 .land-security li { display: flex; gap: 12px; align-items: flex-start; font-size: 14.5px; color: var(--muted); line-height: 1.55; }

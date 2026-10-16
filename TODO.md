@@ -336,7 +336,8 @@ platform exist beside the first three.
       email. The assistant searches and browses for itself (the web `search` and `read_page`
       tools, Google Programmable Search configured in production), reads the faculty page and
       the lab, pulls the papers from the open Semantic Scholar API and arXiv, picks the paper
-      closest to the person's interest, summarises it into five core approaches, proposes one
+      closest to the person's interest, summarises it under five headings (background, data acquisition, methodology, findings,
+      limitations), proposes one
       improvement, weaves in the CV from the knowledge base, and asks for approval before
       sending through the connected mail account. A weekly routine chases the unanswered
 - [x] More than one account per app: an assistant may connect the same app several times (two

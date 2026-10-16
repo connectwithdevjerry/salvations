@@ -1907,3 +1907,6 @@ button.link { background: none; border: 0; padding: 0; color: var(--accent); fon
   .rule-row { grid-template-columns: 1fr 1fr; }
   .rule-row input[list] { grid-column: 1 / -1; }
 }
+
+/* What the studio made, shown in the chat */
+.rt-media { display: block; max-width: min(100%, 420px); max-height: 520px; border-radius: 12px; margin: 8px 0; border: 1px solid var(--border); background: var(--bg); }

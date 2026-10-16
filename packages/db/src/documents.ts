@@ -304,6 +304,31 @@ export interface McpCapabilityDoc extends TenantDoc {
 }
 
 /**
+ * A picture or clip an assistant made.
+ *
+ * The bytes live here, in the workspace's own database, capped well under the
+ * document limit: a product image is a few hundred kilobytes and a short
+ * clip a few megabytes. A clip is a job first: `rendering` until the vendor
+ * finishes, then `ready` with its bytes.
+ */
+export interface MediaDoc extends TenantDoc {
+  agentId?: string | null;
+  runId?: string | null;
+  conversationId?: string | null;
+  kind: 'image' | 'video';
+  mimeType: string;
+  status: 'rendering' | 'ready' | 'failed';
+  prompt: string;
+  bytes?: Uint8Array | null;
+  sizeBytes?: number | null;
+  /** The vendor's job, while rendering. */
+  job?: { providerType: string; externalId: string } | null;
+  error?: string | null;
+  createdAt: Date;
+  readyAt?: Date | null;
+}
+
+/**
  * A connected chat platform.
  *
  * Two secrets, both encrypted, because they do different jobs and rotate

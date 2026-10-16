@@ -278,6 +278,11 @@ export const INDEXES: Readonly<Partial<Record<CollectionName, readonly IndexDef[
         + 'all insert, leaving several entries each claiming to be true.' },
   ],
 
+  media: [
+    { name: 'ws_recent', key: { workspaceId: 1, createdAt: -1 }, rationale: 'what an assistant made lately' },
+    { name: 'ws_run', key: { workspaceId: 1, runId: 1, status: 1 }, rationale: 'clips still rendering when a run ends' },
+  ],
+
   knowledgeDocuments: [
     { name: 'ws_recent', key: { workspaceId: 1, createdAt: -1 }, rationale: 'the knowledge page' },
     {

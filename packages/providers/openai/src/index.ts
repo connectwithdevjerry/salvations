@@ -11,6 +11,7 @@ import {
   type ProviderCredentials, type ProviderEvent, type ProviderType,
   type EmbeddingRequest, type EmbeddingResult,
   type TranscriptionRequest, type TranscriptionResult,
+  type ImageRequest, type ImageResult, type VideoRequest, type VideoJob,
 } from '@salvations/core';
 import { capabilitiesFor, knownModels } from './capabilities';
 import { StreamDecoder, encodeRequest, mapError } from './translate';
@@ -97,6 +98,62 @@ class OpenAIProvider implements AgentProvider {
     }
   }
 
+  /**
+   * A picture from words.
+   *
+   * The image model is named here and nowhere else: it is this vendor's, and
+   * a caller asked only for a shape. Bytes come back inline rather than as a
+   * URL, so nothing has to be fetched from the vendor a second time.
+   */
+  async generateImage(request: ImageRequest): Promise<ImageResult> {
+    try {
+      const result = await this.#client.images.generate({
+        model: 'gpt-image-1',
+        prompt: request.prompt,
+        n: 1,
+        size: IMAGE_SIZES[request.shape],
+        quality: request.quality === 'high' ? 'high' : 'medium',
+      });
+      const first = result.data?.[0];
+      if (first?.b64_json === undefined) throw new Error('The vendor returned no image.');
+      return { bytes: Uint8Array.from(Buffer.from(first.b64_json, 'base64')), mimeType: 'image/png' };
+    } catch (error) {
+      throw mapError(error);
+    }
+  }
+
+  /** A clip from words: the job is started and its id returned at once. */
+  async startVideo(request: VideoRequest): Promise<VideoJob> {
+    try {
+      const job = await this.#client.videos.create({
+        model: 'sora-2',
+        prompt: request.prompt,
+        seconds: String(request.seconds) as never,
+        size: request.orientation === 'portrait' ? '720x1280' : '1280x720',
+      });
+      return toVideoJob(job);
+    } catch (error) {
+      throw mapError(error);
+    }
+  }
+
+  async videoJob(jobId: string): Promise<VideoJob> {
+    try {
+      return toVideoJob(await this.#client.videos.retrieve(jobId));
+    } catch (error) {
+      throw mapError(error);
+    }
+  }
+
+  async videoContent(jobId: string): Promise<Uint8Array> {
+    try {
+      const response = await this.#client.videos.downloadContent(jobId);
+      return new Uint8Array(await response.arrayBuffer());
+    } catch (error) {
+      throw mapError(error);
+    }
+  }
+
   /** One page of the models list: the cheapest call that needs a valid key. */
   async verify(): Promise<CredentialCheck> {
     try {
@@ -162,3 +219,21 @@ export const createProvider = (options: AdapterOptions): AgentProvider =>
 
 export { capabilitiesFor, knownModels };
 export { encodeRequest, StreamDecoder, mapError, mapFinishReason } from './translate';
+
+const IMAGE_SIZES = {
+  square: '1024x1024', portrait: '1024x1536', landscape: '1536x1024',
+} as const;
+
+/** The vendor's job record, in the port's words. */
+function toVideoJob(job: { id: string; status: string; progress?: number; error?: { message?: string } | null }): VideoJob {
+  const status = job.status === 'completed' ? 'completed'
+    : job.status === 'failed' ? 'failed'
+    : job.status === 'queued' ? 'queued'
+    : 'rendering';
+  return {
+    id: job.id,
+    status,
+    ...(typeof job.progress === 'number' ? { progress: job.progress } : {}),
+    ...(job.error?.message !== undefined && job.error.message !== null ? { error: job.error.message } : {}),
+  };
+}

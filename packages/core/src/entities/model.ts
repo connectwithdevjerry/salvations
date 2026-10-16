@@ -224,6 +224,33 @@ export interface TranscriptionRequest {
   readonly languageHint?: string;
 }
 
+/** A still image from a prompt. Sizes are the three a vendor is likely to offer. */
+export interface ImageRequest {
+  readonly prompt: string;
+  readonly shape: 'square' | 'portrait' | 'landscape';
+  readonly quality?: 'standard' | 'high';
+}
+
+export interface ImageResult {
+  readonly bytes: Uint8Array;
+  readonly mimeType: string;
+}
+
+/** A short clip from a prompt. Rendering takes minutes, so it is a job, not a call. */
+export interface VideoRequest {
+  readonly prompt: string;
+  readonly seconds: 4 | 8 | 12;
+  readonly orientation: 'portrait' | 'landscape';
+}
+
+export interface VideoJob {
+  readonly id: string;
+  readonly status: 'queued' | 'rendering' | 'completed' | 'failed';
+  /** 0 to 100 when the vendor reports it. */
+  readonly progress?: number;
+  readonly error?: string;
+}
+
 export interface TranscriptionResult {
   readonly text: string;
   /** What the vendor decided it heard, when it says. */

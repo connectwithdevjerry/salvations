@@ -55,6 +55,13 @@ export interface InboundMessage {
  * typed: a choice is an answer to a question we asked, and `data` names the
  * question. Who pressed it still has to be checked by the caller.
  */
+/** A picture or clip to show, by a link the platform can fetch. */
+export interface OutboundMedia {
+  readonly kind: 'image' | 'video';
+  readonly url: string;
+  readonly caption?: string;
+}
+
 export interface InboundChoice {
   readonly chatRef: string;
   readonly senderRef: string;
@@ -157,6 +164,12 @@ export interface ChannelAdapter {
 
   /** Sends a reply. Throws on refusal — a silent failure is a lost answer. */
   send(token: string, chatRef: string, text: string, fetchImpl?: typeof fetch): Promise<void>;
+
+  /**
+   * Sends a picture or a clip by a public link the platform fetches itself.
+   * Absent on a platform that shows links well enough on its own.
+   */
+  sendMedia?(token: string, chatRef: string, media: OutboundMedia, fetchImpl?: typeof fetch): Promise<void>;
 
   /**
    * Shows the person that something is happening — "typing…" on a platform

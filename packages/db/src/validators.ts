@@ -134,6 +134,21 @@ export const VALIDATORS: Partial<Record<CollectionName, JsonSchema>> = {
     },
   },
 
+  media: {
+    bsonType: 'object',
+    required: ['_id', 'workspaceId', 'kind', 'mimeType', 'status', 'prompt', 'createdAt'],
+    properties: {
+      ...tenantBase,
+      kind: oneOfStrings('image', 'video'),
+      mimeType: str,
+      status: oneOfStrings('rendering', 'ready', 'failed'),
+      prompt: str,
+      bytes: nullable({ bsonType: 'binData' }),
+      sizeBytes: nullable(int),
+      createdAt: date,
+    },
+  },
+
   credentials: {
     bsonType: 'object',
     required: [

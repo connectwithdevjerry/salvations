@@ -12,6 +12,9 @@
  * left to do.
  */
 import { ChannelRepository, ConversationRepository, PlatformDb, toMessage } from '@salvations/db';
+import { findMediaByLink } from '@salvations/db';
+import { env } from './env';
+import { mediaLinksIn } from './media-links';
 import type { ChannelDoc, RunDoc } from '@salvations/db';
 import { channelAdapter, chunk, type ChannelAdapter } from '@salvations/channels';
 import { db } from './db';
@@ -111,6 +114,7 @@ async function deliver(runId: string, draft: Draft | undefined): Promise<Deliver
     } else {
       await adapter.send(token, chatRef, text);
     }
+    await sendMediaIn(text, adapter, token, chatRef);
     await channels.recordDelivery(row._id);
     return { result: 'sent' };
   } catch (caught) {
@@ -120,6 +124,29 @@ async function deliver(runId: string, draft: Draft | undefined): Promise<Deliver
     const message = caught instanceof Error ? caught.message : String(caught);
     await channels.recordFailure(row._id, message);
     return skipped(`send failed: ${message}`);
+  }
+}
+
+/**
+ * The pictures and clips a reply links to, sent as themselves.
+ *
+ * A platform that can show a picture is sent the picture; the link stays in
+ * the words too, so nothing is lost on one that cannot. A clip still
+ * rendering is left to the finisher, which sends it the moment it is done.
+ */
+async function sendMediaIn(text: string, adapter: ChannelAdapter, token: string, chatRef: string): Promise<void> {
+  if (adapter.sendMedia === undefined) return;
+  const links = mediaLinksIn(text, env().PUBLIC_BASE_URL);
+  if (links.length === 0) return;
+  const handle = await db();
+  for (const link of links) {
+    const row = await findMediaByLink(handle.db, link.id);
+    if (row === null || row.status !== 'ready') continue;
+    try {
+      await adapter.sendMedia(token, chatRef, { kind: link.kind, url: link.url });
+    } catch (caught) {
+      console.log(JSON.stringify({ at: 'channel-delivery', media: link.id, failed: caught instanceof Error ? caught.message : String(caught) }));
+    }
   }
 }
 

@@ -17,6 +17,8 @@ import { executor } from '@/lib/container';
 import { deliverFinishedRun } from '@/lib/channel-delivery';
 import { announcePendingApproval } from '@/lib/channel-approvals';
 import { openLiveReply } from '@/lib/channel-live';
+import { finishRenderingForRun } from '@/lib/studio-finisher';
+import { after } from 'next/server';
 
 export const runtime = 'nodejs';
 
@@ -72,6 +74,7 @@ export async function POST(request: Request): Promise<Response> {
   // typing and the first words while the model is still writing.
   const live = await openLiveReply(String(hint));
 
+  const sliceStarted = Date.now();
   const outcome = await (await executor()).execute(
     hint, new WallClockDeadline(SLICE_MS),
   );
@@ -96,6 +99,15 @@ export async function POST(request: Request): Promise<Response> {
     // the run that finished, never with another run's answer.
     ? await deliverFinishedRun(String(outcome.runId), String(outcome.runId) === String(hint) ? draft : undefined)
     : undefined;
+
+  // Clips the run started are still rendering at the vendor. The function
+  // stays up after the response, in the time the slice has left, and sends
+  // each to the chat as it lands.
+  const left = SLICE_MS - (Date.now() - sliceStarted) - 15_000;
+  if (left > 20_000 && 'runId' in outcome) {
+    const finished = String(outcome.runId);
+    after(() => finishRenderingForRun(finished, Date.now() + left));
+  }
 
   // One line per slice, so the deployment's own logs say what happened to a
   // run without anyone reading the database. Ids and enum-shaped fields only.

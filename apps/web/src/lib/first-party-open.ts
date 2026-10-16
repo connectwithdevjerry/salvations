@@ -12,13 +12,14 @@
  * would let it ask.
  */
 import {
-  createConversationServer, createGoogleWorkspaceServer, createKnowledgeServer, createMemoryServer, createOpenClawServer, createWebServer, linkedPair,
+  createConversationServer, createGoogleWorkspaceServer, createKnowledgeServer, createMemoryServer, createOpenClawServer, createStudioServer, createWebServer, linkedPair,
   type ConversationSource, type ServerContext,
 } from '@salvations/servers';
 import { ConversationRepository, toMessage } from '@salvations/db';
 import type { Database } from '@salvations/db';
 import type { InProcessOpener } from '@salvations/mcp';
-import { MEMORY_ALIAS, CONVERSATION_ALIAS, KNOWLEDGE_ALIAS, WEB_ALIAS } from './first-party';
+import { MEMORY_ALIAS, CONVERSATION_ALIAS, KNOWLEDGE_ALIAS, WEB_ALIAS, STUDIO_ALIAS } from './first-party';
+import { createStudioSource } from './studio-service';
 import { createWebSource } from './web-service';
 import { createMemorySource } from './memory-service';
 import { createKnowledgeSource } from './knowledge-service';
@@ -101,6 +102,19 @@ async function build(alias: string, input: OpenerInput, bindingId?: string) {
     return createKnowledgeServer(input.context, createKnowledgeSource({
       database: input.database,
       workspaceId,
+    }));
+  }
+
+  if (alias === STUDIO_ALIAS) {
+    // Pictures and clips, paid for by the workspace's own OpenAI key and kept
+    // in its own database. Scoped to the run so what was made is filed with
+    // the conversation that asked for it.
+    return createStudioServer(input.context, createStudioSource({
+      database: input.database,
+      workspaceId,
+      agentId: input.context.agentId,
+      runId: input.context.runId,
+      conversationId: input.context.conversationId,
     }));
   }
 

@@ -45,7 +45,7 @@ export function stepsFor(context: TourContext): readonly TourStep[] {
       path: '/agents',
       target: 'create-assistant',
       title: 'Build your team',
-      body: 'Start with a team: a manager, marketing, sales, support and a personal assistant, each with its job written in. Or make one assistant with the role you choose.',
+      body: 'Start with a team: a manager, marketing, sales, support and a personal assistant, each with its job written in. Or make one assistant with the role you choose. Give any of them almost nothing, a link, a dish, a photo, and they do the whole job and ask once at the end. Marketing has a studio for pictures and clips.',
     }]
     : [
       {

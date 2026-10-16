@@ -315,8 +315,11 @@ platform exist beside the first three.
       Approve did nothing and said nothing. The webhook is re-registered the moment buttons are
       sent on a stale connection, and on the next inbound message; the daily sweep stays
 - [x] Drop and go: every role treats a bare link, name, file or photo as the whole brief, does the
-      job whole and asks once at the end. Marketing makes a ready-to-publish pack (hook, caption,
-      description, hashtags, times, platforms) and the picture or clip to go with it
+      job whole and asks once at the end, and each role says what a drop means for it (a receipt
+      for Finance, a CV for People, a customer's message for Support). Marketing makes a
+      ready-to-publish pack (hook, caption, description, hashtags, times, platforms) and the
+      picture or clip to go with it. An assistant created before the rule gets it at run time,
+      read from the role heading in its instructions, so nobody has to recreate a team
 - [x] The studio: a first-party server (`studio`) with `create_image`, `create_video` and
       `check_video`, drawn by the workspace's own OpenAI key through the provider port
       (`generateImage`, `startVideo`, `videoJob`, `videoContent`; no vendor named outside the

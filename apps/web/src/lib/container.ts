@@ -12,6 +12,7 @@
  * of rebuilding them on every request.
  */
 import type { Database } from '@salvations/db';
+import { dropAndGoFor } from '@salvations/catalog';
 import {
   asId,
   type LeaseToken, type ModelCapabilities, type Principal, type ProviderCredentials,
@@ -217,7 +218,14 @@ export async function openSession(
     },
 
     async systemDirectives(current): Promise<readonly SystemDirective[]> {
-      return [{ kind: 'identity', text: current.agentSnapshot.systemPrompt }];
+      const prompt = current.agentSnapshot.systemPrompt;
+      // An assistant created before the rule existed still gets it, with
+      // what it means for its role, rather than waiting to be recreated.
+      const owed = dropAndGoFor(prompt);
+      return [
+        { kind: 'identity', text: prompt },
+        ...(owed !== undefined ? [{ kind: 'policy' as const, text: owed }] : []),
+      ];
     },
   };
 

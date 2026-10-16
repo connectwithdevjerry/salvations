@@ -98,12 +98,20 @@ const GITHUB: CatalogEntry = {
   setup: 'mcp',
   accent: '#8b949e',
   docs: 'https://github.com/github/github-mcp-server',
-  mcp: { url: 'https://api.githubcopilot.com/mcp/' },
+  // GitHub's authorization server registers no clients on the fly, so the
+  // deployment brings a GitHub App of its own.
+  mcp: { url: 'https://api.githubcopilot.com/mcp/', registeredClient: 'github.com' },
   steps: [
     {
       title: 'Connect over MCP',
       body: 'GitHub is reached through its MCP server, which asks you to authorise it ' +
         'directly. We never hold a GitHub password or a personal access token.',
+    },
+    {
+      title: 'An app registered with GitHub',
+      body: 'GitHub does not register clients on the fly. Whoever runs this deployment creates a ' +
+        'GitHub App with the callback URL below and sets its client id and secret as ' +
+        'MCP_OAUTH_CLIENTS under "github.com". Until then this connection is not offered.',
     },
   ],
   scopes: [
@@ -211,9 +219,9 @@ function vendor(input: {
 
 const VENDORS: readonly CatalogEntry[] = [
   vendor({ id: 'atlassian', name: 'Jira & Confluence', summary: 'Issues, boards and the pages your team writes.', category: 'Product & code', accent: '#0052CC', url: 'https://mcp.atlassian.com/v2/mcp', docs: 'https://support.atlassian.com/atlassian-rovo-mcp-server/docs/getting-started-with-the-atlassian-remote-mcp-server/', reads: 'Read issues, boards and pages', writes: 'Create and update issues and pages' }),
-  vendor({ id: 'asana', name: 'Asana', summary: 'Tasks, projects and who is doing what.', category: 'Work & docs', accent: '#F06A6A', url: 'https://mcp.asana.com/v2/mcp', docs: 'https://developers.asana.com/docs/using-asanas-mcp-server', reads: 'Read tasks and projects', writes: 'Create and update tasks', registeredClient: 'asana.com' }),
+  vendor({ id: 'asana', name: 'Asana', summary: 'Tasks, projects and who is doing what.', category: 'Work & docs', accent: '#F06A6A', url: 'https://mcp.asana.com/v2/mcp', docs: 'https://developers.asana.com/docs/using-asanas-mcp-server', reads: 'Read tasks and projects', writes: 'Create and update tasks' }),
   vendor({ id: 'monday', name: 'monday.com', summary: 'Boards, items and the status of everything.', category: 'Work & docs', accent: '#FF3D57', url: 'https://mcp.monday.com/mcp', docs: 'https://developer.monday.com/apps/docs/mondaycom-mcp-integration', reads: 'Read boards and items', writes: 'Create and update items' }),
-  vendor({ id: 'box', name: 'Box', summary: 'Files, folders and sharing.', category: 'Email, calendar & files', accent: '#0061D5', url: 'https://mcp.box.com', docs: 'https://developer.box.com/guides/box-mcp/remote/', reads: 'Search and read files', writes: 'Create, move and share files' }),
+  vendor({ id: 'box', name: 'Box', summary: 'Files, folders and sharing.', category: 'Email, calendar & files', accent: '#0061D5', url: 'https://mcp.box.com', docs: 'https://developer.box.com/guides/box-mcp/remote/', reads: 'Search and read files', writes: 'Create, move and share files', registeredClient: 'box.com' }),
   vendor({ id: 'stripe', name: 'Stripe', summary: 'Customers, payments, invoices and subscriptions.', category: 'Money & sales', accent: '#635BFF', url: 'https://mcp.stripe.com', docs: 'https://docs.stripe.com/mcp', reads: 'Read customers, payments and invoices', writes: 'Create customers, invoices and payment links' }),
   vendor({ id: 'paypal', name: 'PayPal', summary: 'Invoices, orders and payments.', category: 'Money & sales', accent: '#003087', url: 'https://mcp.paypal.com/mcp', docs: 'https://developer.paypal.com/tools/mcp-server/', reads: 'Read invoices, orders and payments', writes: 'Create and send invoices' }),
   vendor({ id: 'square', name: 'Square', summary: 'Catalogue, orders, payments and customers.', category: 'Money & sales', accent: '#006AFF', url: 'https://mcp.squareup.com/mcp', docs: 'https://developer.squareup.com/docs/mcp', reads: 'Read catalogue, orders and customers', writes: 'Create orders and customers' }),

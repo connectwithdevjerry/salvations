@@ -256,6 +256,8 @@ export interface McpServerBindingDoc extends TenantDoc {
    */
   agentId?: string | null;
   alias: string;
+  /** A name for this account, when the same app is connected more than once. */
+  label?: string | null;
   credentialId?: string | null;
   perUserAuth: boolean;
   status: string;

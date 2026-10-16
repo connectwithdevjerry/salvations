@@ -253,6 +253,8 @@ export const installMcpServerSchema = z.object({
   name: nameSchema.optional(),
   /** Defaults to the catalogue id when connecting a catalogue integration. */
   alias: aliasSchema.optional(),
+  /** What to call this account when an app is connected more than once: "Sales inbox". */
+  label: nameSchema.optional(),
   perUserAuth: z.boolean().default(false),
   headers: z.record(z.string(), z.string()).optional(),
 }).refine(

@@ -49,8 +49,8 @@ function source(): GoogleWorkspaceSource & { calls: { op: string; args: unknown[
   };
 }
 
-async function connect(deps: GoogleWorkspaceSource) {
-  const server = createGoogleWorkspaceServer(CONTEXT, deps);
+async function connect(deps: GoogleWorkspaceSource, options: { account?: string } = {}) {
+  const server = createGoogleWorkspaceServer(CONTEXT, deps, options);
   const [clientTransport, serverTransport] = linkedPair();
   const client = new Client({ name: 'test', version: '1.0.0' });
   await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
@@ -139,5 +139,22 @@ describe('Gmail wire helpers', () => {
     expect(decoded).toMatch(/\r\n\r\n/);
     const body = decoded.split('\r\n\r\n')[1] ?? '';
     expect(Buffer.from(body.replace(/\r\n/g, ''), 'base64').toString('utf8')).toBe('Paid today.');
+  });
+});
+
+describe('a named account', () => {
+  it('puts the name in every tool description, so two accounts read apart', async () => {
+    const { client, close } = await connect(source(), { account: 'Sales inbox' });
+    const { tools } = await client.listTools();
+    expect(tools.length).toBeGreaterThan(0);
+    for (const tool of tools) expect(tool.description).toMatch(/^\[Sales inbox\] /);
+    await close();
+  });
+
+  it('leaves descriptions alone when there is one account', async () => {
+    const { client, close } = await connect(source());
+    const { tools } = await client.listTools();
+    for (const tool of tools) expect(tool.description).not.toMatch(/^\[/);
+    await close();
   });
 });

@@ -24,6 +24,8 @@ import { createMemorySource } from './memory-service';
 import { createKnowledgeSource } from './knowledge-service';
 import { GOOGLE_WORKSPACE_ALIAS, createGoogleSource } from './google-workspace';
 import { OPENCLAW_ALIAS, createOpenClawSource } from './openclaw';
+import { nativeAliasMatches } from './native-alias';
+import { ScopedDb, type McpServerBindingDoc } from '@salvations/db';
 
 export interface OpenerInput {
   readonly database: Database;
@@ -35,7 +37,7 @@ export interface OpenerInput {
 
 export function firstPartyOpener(input: OpenerInput): InProcessOpener {
   return async (definition) => {
-    const server = build(definition.alias, input, definition.bindingId);
+    const server = await build(definition.alias, input, definition.bindingId);
     if (server === undefined) {
       throw new Error(`No first-party server is registered as "${definition.alias}".`);
     }
@@ -52,21 +54,24 @@ export function firstPartyOpener(input: OpenerInput): InProcessOpener {
   };
 }
 
-function build(alias: string, input: OpenerInput, bindingId?: string) {
+async function build(alias: string, input: OpenerInput, bindingId?: string) {
   const workspaceId = String(input.context.workspaceId);
 
-  if (alias === GOOGLE_WORKSPACE_ALIAS && bindingId !== undefined) {
+  if (nativeAliasMatches(alias, GOOGLE_WORKSPACE_ALIAS) && bindingId !== undefined) {
     // Not a first-party server in the synthesised sense: it has a binding
-    // row and a token, and the token decides whose mailbox this is.
+    // row and a token, and the token decides whose mailbox this is. The
+    // account's name goes into every tool description, so a model holding
+    // two Google accounts knows which inbox it is about to search.
+    const account = await accountLabel(input.database, workspaceId, bindingId);
     return createGoogleWorkspaceServer(input.context, createGoogleSource({
       database: input.database,
       workspaceId,
       bindingId,
       userId: input.createdBy,
-    }));
+    }), account !== undefined ? { account } : {});
   }
 
-  if (alias === OPENCLAW_ALIAS && bindingId !== undefined) {
+  if (nativeAliasMatches(alias, OPENCLAW_ALIAS) && bindingId !== undefined) {
     // The person's own self-hosted gateway: the binding row says which, and
     // its token decides whose machine answers.
     return createOpenClawServer(input.context, createOpenClawSource({
@@ -106,6 +111,15 @@ function build(alias: string, input: OpenerInput, bindingId?: string) {
   }
 
   return undefined;
+}
+
+/** What the person called this account, if they named it. */
+async function accountLabel(database: Database, workspaceId: string, bindingId: string): Promise<string | undefined> {
+  const row = await new ScopedDb(database, workspaceId)
+    .collection<McpServerBindingDoc>('mcpServerBindings')
+    .findOne({ _id: bindingId } as never);
+  const label = row?.label;
+  return label !== null && label !== undefined && label.trim() !== '' ? label.trim() : undefined;
 }
 
 function conversationSource(input: OpenerInput, workspaceId: string): ConversationSource {

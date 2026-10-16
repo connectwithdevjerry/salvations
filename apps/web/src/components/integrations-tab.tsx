@@ -106,7 +106,8 @@ export function IntegrationsTab({ workspaceId, agentId }: { workspaceId: string;
   }, [awaitingCode, reload]);
 
   const connectionOf = (entry: CatalogEntry) => channels.find((c) => c.channel === entry.id);
-  const bindingOf = (entry: CatalogEntry) => bindings.find((b) => b.alias === entry.id || b.catalogId === entry.id);
+  // An app may be connected more than once: two Google accounts, say.
+  const bindingsOf = (entry: CatalogEntry) => bindings.filter((b) => b.alias === entry.id || b.catalogId === entry.id);
   const agentName = agents[0]?.name ?? 'this assistant';
 
   const statusOf = (entry: CatalogEntry): AppStatus => {
@@ -116,9 +117,13 @@ export function IntegrationsTab({ workspaceId, agentId }: { workspaceId: string;
       return STATUS[connection.status] ?? { label: connection.status, tone: '' };
     }
     if (entry.unavailable !== undefined) return { label: 'Coming soon', tone: '' };
-    const binding = bindingOf(entry);
-    if (binding === undefined) return { label: 'Not connected', tone: '' };
-    return STATUS[binding.status] ?? { label: binding.status, tone: '' };
+    const own = bindingsOf(entry);
+    if (own.length === 0) return { label: 'Not connected', tone: '' };
+    // Several accounts: the count when all are fine, else the one that is not.
+    const unwell = own.find((b) => b.status !== 'connected');
+    if (own.length > 1 && unwell === undefined) return { label: `${own.length} accounts`, tone: STATUS['connected']?.tone ?? '' };
+    const shown = unwell ?? own[0] as Binding;
+    return STATUS[shown.status] ?? { label: shown.status, tone: '' };
   };
 
   const open = openId === undefined ? undefined : [...CHANNELS, ...INTEGRATIONS].find((e) => e.id === openId);
@@ -176,7 +181,7 @@ export function IntegrationsTab({ workspaceId, agentId }: { workspaceId: string;
               workspaceId={workspaceId}
               agentId={agentId}
               entry={open}
-              binding={bindingOf(open)}
+              bindings={bindingsOf(open)}
               onChanged={reload}
               onError={setError}
             />

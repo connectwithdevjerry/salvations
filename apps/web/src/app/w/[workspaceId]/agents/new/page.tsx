@@ -560,7 +560,8 @@ function AppsStep({
   }, [workspaceId, agentId]);
   useEffect(() => { reload(); }, [reload]);
 
-  const bindingOf = (entry: CatalogEntry) => bindings.find((b) => b.alias === entry.id || b.catalogId === entry.id);
+  const bindingsOf = (entry: CatalogEntry) => bindings.filter((b) => b.alias === entry.id || b.catalogId === entry.id);
+  const bindingOf = (entry: CatalogEntry) => bindingsOf(entry)[0];
   const statusOf = (entry: CatalogEntry): AppStatus => {
     if (entry.unavailable !== undefined) return { label: 'Coming soon', tone: '' };
     const binding = bindingOf(entry);
@@ -592,7 +593,7 @@ function AppsStep({
             workspaceId={workspaceId}
             agentId={agentId}
             entry={open}
-            binding={bindingOf(open)}
+            bindings={bindingsOf(open)}
             onChanged={reload}
             onError={(message) => { if (message !== undefined) onError(message); }}
           />

@@ -79,11 +79,25 @@ const clip = (value: string, max: number) => (value.length > max ? `${value.slic
 const mailLine = (m: MailSummary) =>
   `${m.unread ? '•' : ' '} [${m.id}] ${m.date} — ${m.from}\n   ${m.subject}${m.labels.length > 0 ? `  (${m.labels.join(', ')})` : ''}\n   ${m.snippet}`;
 
+export interface GoogleWorkspaceOptions {
+  /** The account's name when the app is connected more than once: "Sales inbox". */
+  readonly account?: string;
+}
+
 export function createGoogleWorkspaceServer(
   _context: ServerContext,
   source: GoogleWorkspaceSource,
+  options: GoogleWorkspaceOptions = {},
 ): McpServer {
-  const server = new McpServer({ name: SERVER_NAME, version: '1.0.0', title: 'Google Workspace' });
+  const account = options.account;
+  const server = new McpServer({
+    name: SERVER_NAME, version: '1.0.0',
+    title: account === undefined ? 'Google Workspace' : `Google Workspace (${account})`,
+  });
+
+  // Every description names the account, because a model holding two Google
+  // accounts has nothing else to tell them apart by but the tool prefix.
+  const d = (text: string): string => (account === undefined ? text : `[${account}] ${text}`);
 
   /* --------------------------------------------------------------- gmail -- */
 
@@ -92,9 +106,9 @@ export function createGoogleWorkspaceServer(
     {
       title: 'Search mail',
       description:
-        'Find messages with Gmail search syntax: `is:unread`, `from:someone`, `newer_than:7d`, '
+        d('Find messages with Gmail search syntax: `is:unread`, `from:someone`, `newer_than:7d`, '
         + '`label:clients`, `has:attachment`, plain words. Returns ids to read or label. Use '
-        + 'this first when asked about mail; group by sender, subject or label from the results.',
+        + 'this first when asked about mail; group by sender, subject or label from the results.'),
       inputSchema: {
         query: z.string().trim().min(1).max(500).describe('Gmail search query.'),
         limit: z.number().int().min(1).max(MAX_RESULTS).default(20),
@@ -112,7 +126,7 @@ export function createGoogleWorkspaceServer(
     'read_mail',
     {
       title: 'Read a message',
-      description: 'The full text of one message, by id from search_mail.',
+      description: d('The full text of one message, by id from search_mail.'),
       inputSchema: { id: z.string().trim().min(1).max(64) },
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
     },
@@ -131,8 +145,8 @@ export function createGoogleWorkspaceServer(
     {
       title: 'Send a message',
       description:
-        'Send an email as the connected account. To reply in a thread, pass the id of the '
-        + 'message being answered as replyToMessageId. Plain text only.',
+        d('Send an email as the connected account. To reply in a thread, pass the id of the '
+        + 'message being answered as replyToMessageId. Plain text only.'),
       inputSchema: {
         to: z.array(z.string().email()).min(1).max(20),
         cc: z.array(z.string().email()).max(20).optional(),
@@ -156,7 +170,7 @@ export function createGoogleWorkspaceServer(
     'list_labels',
     {
       title: 'List labels',
-      description: 'Every Gmail label, system and custom, with ids for label_mail.',
+      description: d('Every Gmail label, system and custom, with ids for label_mail.'),
       inputSchema: {},
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
     },
@@ -171,9 +185,9 @@ export function createGoogleWorkspaceServer(
     {
       title: 'Label messages',
       description:
-        'Add or remove labels on messages: how mail is grouped. Give label NAMES; a label '
+        d('Add or remove labels on messages: how mail is grouped. Give label NAMES; a label '
         + 'that does not exist is created. Remove "UNREAD" to mark read, add "STARRED" to star, '
-        + 'remove "INBOX" to archive.',
+        + 'remove "INBOX" to archive.'),
       inputSchema: {
         messageIds: z.array(z.string().trim().min(1).max(64)).min(1).max(100),
         add: z.array(z.string().trim().min(1).max(100)).max(10).default([]),
@@ -203,9 +217,9 @@ export function createGoogleWorkspaceServer(
     {
       title: 'Move messages to the bin',
       description:
-        'Move messages to Gmail\'s bin, by id from search_mail. Gmail keeps them for thirty '
+        d('Move messages to Gmail\'s bin, by id from search_mail. Gmail keeps them for thirty '
         + 'days, so this is undoable from Gmail; nothing here empties the bin. For promotional '
-        + 'mail, search `category:promotions` first and show what will go before calling this.',
+        + 'mail, search `category:promotions` first and show what will go before calling this.'),
       inputSchema: { messageIds: z.array(z.string().trim().min(1).max(64)).min(1).max(200) },
       annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
     },
@@ -221,7 +235,7 @@ export function createGoogleWorkspaceServer(
     'list_events',
     {
       title: 'List calendar events',
-      description: 'Events on the primary calendar between two times (ISO 8601). Defaults to the next 7 days.',
+      description: d('Events on the primary calendar between two times (ISO 8601). Defaults to the next 7 days.'),
       inputSchema: {
         from: z.string().datetime({ offset: true }).optional(),
         to: z.string().datetime({ offset: true }).optional(),
@@ -247,7 +261,7 @@ export function createGoogleWorkspaceServer(
     'create_event',
     {
       title: 'Create a calendar event',
-      description: 'Put an event on the primary calendar. Times are ISO 8601 with offset. Attendees are invited.',
+      description: d('Put an event on the primary calendar. Times are ISO 8601 with offset. Attendees are invited.'),
       inputSchema: {
         summary: z.string().trim().min(1).max(300),
         start: z.string().datetime({ offset: true }),
@@ -275,7 +289,7 @@ export function createGoogleWorkspaceServer(
     'search_files',
     {
       title: 'Search Drive',
-      description: 'Find files in Drive by words in the name or contents. Returns ids for read_file.',
+      description: d('Find files in Drive by words in the name or contents. Returns ids for read_file.'),
       inputSchema: {
         query: z.string().trim().min(1).max(300),
         limit: z.number().int().min(1).max(MAX_RESULTS).default(20),
@@ -293,7 +307,7 @@ export function createGoogleWorkspaceServer(
     'read_file',
     {
       title: 'Read a Drive file',
-      description: 'The text of a Drive file: Docs, Sheets and Slides are exported as text; text-like files are read as they are.',
+      description: d('The text of a Drive file: Docs, Sheets and Slides are exported as text; text-like files are read as they are.'),
       inputSchema: { id: z.string().trim().min(1).max(128) },
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
     },

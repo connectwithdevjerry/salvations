@@ -19,7 +19,7 @@ interface Rule {
 
 interface Scope { type: 'workspace' | 'agent'; id?: string }
 interface Agent { id: string; name: string; color: string }
-interface Binding { id: string; alias: string; serverName: string; agentId?: string }
+interface Binding { id: string; alias: string; label?: string; serverName: string; agentId?: string }
 interface Capability { bindingId: string; name: string }
 interface Policy { rules: Rule[]; defaultEffect: Effect; canWrite: boolean; canChangeDefault: boolean }
 
@@ -82,12 +82,15 @@ export function PolicyEditor({ workspaceId }: { workspaceId: string }) {
     const own = scope.type === 'agent'
       ? bindings.filter((b) => b.agentId === undefined || b.agentId === scope.id)
       : bindings;
-    const connected = own.map((b) => ({
-      id: b.id,
-      label: scope.type === 'workspace' && b.agentId !== undefined
-        ? `${b.serverName} (${agents.find((a) => a.id === b.agentId)?.name ?? 'one assistant'})`
-        : b.serverName,
-    }));
+    const connected = own.map((b) => {
+      const name = b.label !== undefined && b.label !== '' ? `${b.serverName}: ${b.label}` : b.serverName;
+      return {
+        id: b.id,
+        label: scope.type === 'workspace' && b.agentId !== undefined
+          ? `${name} (${agents.find((a) => a.id === b.agentId)?.name ?? 'one assistant'})`
+          : name,
+      };
+    });
     return [...FIRST_PARTY_APPS.map((a) => ({ id: a.id, label: `${a.label} (built in)` })), ...connected];
   }, [agents, bindings, scope]);
 

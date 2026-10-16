@@ -2,8 +2,10 @@
 
 Companion to [ARCHITECTURE.md](./ARCHITECTURE.md) and the documents in [docs/](./docs).
 
-**Current state:** Phase 1 complete through §1.10 and Phase 1.5 through §1.5.8; what remains in
-Phase 1 is the manual acceptance pass and the runbooks.
+**Current state:** Phase 1 complete through §1.10 and Phase 1.5 through §1.5.8, plus the plan
+gate (10-day trial or subscription before the first assistant), the rules editor on the Approvals
+page, and apps connected more than once; what remains in Phase 1 is the manual acceptance pass
+and the runbooks.
 The catalogue direction — named, hard-coded integrations rather than a generic MCP URL box —
 was set after Phase 1 and supersedes the "no integrations in Phase 1" line that was here.
 

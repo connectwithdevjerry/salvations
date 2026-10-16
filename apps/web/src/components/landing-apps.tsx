@@ -28,7 +28,7 @@ export function LandingApps() {
       {browsing && (
         <AppPickerDialog
           title={`${entries.length} apps, each reached directly`}
-          lede="The places an assistant talks and the services it works in. No hub in between."
+          lede="The places an assistant talks and the services it works in. No hub in between. Connect an app more than once, such as two Google accounts, and name each."
           entries={entries}
           statusOf={() => none}
           onPick={(entry) => { setBrowsing(false); setOpen(entry); }}

@@ -312,6 +312,15 @@ platform exist beside the first three.
 - [x] A Telegram bot registered before button presses were asked for never heard a press, so
       Approve did nothing and said nothing. The webhook is re-registered the moment buttons are
       sent on a stale connection, and on the next inbound message; the daily sweep stays
+- [x] More than one account per app: an assistant may connect the same app several times (two
+      Google accounts, two Stripe accounts). Each connection gets its own alias (`google_workspace`,
+      `google_workspace_2`), its own tokens and its own tool prefix; a name the person gives it
+      ("Sales inbox") goes into every tool description so the model tells them apart. The app
+      panel lists the accounts with their own authorise and disconnect, and adds another
+- [x] Who registers apps by hand, from what the vendors answer today: GitHub and Box offer no
+      dynamic registration (a GitHub App or Box app goes in `MCP_OAUTH_CLIENTS`); Asana does,
+      so it no longer waits on one. Every catalogue server answered 401 with resource metadata
+      and PKCE S256, which is the whole handshake HIVE relies on
 - [x] Pay or try first: a workspace runs assistants on a subscription, a 10-day free trial
       (one click, no card, once per workspace, `POST /billing/trial`), or the operator's
       exemption (`COMPLIMENTARY_WORKSPACES`). Nothing else makes or runs an assistant: the

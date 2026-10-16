@@ -13,6 +13,7 @@
  * What a tool may DO is still policy's decision at call time.
  */
 import { installMcpServerSchema } from '@salvations/contracts';
+import { nextAlias } from '@/lib/native-alias';
 import { catalogEntry } from '@salvations/catalog';
 import { AgentRepository, ScopedDb, type McpServerBindingDoc } from '@salvations/db';
 import { mcpServersById } from '@/lib/mcp-servers';
@@ -46,6 +47,7 @@ export const GET = workspaceRoute('mcp:read', async (ctx) => {
         id: b._id,
         agentId: b.agentId ?? undefined,
         alias: b.alias,
+        label: b.label ?? undefined,
         catalogId: typeof server?.catalogId === 'string' ? server.catalogId : undefined,
         serverName: String(server?.['name'] ?? b.alias),
         url: server?.['url'] ?? undefined,
@@ -89,8 +91,9 @@ export const POST = workspaceRoute('mcp:install', async (ctx) => {
   }
 
   // A native entry is served by an adapter of ours in this process; its
-  // alias is fixed so the opener knows which adapter to build.
-  const alias = entry?.native?.alias ?? input.alias ?? entry?.id ?? '';
+  // alias starts with a fixed word so the opener knows which adapter to
+  // build, and a second account of the same app gets a numbered suffix.
+  const base = entry?.native?.alias ?? input.alias ?? entry?.id ?? '';
   const url = entry?.mcp?.url ?? input.url;
 
   const agent = await new AgentRepository(ctx.database, ctx.workspaceId).findById(input.agentId);
@@ -100,16 +103,17 @@ export const POST = workspaceRoute('mcp:install', async (ctx) => {
   if (!room.allowed) return errorResponse(422, 'limit_reached', room.reason ?? 'Your plan has no room for another connected app.');
 
   // The alias is unique per assistant, which is what makes its canonical tool
-  // names collision-free by construction rather than by a runtime check.
-  const clash = await bindings.findOne({ agentId: input.agentId, alias } as never);
-  if (clash !== null) {
-    return errorResponse(
-      409, 'conflict',
-      entry !== undefined
-        ? `${entry.name} is already connected to ${agent.name}.`
-        : `${agent.name} already has a server aliased "${alias}".`,
-    );
+  // names collision-free by construction rather than by a runtime check. An
+  // app from the catalogue may be connected more than once (two Google
+  // accounts, say): each gets its own alias and its own tokens. A pasted
+  // server keeps the alias the person chose, so a clash there is theirs.
+  const taken = new Set(
+    (await bindings.find({ agentId: input.agentId } as never)).map((b) => b.alias),
+  );
+  if (entry === undefined && taken.has(base)) {
+    return errorResponse(409, 'conflict', `${agent.name} already has a server aliased "${base}".`);
   }
+  const alias = entry === undefined ? base : nextAlias(base, taken);
 
   let mcpServerId = input.mcpServerId;
   if (mcpServerId === undefined) {
@@ -136,6 +140,7 @@ export const POST = workspaceRoute('mcp:install', async (ctx) => {
     mcpServerId,
     agentId: input.agentId,
     alias,
+    label: input.label ?? null,
     credentialId: null,
     perUserAuth: input.perUserAuth,
     // Nothing is callable yet: consent has not been given and no capability

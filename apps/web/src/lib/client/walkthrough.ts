@@ -93,7 +93,7 @@ export function stepsFor(context: TourContext): readonly TourStep[] {
         target: 'tab-integrations',
         activate: true,
         title: 'Integrations',
-        body: 'What it is connected to. Add an app opens the whole catalogue; each connects on the vendor’s own consent screen and can be disconnected here. Anything that changes something waits for your approval first.',
+        body: 'What it is connected to. Add an app opens the whole catalogue; each connects on the vendor’s own consent screen and can be disconnected here. An app can be connected more than once, such as two Google accounts; name each so the assistant knows which is which. Anything that changes something waits for your approval first.',
       },
       {
         id: 'model',

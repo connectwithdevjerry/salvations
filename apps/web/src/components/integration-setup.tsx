@@ -17,7 +17,7 @@ import { useDialog } from '@/components/dialog';
  */
 
 export interface Binding {
-  id: string; agentId?: string; alias: string; catalogId?: string; serverName: string; url?: string; trustTier: string;
+  id: string; agentId?: string; alias: string; label?: string; catalogId?: string; serverName: string; url?: string; trustTier: string;
   status: string; perUserAuth: boolean; negotiatedProtocolVersion?: string;
   capabilityCount: number;
   health: { circuitState: string; consecutiveFailures: number; lastError?: string };
@@ -54,16 +54,19 @@ export async function authorise(workspaceId: string, bindingId: string): Promise
 }
 
 export function IntegrationSetup({
-  workspaceId, agentId, entry, binding, onChanged, onError,
+  workspaceId, agentId, entry, bindings, onChanged, onError,
 }: {
   workspaceId: string;
   agentId: string;
   entry: CatalogEntry;
-  binding: Binding | undefined;
+  /** Every account of this app on this assistant. Usually none or one. */
+  bindings: readonly Binding[];
   onChanged: () => void;
   onError: (message: string | undefined) => void;
 }) {
   const [busy, setBusy] = useState(false);
+  const [label, setLabel] = useState('');
+  const binding = bindings[0];
 
   if (entry.unavailable !== undefined) {
     return (
@@ -82,71 +85,107 @@ export function IntegrationSetup({
     return <GatewaySetup workspaceId={workspaceId} agentId={agentId} entry={entry} binding={binding} onChanged={onChanged} onError={onError} />;
   }
 
-  if (binding !== undefined && binding.status === 'connected') {
-    return (
-      <div className="stack" style={{ gap: 10 }}>
-        <div className="note">
-          <span className="tile" aria-hidden><Icon name="check" size={16} /></span>
-          <span>
-            <strong>Connected.</strong> {binding.capabilityCount}{' '}
-            {binding.capabilityCount === 1 ? 'tool' : 'tools'} available to this assistant.
-          </span>
+  async function connect(id?: string) {
+    setBusy(true);
+    onError(undefined);
+    try {
+      const target = id ?? (await api.post<{ id: string }>(
+        `${ws(workspaceId)}/mcp/bindings`,
+        { catalogId: entry.id, agentId, ...(label.trim() !== '' ? { label: label.trim() } : {}) },
+      )).id;
+      if (await authorise(workspaceId, target) === 'connected') onChanged();
+    } catch (caught) {
+      onError(caught instanceof Error ? caught.message : `Could not connect ${entry.name}.`);
+      setBusy(false);
+      onChanged();
+    }
+  }
+
+  return (
+    <div className="stack" style={{ gap: 12 }}>
+      {bindings.length === 0 ? (
+        <>
+          <p className="muted" style={{ margin: 0 }}>Connecting grants this assistant these permissions:</p>
+          <ScopeList scopes={entry.scopes} />
+          <SetupSteps steps={entry.steps} />
+          {entry.native !== undefined && <NativeSetupNote entry={entry} />}
+        </>
+      ) : (
+        <div className="stack" style={{ gap: 8 }}>
+          {bindings.map((account, index) => (
+            <AccountCard
+              key={account.id} workspaceId={workspaceId} entry={entry} binding={account}
+              name={account.label ?? (bindings.length > 1 ? `Account ${index + 1}` : entry.name)}
+              busy={busy} setBusy={setBusy} onChanged={onChanged} onError={onError}
+              onAuthorise={() => void connect(account.id)}
+            />
+          ))}
         </div>
-        <ScopeList scopes={entry.scopes} />
+      )}
+
+      {/* Another account of the same app: its own consent, its own tokens,
+          its own tool prefix. The name is what tells the assistant apart
+          "search the sales inbox" from "search mine". */}
+      <div className="card" style={{ margin: 0 }}>
+        <strong>{bindings.length === 0 ? `Connect ${entry.name}` : 'Add another account'}</strong>
+        <p className="muted" style={{ margin: '4px 0 10px' }}>
+          {bindings.length === 0
+            ? 'Give this account a name if you will connect more than one, such as "Sales inbox".'
+            : 'Each account signs in on its own consent screen and keeps its own access. Name it so the assistant knows which is which.'}
+        </p>
+        <div className="row" style={{ justifyContent: 'flex-start', gap: 8, flexWrap: 'wrap' }}>
+          <input
+            aria-label="Account name" placeholder={bindings.length === 0 ? 'Name (optional)' : 'Name, such as "Sales inbox"'}
+            value={label} onChange={(e) => setLabel(e.target.value)} style={{ maxWidth: 260 }}
+          />
+          <button className="primary" type="button" disabled={busy} onClick={() => void connect()}>
+            {busy ? 'Opening consent…' : bindings.length === 0 ? `Connect ${entry.name}` : 'Add account'}
+            {' '}<Icon name="arrow" size={14} />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** One account of an app: its state, and what can be done to it. */
+function AccountCard({
+  workspaceId, entry, binding, name, busy, setBusy, onChanged, onError, onAuthorise,
+}: {
+  workspaceId: string;
+  entry: CatalogEntry;
+  binding: Binding;
+  name: string;
+  busy: boolean;
+  setBusy: (busy: boolean) => void;
+  onChanged: () => void;
+  onError: (message: string | undefined) => void;
+  onAuthorise: () => void;
+}) {
+  const connected = binding.status === 'connected';
+  return (
+    <div className="card" style={{ margin: 0 }}>
+      <div className="row" style={{ alignItems: 'flex-start' }}>
         <div>
-          <button
-            type="button" disabled={busy}
-            onClick={async () => {
-              setBusy(true);
-              onError(undefined);
-              try {
-                if (await authorise(workspaceId, binding.id) === 'connected') onChanged();
-              } catch (caught) {
-                onError(caught instanceof Error ? caught.message : 'Could not re-authorise.');
-                setBusy(false);
-              }
-            }}
-          >
-            Re-authorise
+          <strong>{name}</strong>
+          <p className="muted" style={{ margin: '2px 0 0' }}>
+            {connected
+              ? `Connected. ${binding.capabilityCount} ${binding.capabilityCount === 1 ? 'tool' : 'tools'} available to this assistant.`
+              : binding.status === 'pending_auth' ? 'Waiting for consent.' : `Status: ${binding.status.replace('_', ' ')}.`}
+            {' '}<span className="mono">{binding.alias}</span>
+          </p>
+          {binding.health.lastError !== undefined && (
+            <p className="error" style={{ margin: '6px 0 0' }}>{binding.health.lastError}</p>
+          )}
+        </div>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          <button type="button" disabled={busy} className={connected ? '' : 'primary'} onClick={onAuthorise}>
+            {connected ? 'Re-authorise' : 'Authorise'}
           </button>
           <DisconnectButton workspaceId={workspaceId} binding={binding} entry={entry} busy={busy} setBusy={setBusy} onChanged={onChanged} onError={onError} />
         </div>
       </div>
-    );
-  }
-
-  return (
-    <>
-      <p className="muted" style={{ marginTop: 0 }}>Connecting grants this assistant these permissions:</p>
-      <ScopeList scopes={entry.scopes} />
-      <SetupSteps steps={entry.steps} />
-      {entry.native !== undefined && <NativeSetupNote entry={entry} />}
-      {binding?.health.lastError !== undefined && (
-        <p className="error" style={{ margin: '10px 0 0' }}>{binding.health.lastError}</p>
-      )}
-      <div style={{ marginTop: 14 }}>
-        <button
-          className="primary" type="button" disabled={busy}
-          onClick={async () => {
-            setBusy(true);
-            onError(undefined);
-            try {
-              const id = binding?.id ?? (await api.post<{ id: string }>(
-                `${ws(workspaceId)}/mcp/bindings`, { catalogId: entry.id, agentId },
-              )).id;
-              if (await authorise(workspaceId, id) === 'connected') onChanged();
-            } catch (caught) {
-              onError(caught instanceof Error ? caught.message : `Could not connect ${entry.name}.`);
-              setBusy(false);
-              onChanged();
-            }
-          }}
-        >
-          {busy ? 'Opening consent…' : binding === undefined ? `Connect ${entry.name}` : 'Authorise'}
-          {' '}<Icon name="arrow" size={14} />
-        </button>
-      </div>
-    </>
+    </div>
   );
 }
 
@@ -243,6 +282,7 @@ function GatewaySetup({
     </div>
   );
 }
+
 
 
 /**

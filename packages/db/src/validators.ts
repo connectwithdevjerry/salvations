@@ -215,6 +215,7 @@ export const VALIDATORS: Partial<Record<CollectionName, JsonSchema>> = {
             capabilityPattern: str,
             effect: oneOfStrings('allow', 'ask', 'deny'),
             priority: int,
+            expiresAt: date,
           },
         },
       },

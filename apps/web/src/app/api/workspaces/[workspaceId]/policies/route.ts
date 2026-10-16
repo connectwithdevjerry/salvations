@@ -12,6 +12,7 @@ import { AgentRepository, AuditRepository, PolicyRepository, WorkspaceRepository
 import { errorResponse, jsonBody, ok } from '@/lib/http';
 import { workspaceRoute } from '@/lib/route';
 import { actorIdOf } from '@/lib/principal';
+import { autoApproveUntil, liveRules } from '@/lib/policy-rules';
 
 export const runtime = 'nodejs';
 
@@ -32,9 +33,12 @@ export const GET = workspaceRoute('policies:read', async (ctx) => {
     new WorkspaceRepository(ctx.database).findById(ctx.workspaceId),
   ]);
 
+  const rules = policy?.rules ?? [];
+  const until = autoApproveUntil(rules);
   return ok({
     scope,
-    rules: policy?.rules ?? [],
+    rules: liveRules(rules),
+    ...(until !== undefined ? { autoApproveUntil: until.toISOString() } : {}),
     defaultEffect: workspace?.settings?.defaultToolEffect ?? 'ask',
     canWrite: hasPermission(ctx.principal, 'policies:write'),
     canChangeDefault: hasPermission(ctx.principal, 'workspace:manage'),
@@ -69,6 +73,7 @@ export const PUT = workspaceRoute('policies:write', async (ctx) => {
     ...(rule.constraints?.maxCallsPerRun !== undefined
       ? { constraints: { maxCallsPerRun: rule.constraints.maxCallsPerRun } }
       : {}),
+    ...(rule.expiresAt !== undefined ? { expiresAt: new Date(rule.expiresAt) } : {}),
   }));
 
   const actor = actorIdOf(ctx.principal);

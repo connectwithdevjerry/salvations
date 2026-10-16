@@ -15,6 +15,8 @@ interface Rule {
   effect: Effect;
   priority: number;
   constraints?: { maxCallsPerRun?: number };
+  /** An ISO instant after which the rule is gone. The auto-approve window is one. */
+  expiresAt?: string;
 }
 
 interface Scope { type: 'workspace' | 'agent'; id?: string }
@@ -131,6 +133,9 @@ export function PolicyEditor({ workspaceId }: { workspaceId: string }) {
         effect: rule.effect,
         priority: rule.priority,
         ...(rule.constraints?.maxCallsPerRun !== undefined ? { constraints: { maxCallsPerRun: rule.constraints.maxCallsPerRun } } : {}),
+        // Carried through untouched: dropping it would turn a twenty-minute
+        // window into a permanent rule nobody chose.
+        ...(rule.expiresAt !== undefined ? { expiresAt: rule.expiresAt } : {}),
       }));
       await api.put(`${ws(workspaceId)}/policies`, { scope, rules: cleaned });
       setDirty(false);
@@ -256,6 +261,11 @@ export function PolicyEditor({ workspaceId }: { workspaceId: string }) {
                 ? without(r, 'constraints')
                 : { ...r, constraints: { maxCallsPerRun: Number(e.target.value) } }))}
             />
+            {rule.expiresAt !== undefined && (
+              <span className="muted" title="This rule ends on its own">
+                until {new Date(rule.expiresAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+              </span>
+            )}
             <button
               type="button" className="ghost" aria-label="Remove rule" disabled={!canWrite}
               onClick={() => remove(rule.id)}

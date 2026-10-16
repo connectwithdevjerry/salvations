@@ -122,6 +122,36 @@ describe('decidePermission — fail closed', () => {
   });
 });
 
+describe('decidePermission — rules that end', () => {
+  const window = { id: 'auto', capabilityPattern: '*', effect: 'allow' as const, priority: 900, expiresAt: new Date('2026-10-16T18:00:00Z') };
+
+  it('lets a timed allow-all speak while it lasts', () => {
+    const d = decidePermission(input({
+      policies: [policy('workspace', [window, { id: 'ask', capabilityPattern: '*', effect: 'ask', priority: 10 }])],
+      now: new Date('2026-10-16T17:59:59Z'),
+    }));
+    expect(d.effect).toBe('allow');
+    expect(d.matchedRuleId).toBe('auto');
+  });
+
+  it('forgets it the moment it ends, so the ask comes back', () => {
+    const d = decidePermission(input({
+      policies: [policy('workspace', [window, { id: 'ask', capabilityPattern: '*', effect: 'ask', priority: 10 }])],
+      now: new Date('2026-10-16T18:00:00Z'),
+    }));
+    expect(d.effect).toBe('ask');
+    expect(d.matchedRuleId).toBe('ask');
+  });
+
+  it('never lets the window override a deny', () => {
+    const d = decidePermission(input({
+      policies: [policy('workspace', [window, { id: 'never', capabilityPattern: 'create_issue', effect: 'deny', priority: 1 }])],
+      now: new Date('2026-10-16T17:00:00Z'),
+    }));
+    expect(d.effect).toBe('deny');
+  });
+});
+
 describe('decidePermission — effect resolution', () => {
   it('lets deny win over a higher-priority allow', () => {
     const d = decidePermission(

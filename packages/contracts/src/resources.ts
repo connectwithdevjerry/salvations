@@ -450,11 +450,18 @@ export const policyRuleSchema = z.object({
   constraints: z.object({
     maxCallsPerRun: z.number().int().min(1).max(10_000).optional(),
   }).optional(),
+  /** When the rule stops counting, as an ISO instant. Absent means never. */
+  expiresAt: z.string().datetime({ offset: true }).optional(),
 });
 
 export const setPolicySchema = z.object({
   scope: policyScopeSchema,
   rules: z.array(policyRuleSchema).max(200),
+});
+
+/** "Approve everything for a while": how long, from now. */
+export const autoApproveSchema = z.object({
+  minutes: z.number().int().min(1).max(240),
 });
 
 // ─── Credentials ────────────────────────────────────────────────────────────

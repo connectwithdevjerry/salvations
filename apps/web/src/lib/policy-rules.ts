@@ -45,3 +45,35 @@ export function rememberAllow(
 
 /** The editor's defaults for a rule somebody just added. */
 export const DEFAULT_RULE_PRIORITY = 10;
+
+/** The one rule that says "everything, for a while". One per scope, by id. */
+export const AUTO_APPROVE_RULE_ID = 'auto_approve_window';
+
+/** Above anything the editor writes by hand, below nothing: a deny still wins, by the engine's rule. */
+const AUTO_APPROVE_PRIORITY = 900;
+
+/**
+ * Replaces the window with one that ends at `until`. Every other rule is
+ * left as it is, so switching the window on and off never touches what a
+ * person wrote.
+ */
+export function withAutoApproveWindow(rules: readonly PolicyRule[], until: Date): PolicyRule[] {
+  return [
+    ...withoutAutoApproveWindow(rules),
+    { id: AUTO_APPROVE_RULE_ID, bindingId: ANY_BINDING, capabilityPattern: '*', effect: 'allow', priority: AUTO_APPROVE_PRIORITY, expiresAt: until },
+  ];
+}
+
+export const withoutAutoApproveWindow = (rules: readonly PolicyRule[]): PolicyRule[] =>
+  rules.filter((rule) => rule.id !== AUTO_APPROVE_RULE_ID);
+
+/** When the window closes, if one is open at `now`. */
+export function autoApproveUntil(rules: readonly PolicyRule[], now = new Date()): Date | undefined {
+  const window = rules.find((rule) => rule.id === AUTO_APPROVE_RULE_ID);
+  if (window?.expiresAt === undefined || window.expiresAt.getTime() <= now.getTime()) return undefined;
+  return window.expiresAt;
+}
+
+/** Rules still in force: the engine skips an ended one, and so does the editor. */
+export const liveRules = (rules: readonly PolicyRule[], now = new Date()): PolicyRule[] =>
+  rules.filter((rule) => rule.expiresAt === undefined || rule.expiresAt.getTime() > now.getTime());

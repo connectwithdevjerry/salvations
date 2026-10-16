@@ -41,6 +41,12 @@ export interface PolicyRule {
   readonly effect: PermissionEffect;
   readonly priority: number;
   readonly constraints?: RuleConstraints;
+  /**
+   * A rule with an end. Past this moment it is as if it were not there:
+   * "approve everything for the next twenty minutes" is such a rule, and
+   * a rule that forgot to end would be a permanent allow-all nobody chose.
+   */
+  readonly expiresAt?: Date;
 }
 
 export interface PolicyDocument {
@@ -58,6 +64,8 @@ export interface PermissionInput {
   readonly args: unknown;
   /** Workspace → agent → principal. At most three documents. */
   readonly policies: readonly PolicyDocument[];
+  /** The moment the decision is made, for rules that expire. Now, unless a test says otherwise. */
+  readonly now?: Date;
   readonly defaultEffect: PermissionEffect;
   readonly callsThisRun: number;
 }
@@ -172,8 +180,11 @@ export function decidePermission(input: PermissionInput): PermissionDecision {
 
   // 2/3. Collect and rank every matching rule across all scopes.
   const candidates: Candidate[] = [];
+  const now = input.now ?? new Date();
   for (const doc of input.policies) {
     for (const rule of doc.rules) {
+      // A rule past its end has nothing to say.
+      if (rule.expiresAt !== undefined && rule.expiresAt.getTime() <= now.getTime()) continue;
       const bindingOk =
         rule.bindingId === undefined ||
         rule.bindingId === '*' ||

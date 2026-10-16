@@ -492,6 +492,11 @@ Both were assessed and neither fits a request-shaped deployment, so neither is h
       drafts (Messages cannot edit).
 - [x] Approvals page: "Approve all" for the waiting tool calls, each its own decision on the
       server, questions that need an answer left alone.
+- [x] "Auto-approve for 20 min": a policy rule with an end (`PolicyRule.expiresAt`, skipped by
+      the engine once past), written to the workspace by `PUT policies/auto-approve`, removed by
+      `DELETE`. What is waiting is approved as it opens; a deny still wins; the banner on the
+      Approvals page says when it closes and offers Stop. The editor carries `expiresAt` through
+      so a save cannot turn the window into a permanent allow-all.
 - [ ] Channel capability matrix as a test: which adapter has which optional method
 - [ ] Discord over the Gateway once there is a worker that can hold a socket, so it is a
       conversation rather than a slash command

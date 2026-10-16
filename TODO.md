@@ -478,9 +478,20 @@ Both were assessed and neither fits a request-shaped deployment, so neither is h
       command, the rewritten message for a press) so Discord never shows "did not respond".
 - [x] The hero's channel word rotates through where you can text it (Telegram, Slack,
       Discord, the web, Claude.ai, ChatGPT). Only places that work today.
-- [ ] iMessage: no API from Apple. Every route is a third party holding the messages or a Mac
-      kept on, so it stays off the list. WhatsApp (Meta's Cloud API, the person's own Meta app)
-      is the honest next channel.
+- [x] WhatsApp through Meta's Cloud API, on the person's own Meta app and number: signed
+      deliveries (X-Hub-Signature-256 with the app secret), the GET probe answered with a verify
+      token derived from that secret, reply buttons (three, 20-char labels), pictures and clips by
+      link, voice notes fetched in Meta's two steps, read-and-typing tied to the message answered.
+      The port grew `extraField`/`composeToken` (phone number id beside the token), `verifyToken`
+      and `verify` (the probe), and `indicate` takes the message ref.
+- [x] iMessage through the person's own Mac running the open-source BlueBubbles server. Apple has
+      no API; this is the one route that keeps the messages on the person's hardware. The Mac
+      cannot sign what it posts, so the port grew `confirm`: the message is looked up on the Mac
+      before anything is written. Text, pictures and clips as attachments, voice memos as mp3,
+      typing where the Mac's private API is on. No buttons (a question is asked in words), no
+      drafts (Messages cannot edit).
+- [x] Approvals page: "Approve all" for the waiting tool calls, each its own decision on the
+      server, questions that need an answer left alone.
 - [ ] Channel capability matrix as a test: which adapter has which optional method
 - [ ] Discord over the Gateway once there is a worker that can hold a socket, so it is a
       conversation rather than a slash command

@@ -24,11 +24,11 @@ export interface TalkWay {
   readonly always?: true;
 }
 
-const SUB: Record<string, string> = { telegram: 'From your phone', discord: 'In your server', slack: 'In your workspace' };
+const SUB: Record<string, string> = { telegram: 'From your phone', whatsapp: 'From your phone', imessage: 'From your iPhone', discord: 'In your server', slack: 'In your workspace' };
 
 export const WAYS: readonly TalkWay[] = [
   ...CHANNELS.map((entry) => ({ id: entry.id, name: entry.name, sub: SUB[entry.id] ?? entry.summary, accent: entry.accent, entry })),
-  { id: 'web', name: 'Here', sub: 'In the browser', accent: '#3b82f6', always: true },
+  { id: 'web', name: 'Here', sub: 'Private chat, in the browser', accent: '#3b82f6', always: true },
   { id: 'voice', name: 'Out loud', sub: 'By voice, on Speak', accent: '#F59E0B', always: true },
 ];
 
@@ -81,7 +81,7 @@ export function PhoneMock({ agentName, way }: { agentName: string; way: TalkWay 
               <>
                 <small>Today 9:41</small>
                 <p className="you">{ask}</p>
-                {way.id === 'telegram' && <small className="end">Delivered</small>}
+                {(way.id === 'telegram' || way.id === 'imessage' || way.id === 'whatsapp') && <small className="end">Delivered</small>}
                 <p>{reply}</p>
               </>
             )}

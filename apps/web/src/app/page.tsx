@@ -28,7 +28,7 @@ import { callerFromCookieHeader } from '@/lib/session';
  * places that work today: a channel it answers in, with buttons, pictures
  * and clips, or an MCP client every assistant is a server for.
  */
-const WAYS_TO_TEXT = ['Telegram', 'Slack', 'Discord', 'the web', 'Claude.ai', 'ChatGPT'] as const;
+const WAYS_TO_TEXT = ['Telegram', 'WhatsApp', 'iMessage', 'Slack', 'Discord', 'the web', 'Claude.ai', 'ChatGPT'] as const;
 
 export default async function Home() {
   const caller = callerFromCookieHeader((await cookies()).toString());
@@ -129,7 +129,7 @@ export default async function Home() {
               <div className="mock-row"><span className="mock-tag" style={{ background: '#8B5CF6' }} />Newsletters ×14<span className="mock-pill ok">archive</span></div>
             </div>
           </Feature>
-          <Feature title="Every channel reaches you" body="Telegram, Slack and Discord, one assistant. Approve with a tap, get the picture and the clip in the chat, and a voice note comes back as text first, so you can see what it heard.">
+          <Feature title="Every channel reaches you" body="Telegram, WhatsApp, iMessage, Slack and Discord, one assistant. Approve with a tap, get the picture and the clip in the chat, and a voice note comes back as text first, so you can see what it heard.">
             <div className="mock-chat">
               <span className="mock-bubble you">any deliveries stuck?</span>
               <span className="mock-bubble">Two. Tunde&apos;s is with the courier, Ada&apos;s needs a phone number. Want me to ask her?</span>
@@ -221,7 +221,7 @@ export default async function Home() {
         <p className="kicker land-center">How it works</p>
         <h2 className="land-center">Now hand it to <span className="accent">HIVE</span>.</h2>
         <ol className="land-steps">
-          <Step n={1} title="Connect your stack" body="Your Telegram, Slack or Discord bot, your Gmail, your calendar, GitHub, Notion, Linear, or an assistant you already run on your own machine. Each on the vendor's own consent screen; the tokens stay encrypted in your database.">
+          <Step n={1} title="Connect your stack" body="Your Telegram, WhatsApp, Slack or Discord bot, your Gmail, your calendar, GitHub, Notion, Linear, or an assistant you already run on your own machine. Each on the vendor's own consent screen; the tokens stay encrypted in your database.">
             <div className="mock-rows">
               {integrations.slice(0, 4).map((e, i) => (
                 <div key={e.id} className="mock-row"><AppLogo id={e.id} name={e.name} accent={e.accent} size={20} />{e.name}<span className={`mock-pill ${i < 3 ? 'ok' : ''}`}>{i < 3 ? 'Connected' : 'Connect'}</span></div>
@@ -237,7 +237,7 @@ export default async function Home() {
               <span className="mock-node n4">Team</span>
             </div>
           </Step>
-          <Step n={3} title="Delegate where you already work" body="Send the request from Telegram, Slack or Discord, type it here, say it out loud on the Speak tab, or ask from Claude.ai and ChatGPT: every assistant is its own MCP server. It does the work and reports back, including what did not work.">
+          <Step n={3} title="Delegate where you already work" body="Send the request from Telegram, WhatsApp, iMessage, Slack or Discord, type it here, say it out loud on the Speak tab, or ask from Claude.ai and ChatGPT: every assistant is its own MCP server. It does the work and reports back, including what did not work.">
             <div className="mock-chat">
               <span className="mock-bubble you">draft replies to everyone waiting on me, then archive the newsletters</span>
               <span className="mock-bubble">Three drafts are in your Gmail. The 14 newsletters wait for your approval above.</span>

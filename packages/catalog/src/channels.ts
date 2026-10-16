@@ -7,7 +7,9 @@
  * connecting Gmail changes what it can do.
  *
  * Every one of these is a bot you create and own. We never ask for a personal
- * account password, and the token you paste is yours to revoke.
+ * account password, and the token you paste is yours to revoke. iMessage is
+ * the exception that proves it: Apple has no bot API, so the "bot" is a Mac
+ * of your own, and the password is the one you set on it.
  *
  * What each one can do is limited by what the platform offers a server that does
  * not hold a socket open. Telegram and Slack push to a URL, so those are real
@@ -152,4 +154,96 @@ const SLACK: CatalogEntry = {
   ],
 };
 
-export const CHANNELS: readonly CatalogEntry[] = [TELEGRAM, DISCORD, SLACK];
+const WHATSAPP: CatalogEntry = {
+  id: 'whatsapp',
+  kind: 'channel',
+  category: 'Chat',
+  name: 'WhatsApp',
+  summary: 'Message your agent on WhatsApp from your own Meta app and business number. Buttons, pictures, clips and voice notes, straight from Meta\'s API.',
+  setup: 'bot_token',
+  accent: '#25D366',
+  docs: 'https://developers.facebook.com/docs/whatsapp/cloud-api/get-started',
+  steps: [
+    {
+      title: 'Create a Meta app with WhatsApp on it',
+      body: 'In the Meta developer portal, create an app of the Business type and add the ' +
+        'WhatsApp product. Meta gives it a test number straight away; your own number can ' +
+        'be added later, under the same product.',
+      link: { label: 'Open the Meta developer portal', url: 'https://developers.facebook.com/apps/' },
+    },
+    {
+      title: 'Copy the phone number ID',
+      body: 'Under WhatsApp → API Setup, beside the number the assistant will answer from. ' +
+        'It is a long number, not the phone number itself. With the test number, add your ' +
+        'own phone to its recipient list on the same page.',
+    },
+    {
+      title: 'Make a permanent access token',
+      body: 'A temporary token from API Setup works for a day. For one that lasts, go to ' +
+        'Business settings → System users, add a system user, give it the app with ' +
+        'whatsapp_business_messaging and whatsapp_business_management, and generate a token.',
+      link: { label: 'Open Business settings', url: 'https://business.facebook.com/settings/system-users' },
+    },
+    {
+      title: 'Copy the app secret',
+      body: 'Under App settings → Basic. Meta signs every delivery with it, so a delivery ' +
+        'that cannot be checked against it is never acted on.',
+    },
+    {
+      title: 'Point its webhook at us',
+      body: 'Under WhatsApp → Configuration, paste the callback URL and the verify token we ' +
+        'show you after connecting, then subscribe to the messages field. Meta checks the ' +
+        'URL before it saves it, so a green tick means the connection works.',
+    },
+    {
+      title: 'Say hello',
+      body: 'From your phone, send the business number the code we show you. That first ' +
+        'message is what proves the chat is yours.',
+    },
+  ],
+  scopes: [
+    { label: 'Receive messages, voice notes and button taps sent to your number', scope: 'whatsapp_business_messaging', writes: false },
+    { label: 'Reply with text, buttons, pictures and clips', scope: 'whatsapp_business_messaging', writes: true },
+  ],
+};
+
+const IMESSAGE: CatalogEntry = {
+  id: 'imessage',
+  kind: 'channel',
+  category: 'Chat',
+  name: 'iMessage',
+  summary: 'Text your agent from Messages, through a Mac of your own that stays on. Apple offers no other way, and nothing of yours leaves that Mac.',
+  setup: 'bot_token',
+  accent: '#34C759',
+  docs: 'https://docs.bluebubbles.app/server',
+  steps: [
+    {
+      title: 'Install the BlueBubbles server on a Mac',
+      body: 'A Mac that stays on and signed in to Messages, with its own Apple ID for the ' +
+        'assistant if you would rather keep yours. BlueBubbles is open source; it runs ' +
+        'only on that Mac and holds your messages nowhere else.',
+      link: { label: 'Get the server', url: 'https://bluebubbles.app/downloads/server/' },
+    },
+    {
+      title: 'Set a password and give it an address',
+      body: 'On its Connection page, set the server password and pick a proxy. Cloudflare ' +
+        'needs no account and gives you an https address; copy that address.',
+    },
+    {
+      title: 'Paste the address and the password below',
+      body: 'We ask the Mac who it is signed in as before anything is saved, and tell it where ' +
+        'to send new messages. There is nothing to paste back into the Mac.',
+    },
+    {
+      title: 'Say hello',
+      body: 'From your iPhone, text the Mac\'s Apple ID the code we show you. That first ' +
+        'message is what proves the chat is yours.',
+    },
+  ],
+  scopes: [
+    { label: 'Read messages and voice memos sent to the Mac', scope: 'bluebubbles:read', writes: false },
+    { label: 'Reply from the Mac, with pictures and clips as attachments', scope: 'bluebubbles:send', writes: true },
+  ],
+};
+
+export const CHANNELS: readonly CatalogEntry[] = [TELEGRAM, WHATSAPP, IMESSAGE, SLACK, DISCORD];

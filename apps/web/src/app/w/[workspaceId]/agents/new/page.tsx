@@ -8,6 +8,7 @@ import { DEFAULT_AGENT_NAME, INTEGRATIONS, ROLES, type AssistantRole, type Catal
 import { api, ws } from '@/lib/client/api';
 import { BrandMark, Icon, StepDots, Tile } from '@/components/ui';
 import { SetupSteps, Copyable } from '@/components/setup-steps';
+import { ADDRESS_LABEL, ADDRESS_NOTE, EXTRA, SECONDARY, tokenLabelOf } from '@/lib/client/channel-fields';
 import { Qr } from '@/components/qr';
 import { GroupPicker } from '@/components/group-picker';
 import { VendorCards, keyStatesOf, vendorCopy } from '@/components/vendor-mark';
@@ -280,14 +281,9 @@ function AgentStep({
 
 /* ------------------------------------------------------------ 2. channel -- */
 
-/** Which platforms issue their own signing secret, and what it is called. */
-const SECONDARY: Record<string, string> = {
-  slack: 'Signing secret',
-  discord: 'Application public key',
-};
 
 interface Channel {
-  id: string; channel: string; status: string; handle: string; agentId: string;
+  id: string; channel: string; status: string; handle: string; agentId: string; verifyToken?: string;
   webhookUrl: string; connectCode?: string; lastError?: string;
 }
 
@@ -667,8 +663,10 @@ function ConnectForm({
 }) {
   const [token, setToken] = useState('');
   const [signingSecret, setSigningSecret] = useState('');
+  const [extra, setExtra] = useState('');
   const [busy, setBusy] = useState(false);
   const secondary = SECONDARY[entry.id];
+  const extraField = EXTRA[entry.id];
 
   return (
     <>
@@ -684,6 +682,7 @@ function ConnectForm({
               channel: entry.id,
               token,
               ...(secondary !== undefined ? { signingSecret } : {}),
+              ...(extraField !== undefined ? { extra } : {}),
               agentId,
             });
             onDone();
@@ -694,8 +693,18 @@ function ConnectForm({
           }
         }}
       >
+        {extraField !== undefined && (
+          <div>
+            <label htmlFor={`extra-${entry.id}`}>{extraField.label}</label>
+            <input
+              id={`extra-${entry.id}`} type="text" required autoComplete="off"
+              placeholder={extraField.placeholder} value={extra} onChange={(e) => setExtra(e.target.value)}
+            />
+            <p className="muted" style={{ margin: '5px 0 0' }}>{extraField.help}</p>
+          </div>
+        )}
         <div>
-          <label htmlFor={`token-${entry.id}`}>Bot token</label>
+          <label htmlFor={`token-${entry.id}`}>{tokenLabelOf(entry.id)}</label>
           <input
             id={`token-${entry.id}`} type="password" required autoComplete="off"
             value={token} onChange={(e) => setToken(e.target.value)}
@@ -703,11 +712,12 @@ function ConnectForm({
         </div>
         {secondary !== undefined && (
           <div>
-            <label htmlFor={`secret-${entry.id}`}>{secondary}</label>
+            <label htmlFor={`secret-${entry.id}`}>{secondary.label}</label>
             <input
               id={`secret-${entry.id}`} type="password" required autoComplete="off"
               value={signingSecret} onChange={(e) => setSigningSecret(e.target.value)}
             />
+            <p className="muted" style={{ margin: '5px 0 0' }}>{secondary.help}</p>
           </div>
         )}
         <button className="primary" type="submit" disabled={busy}>
@@ -780,11 +790,12 @@ function Handshake({
         <code className="code-large">{code}</code>
       </div>
 
-      {(entry.id === 'slack' || entry.id === 'discord') && (
-        <Copyable
-          label={entry.id === 'slack' ? 'Request URL' : 'Interactions endpoint URL'}
-          value={connection.webhookUrl}
-        />
+      {ADDRESS_LABEL[entry.id] !== undefined && (
+        <>
+          <Copyable label={ADDRESS_LABEL[entry.id] as string} value={connection.webhookUrl} />
+          {connection.verifyToken !== undefined && <Copyable label="Verify token" value={connection.verifyToken} />}
+          <p className="muted" style={{ margin: 0 }}>{ADDRESS_NOTE[entry.id]}</p>
+        </>
       )}
 
       {!telegram && (

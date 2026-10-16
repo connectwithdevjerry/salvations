@@ -4,6 +4,8 @@ import { channelAdapter, CHANNEL_IDS, ChannelError } from './index';
 import { telegramAdapter, chunk, SECRET_HEADER, MAX_AUDIO_BYTES } from './telegram';
 import { discordAdapter } from './discord';
 import { slackAdapter, MAX_SKEW_SECONDS } from './slack';
+import { whatsappAdapter, whatsappVerifyToken } from './whatsapp';
+import { imessageAdapter } from './imessage';
 
 const CONTEXT = { webhookUrl: 'https://example.test/hook', webhookSecret: 'sekrit-token-value' };
 
@@ -709,5 +711,261 @@ describe('slack as a teammate', () => {
     await slackAdapter.editDraft?.('xoxb', 'D1', '4.0', 'Done.', impl);
     expect(calls[1]?.url).toContain('/chat.update');
     expect(JSON.parse(String(calls[1]?.init.body))).toEqual({ channel: 'D1', ts: '4.0', text: 'Done.' });
+  });
+});
+
+describe('whatsapp', () => {
+  const appSecret = 'app-secret';
+  const context = { webhookUrl: 'https://example.test/w', webhookSecret: appSecret };
+  const token = '106540352242922:EAAtoken';
+  const signed = (body: string, secret = appSecret) => new Headers({
+    'x-hub-signature-256': `sha256=${createHmac('sha256', secret).update(body).digest('hex')}`,
+  });
+  const delivery = (message: Record<string, unknown>, extra: Record<string, unknown> = {}) => JSON.stringify({
+    object: 'whatsapp_business_account',
+    entry: [{ id: '1', changes: [{ field: 'messages', value: {
+      messaging_product: 'whatsapp',
+      metadata: { display_phone_number: '15550783881', phone_number_id: '106540352242922' },
+      contacts: [{ profile: { name: 'Sheena' }, wa_id: '16505551234' }],
+      messages: [{ from: '16505551234', id: 'wamid.1', timestamp: '1', ...message }],
+      ...extra,
+    } }] }],
+  });
+
+  function sequence(answers: readonly unknown[]) {
+    const calls: { url: string; init: RequestInit }[] = [];
+    let n = 0;
+    const impl = (async (url: string | URL | Request, init: RequestInit = {}) => {
+      calls.push({ url: String(url), init });
+      const answer = answers[n] ?? answers[answers.length - 1] ?? {};
+      n += 1;
+      return answer instanceof Response ? answer : new Response(JSON.stringify(answer), { status: 200, headers: { 'content-type': 'application/json' } });
+    }) as unknown as typeof fetch;
+    return { impl, calls };
+  }
+
+  it('composes the phone number id and the access token into one stored token', () => {
+    expect(whatsappAdapter.composeToken?.(' EAAtoken ', ' 106540352242922 ')).toBe(token);
+  });
+
+  it('identifies the number without the token in the URL', async () => {
+    const { impl, calls } = sequence([{ display_phone_number: '+1 555-078-3881', verified_name: 'Lucky Shrub', id: '106540352242922' }]);
+    const who = await whatsappAdapter.identify(token, impl);
+    expect(who).toEqual({ handle: '+1 555-078-3881', displayName: 'Lucky Shrub', botRef: '106540352242922' });
+    expect(calls[0]?.url).toBe('https://graph.facebook.com/v22.0/106540352242922?fields=display_phone_number,verified_name');
+    expect(calls[0]?.url).not.toContain('EAAtoken');
+    expect(new Headers(calls[0]?.init.headers).get('authorization')).toBe('Bearer EAAtoken');
+  });
+
+  it("answers Meta's probe with the challenge when the verify token is its own", () => {
+    const verifyToken = whatsappVerifyToken(context);
+    const good = new URLSearchParams({ 'hub.mode': 'subscribe', 'hub.verify_token': verifyToken, 'hub.challenge': '1158201444' });
+    expect(whatsappAdapter.verify?.(good, context)).toEqual({ body: '1158201444', contentType: 'text/plain' });
+    const bad = new URLSearchParams({ 'hub.mode': 'subscribe', 'hub.verify_token': 'meatyhamhock', 'hub.challenge': '1' });
+    expect(whatsappAdapter.verify?.(bad, context)).toBeUndefined();
+    // Derived, so two connections with different app secrets have different tokens.
+    expect(whatsappVerifyToken({ ...context, webhookSecret: 'other' })).not.toBe(verifyToken);
+  });
+
+  it('rejects an unsigned delivery and one signed with another app secret', () => {
+    const body = delivery({ type: 'text', text: { body: 'hi' } });
+    expect(whatsappAdapter.receive(body, new Headers(), context).kind).toBe('rejected');
+    expect(whatsappAdapter.receive(body, signed(body, 'wrong'), context).kind).toBe('rejected');
+  });
+
+  it('reads a text message, named after the contact', () => {
+    const body = delivery({ type: 'text', text: { body: 'Does it come in another color?' } });
+    expect(whatsappAdapter.receive(body, signed(body), context)).toEqual({
+      kind: 'message',
+      message: { chatRef: '16505551234', senderRef: '16505551234', senderLabel: 'Sheena', text: 'Does it come in another color?', messageRef: 'wamid.1' },
+    });
+  });
+
+  it('ignores a status update, which is about a message of ours', () => {
+    const body = JSON.stringify({ object: 'whatsapp_business_account', entry: [{ changes: [{ field: 'messages', value: {
+      metadata: { phone_number_id: '1' }, statuses: [{ id: 'wamid.9', status: 'delivered' }],
+    } }] }] });
+    expect(whatsappAdapter.receive(body, signed(body), context)).toEqual({ kind: 'ignored', reason: 'A status update, not a message.' });
+  });
+
+  it('reads a button tap, with the message the button was on', () => {
+    const body = delivery({ type: 'interactive', context: { id: 'wamid.q' }, interactive: { type: 'button_reply', button_reply: { id: 'a:apr_1:y', title: 'Approve' } } });
+    expect(whatsappAdapter.receive(body, signed(body), context)).toEqual({
+      kind: 'choice',
+      choice: { chatRef: '16505551234', senderRef: '16505551234', senderLabel: 'Sheena', data: 'a:apr_1:y', callbackRef: 'wamid.1', messageRef: 'wamid.q', deliveryRef: 'press:wamid.1' },
+    });
+  });
+
+  it('reads a voice note as audio to fetch', () => {
+    const body = delivery({ type: 'audio', audio: { id: 'media_7', mime_type: 'audio/ogg; codecs=opus', voice: true } });
+    expect(whatsappAdapter.receive(body, signed(body), context)).toMatchObject({
+      kind: 'message', message: { text: '', audio: { fileRef: 'media_7', mimeType: 'audio/ogg; codecs=opus' } },
+    });
+  });
+
+  it('sends text to the number from the number', async () => {
+    const { impl, calls } = sequence([{ messages: [{ id: 'wamid.s' }] }]);
+    await whatsappAdapter.send(token, '16505551234', 'Hello', impl);
+    expect(calls[0]?.url).toBe('https://graph.facebook.com/v22.0/106540352242922/messages');
+    expect(JSON.parse(String(calls[0]?.init.body))).toEqual({
+      messaging_product: 'whatsapp', recipient_type: 'individual', to: '16505551234', type: 'text', text: { body: 'Hello', preview_url: true },
+    });
+  });
+
+  it('asks with reply buttons, at most three, labels cut to twenty characters', async () => {
+    const { impl, calls } = sequence([{ messages: [{ id: 'wamid.b' }] }]);
+    const ref = await whatsappAdapter.sendChoices?.(token, '16505551234', 'Go ahead?', [
+      { label: 'Approve', data: 'a:1:y' }, { label: 'Not now, maybe later this week', data: 'a:1:n' },
+    ], impl);
+    expect(ref).toBe('wamid.b');
+    const sent = JSON.parse(String(calls[0]?.init.body)) as { type: string; interactive: { type: string; body: { text: string }; action: { buttons: { reply: { id: string; title: string } }[] } } };
+    expect(sent.type).toBe('interactive');
+    expect(sent.interactive.body.text).toBe('Go ahead?');
+    expect(sent.interactive.action.buttons.map((b) => [b.reply.id, b.reply.title])).toEqual([['a:1:y', 'Approve'], ['a:1:n', 'Not now, maybe later']]);
+  });
+
+  it('sends a picture and a clip by link', async () => {
+    const { impl, calls } = sequence([{ messages: [{ id: '1' }] }, { messages: [{ id: '2' }] }]);
+    await whatsappAdapter.sendMedia?.(token, '16505551234', { kind: 'image', url: 'https://h/i.png', caption: 'The dish' }, impl);
+    await whatsappAdapter.sendMedia?.(token, '16505551234', { kind: 'video', url: 'https://h/v.mp4' }, impl);
+    expect(JSON.parse(String(calls[0]?.init.body))).toMatchObject({ type: 'image', image: { link: 'https://h/i.png', caption: 'The dish' } });
+    expect(JSON.parse(String(calls[1]?.init.body))).toMatchObject({ type: 'video', video: { link: 'https://h/v.mp4' } });
+  });
+
+  it('marks the message read and types, only when it knows which message', async () => {
+    const { impl, calls } = sequence([{ success: true }]);
+    await whatsappAdapter.indicate?.(token, '16505551234', impl);
+    expect(calls).toHaveLength(0);
+    await whatsappAdapter.indicate?.(token, '16505551234', impl, 'wamid.1');
+    expect(JSON.parse(String(calls[0]?.init.body))).toEqual({
+      messaging_product: 'whatsapp', status: 'read', message_id: 'wamid.1', typing_indicator: { type: 'text' },
+    });
+  });
+
+  it('fetches a recording in two steps and sends the token only to Meta', async () => {
+    const { impl, calls } = sequence([
+      { url: 'https://lookaside.fbsbx.com/whatsapp_business/attachments/?mid=1', mime_type: 'audio/ogg', file_size: 1234 },
+      new Response(new Uint8Array([1, 2]), { status: 200 }),
+    ]);
+    const bytes = await whatsappAdapter.fetchAudio?.(token, { fileRef: 'media_7', mimeType: 'audio/ogg' }, impl);
+    expect(bytes?.byteLength).toBe(2);
+    expect(calls[0]?.url).toBe('https://graph.facebook.com/v22.0/media_7');
+    expect(new Headers(calls[1]?.init.headers).get('authorization')).toBe('Bearer EAAtoken');
+
+    const elsewhere = sequence([{ url: 'https://evil.test/steal', mime_type: 'audio/ogg', file_size: 1 }]);
+    await expect(whatsappAdapter.fetchAudio?.(token, { fileRef: 'media_7', mimeType: 'audio/ogg' }, elsewhere.impl)).rejects.toThrow(/not on Meta/);
+  });
+
+  it("says Meta's 24-hour rule in words a person can act on", async () => {
+    const { impl } = sequence([new Response(JSON.stringify({ error: { message: 'Re-engagement message', code: 131047 } }), { status: 400 })]);
+    await expect(whatsappAdapter.send(token, '16505551234', 'Hello', impl)).rejects.toThrow(/within 24 hours/);
+  });
+});
+
+describe('imessage, through a Mac of your own', () => {
+  const token = 'https://quiet-river.trycloudflare.com s3cret';
+  const context = { webhookUrl: 'https://example.test/api/channels/imessage/ch_1', webhookSecret: '' };
+  const message = (over: Record<string, unknown> = {}) => ({
+    guid: 'msg_1', text: 'what is on my calendar', isFromMe: false,
+    handle: { address: '+15551234567' }, chats: [{ guid: 'iMessage;-;+15551234567' }], attachments: [], ...over,
+  });
+  const event = (data: unknown, type = 'new-message') => JSON.stringify({ type, data });
+
+  function sequence(answers: readonly unknown[]) {
+    const calls: { url: string; init: RequestInit }[] = [];
+    let n = 0;
+    const impl = (async (url: string | URL | Request, init: RequestInit = {}) => {
+      calls.push({ url: String(url), init });
+      const answer = answers[n] ?? answers[answers.length - 1] ?? {};
+      n += 1;
+      return answer instanceof Response ? answer : new Response(JSON.stringify({ status: 200, message: 'Success', data: answer }), { status: 200, headers: { 'content-type': 'application/json' } });
+    }) as unknown as typeof fetch;
+    return { impl, calls };
+  }
+
+  it('composes the address and the password, and refuses an address that is not a URL', async () => {
+    expect(imessageAdapter.composeToken?.('s3cret', 'https://quiet-river.trycloudflare.com/')).toBe('https://quiet-river.trycloudflare.com/ s3cret');
+    await expect(imessageAdapter.identify('not-a-url s3cret', sequence([{}]).impl)).rejects.toThrow(/should be a URL/);
+  });
+
+  it('identifies the Mac by the account Messages is signed in as, with the password in the query where the server looks', async () => {
+    const { impl, calls } = sequence([{ detected_imessage: 'assistant@icloud.com', os_version: '15.1', server_version: '1.9.9' }]);
+    const who = await imessageAdapter.identify(token, impl);
+    expect(who).toEqual({ handle: 'assistant@icloud.com', displayName: 'Messages, signed in as assistant@icloud.com', botRef: 'assistant@icloud.com' });
+    expect(calls[0]?.url).toBe('https://quiet-river.trycloudflare.com/api/v1/server/info?password=s3cret');
+  });
+
+  it('tells the Mac where to post new messages, once', async () => {
+    const fresh = sequence([[], { id: 1 }]);
+    await imessageAdapter.register(token, context, fresh.impl);
+    expect(fresh.calls.map((c) => c.init.method ?? 'GET')).toEqual(['GET', 'POST']);
+    expect(JSON.parse(String(fresh.calls[1]?.init.body))).toEqual({ url: context.webhookUrl, events: ['new-message'] });
+
+    const already = sequence([[{ id: 1, url: context.webhookUrl }]]);
+    await imessageAdapter.register(token, context, already.impl);
+    expect(already.calls).toHaveLength(1);
+  });
+
+  it('reads a new message from the person', () => {
+    const body = event(message());
+    expect(imessageAdapter.receive(body, new Headers(), context)).toEqual({
+      kind: 'message',
+      message: { chatRef: 'iMessage;-;+15551234567', senderRef: '+15551234567', senderLabel: '+15551234567', text: 'what is on my calendar', messageRef: 'msg_1' },
+    });
+  });
+
+  it('ignores its own replies, group chats and other events', () => {
+    expect(imessageAdapter.receive(event(message({ isFromMe: true })), new Headers(), context).kind).toBe('ignored');
+    expect(imessageAdapter.receive(event(message({ chats: [{ guid: 'iMessage;+;chat123' }] })), new Headers(), context).kind).toBe('ignored');
+    expect(imessageAdapter.receive(event(message(), 'typing-indicator'), new Headers(), context).kind).toBe('ignored');
+  });
+
+  it('reads a voice memo, to be fetched as mp3', () => {
+    const body = event(message({ text: '￼', attachments: [{ guid: 'att_1', mimeType: 'audio/x-caf', totalBytes: 5000 }] }));
+    expect(imessageAdapter.receive(body, new Headers(), context)).toMatchObject({
+      kind: 'message', message: { text: '', audio: { fileRef: 'att_1', mimeType: 'audio/mpeg', sizeBytes: 5000 } },
+    });
+  });
+
+  it('believes a delivery only once the Mac confirms the message', async () => {
+    const inbound = { chatRef: 'iMessage;-;+15551234567', senderRef: '+15551234567', senderLabel: '+15551234567', text: 'what is on my calendar', messageRef: 'msg_1' };
+    const real = sequence([message()]);
+    expect(await imessageAdapter.confirm?.(token, inbound, real.impl)).toBe(true);
+    expect(real.calls[0]?.url).toBe('https://quiet-river.trycloudflare.com/api/v1/message/msg_1?with=chats&password=s3cret');
+
+    const forged = sequence([message({ text: 'something else' })]);
+    expect(await imessageAdapter.confirm?.(token, inbound, forged.impl)).toBe(false);
+    const missing = sequence([new Response(JSON.stringify({ status: 404, message: 'Not found' }), { status: 404 })]);
+    expect(await imessageAdapter.confirm?.(token, inbound, missing.impl)).toBe(false);
+  });
+
+  it('sends a reply into the chat', async () => {
+    const { impl, calls } = sequence([message({ isFromMe: true })]);
+    await imessageAdapter.send(token, 'iMessage;-;+15551234567', 'Two meetings.', impl);
+    expect(calls[0]?.url).toBe('https://quiet-river.trycloudflare.com/api/v1/message/text?password=s3cret');
+    expect(JSON.parse(String(calls[0]?.init.body))).toMatchObject({ chatGuid: 'iMessage;-;+15551234567', message: 'Two meetings.', method: 'apple-script' });
+  });
+
+  it('sends a picture as an attachment, then its caption', async () => {
+    const { impl, calls } = sequence([
+      new Response(new Uint8Array([9]), { status: 200, headers: { 'content-type': 'image/png' } }),
+      message({ isFromMe: true }),
+      message({ isFromMe: true }),
+    ]);
+    await imessageAdapter.sendMedia?.(token, 'iMessage;-;+15551234567', { kind: 'image', url: 'https://h/i.png', caption: 'The dish' }, impl);
+    expect(calls.map((c) => c.url)).toEqual([
+      'https://h/i.png',
+      'https://quiet-river.trycloudflare.com/api/v1/message/attachment?password=s3cret',
+      'https://quiet-river.trycloudflare.com/api/v1/message/text?password=s3cret',
+    ]);
+    expect(calls[1]?.init.body).toBeInstanceOf(FormData);
+    expect((calls[1]?.init.body as FormData).get('chatGuid')).toBe('iMessage;-;+15551234567');
+  });
+
+  it('fetches a recording from the Mac', async () => {
+    const { impl, calls } = sequence([new Response(new Uint8Array([1, 2, 3]), { status: 200 })]);
+    const bytes = await imessageAdapter.fetchAudio?.(token, { fileRef: 'att_1', mimeType: 'audio/mpeg' }, impl);
+    expect(bytes?.byteLength).toBe(3);
+    expect(calls[0]?.url).toBe('https://quiet-river.trycloudflare.com/api/v1/attachment/att_1/download?password=s3cret');
   });
 });

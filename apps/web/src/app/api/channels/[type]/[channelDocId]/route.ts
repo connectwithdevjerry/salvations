@@ -10,7 +10,7 @@
  * proxy; putting a tenant id in it would publish the tenant boundary to all
  * three.
  */
-import { handleDelivery } from '@/lib/channel-inbound';
+import { handleDelivery, handleProbe } from '@/lib/channel-inbound';
 
 export const runtime = 'nodejs';
 
@@ -35,9 +35,18 @@ export async function POST(
 /**
  * Some platforms probe with GET before they will save a URL.
  *
- * Answering 200 with nothing is enough for that, and is strictly better than a
- * 405 the dashboard reports as "endpoint unreachable".
+ * Meta expects its challenge echoed back once the verify token matches;
+ * for the rest, 200 with nothing is enough, and strictly better than a 405
+ * the dashboard reports as "endpoint unreachable".
  */
-export function GET(): Response {
-  return new Response('ok', { status: 200, headers: { 'content-type': 'text/plain' } });
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ type: string; channelDocId: string }> },
+): Promise<Response> {
+  const { type, channelDocId } = await params;
+  const outcome = await handleProbe(type, channelDocId, new URL(request.url).searchParams);
+  return new Response(outcome.body, {
+    status: outcome.status,
+    headers: { 'content-type': outcome.contentType },
+  });
 }

@@ -16,6 +16,7 @@ import { actorIdOf } from '@/lib/principal';
 import { randomBytes } from 'node:crypto';
 import { connectCode } from '@/lib/connect-code';
 import { CONNECT_CODE_TTL_MS, webhookUrl } from '@/lib/channel-inbound';
+import { WEBHOOK_SPEC } from '@/lib/channel-webhook';
 import { countGate } from '@/lib/limits';
 
 export const runtime = 'nodejs';
@@ -23,8 +24,21 @@ export const runtime = 'nodejs';
 export const GET = workspaceRoute('channels:read', async (ctx) => {
   const rows = await new ChannelRepository(ctx.database, ctx.workspaceId).list();
 
-  return ok({
-    items: rows.map((row) => ({
+  // What the person pastes into a platform that probes before it will
+  // save the address. Derived from the delivery secret, so it is resolved
+  // here and shown, never stored a second time.
+  const verifyTokenOf = async (row: (typeof rows)[number]): Promise<string | undefined> => {
+    const adapter = channelAdapter(row.type);
+    if (adapter?.verifyToken === undefined || row.secretCredentialId === null || row.secretCredentialId === undefined) return undefined;
+    const secret = await ctx.repos.credentials.resolve(row.secretCredentialId);
+    if (secret === null) return undefined;
+    return adapter.verifyToken({ webhookUrl: webhookUrl(row.type, row._id), webhookSecret: secret.expose() });
+  };
+
+  const items = [];
+  for (const row of rows) {
+    const verifyToken = await verifyTokenOf(row);
+    items.push({
       id: row._id,
       channel: row.type,
       status: row.status,
@@ -32,6 +46,7 @@ export const GET = workspaceRoute('channels:read', async (ctx) => {
       displayName: row.identity.displayName,
       agentId: row.agentId,
       webhookUrl: webhookUrl(row.type, row._id),
+      ...(verifyToken !== undefined ? { verifyToken } : {}),
       // Where the platform actually delivers, when that is known. Differs
       // from the line above after the site moves, until the bot is re-pointed.
       ...(row.webhookUrl !== null && row.webhookUrl !== undefined ? { registeredWebhookUrl: row.webhookUrl } : {}),
@@ -42,8 +57,10 @@ export const GET = workspaceRoute('channels:read', async (ctx) => {
       ...(row.health.lastError !== null && row.health.lastError !== undefined
         ? { lastError: row.health.lastError }
         : {}),
-    })),
-  });
+    });
+  }
+
+  return ok({ items });
 });
 
 export const POST = workspaceRoute('channels:write', async (ctx) => {
@@ -64,6 +81,18 @@ export const POST = workspaceRoute('channels:write', async (ctx) => {
       `${entry.name} also needs its ${adapter.secondarySecret.label.toLowerCase()}.`,
     );
   }
+  if (adapter.extraField !== undefined && input.extra === undefined) {
+    return errorResponse(
+      422, 'validation_failed',
+      `${entry.name} also needs its ${adapter.extraField.label.toLowerCase()}.`,
+    );
+  }
+
+  // Two parts become one string here, by the adapter's own rule, so the
+  // rest of this route and every later read see one token.
+  const token = adapter.composeToken !== undefined && input.extra !== undefined
+    ? adapter.composeToken(input.token, input.extra)
+    : input.token;
 
   const agent = await new AgentRepository(ctx.database, ctx.workspaceId).findById(input.agentId);
   if (agent === null) return errorResponse(404, 'not_found', 'That agent does not exist.');
@@ -84,7 +113,7 @@ export const POST = workspaceRoute('channels:write', async (ctx) => {
   // not a connection that fails silently later.
   let identity;
   try {
-    identity = await adapter.identify(input.token);
+    identity = await adapter.identify(token);
   } catch (caught) {
     return errorResponse(
       422, 'validation_failed',
@@ -94,9 +123,9 @@ export const POST = workspaceRoute('channels:write', async (ctx) => {
 
   const actor = actorIdOf(ctx.principal);
   const tokenCredential = await ctx.repos.credentials.store({
-    name: `${entry.name} bot token`,
+    name: `${entry.name} ${adapter.tokenLabel?.toLowerCase() ?? 'bot token'}`,
     kind: 'api_key',
-    plaintext: input.token,
+    plaintext: token,
     createdBy: actor,
     hint: `${identity.handle}`,
   });
@@ -142,8 +171,8 @@ export const POST = workspaceRoute('channels:write', async (ctx) => {
   // URL is returned, because the person needs it on screen.
   const url = webhookUrl(row.type, row._id);
   try {
-    await adapter.register(input.token, { webhookUrl: url, webhookSecret });
-    await channels.recordWebhook(row._id, url);
+    await adapter.register(token, { webhookUrl: url, webhookSecret });
+    await channels.recordWebhook(row._id, url, WEBHOOK_SPEC);
   } catch (caught) {
     await channels.recordFailure(
       row._id, caught instanceof Error ? caught.message : String(caught),
@@ -158,6 +187,7 @@ export const POST = workspaceRoute('channels:write', async (ctx) => {
     displayName: identity.displayName,
     agentId: row.agentId,
     webhookUrl: url,
+    ...(adapter.verifyToken !== undefined ? { verifyToken: adapter.verifyToken({ webhookUrl: url, webhookSecret }) } : {}),
     connectCode: row.connect?.code,
   }, 201);
 });

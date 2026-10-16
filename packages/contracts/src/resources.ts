@@ -89,8 +89,10 @@ export const connectChannelSchema = z.object({
   /** A catalogue id: telegram, discord, slack. */
   channel: z.string().trim().min(1).max(40),
   token: z.string().trim().min(1).max(500),
-  /** Slack's signing secret, Discord's public key. Absent for Telegram. */
+  /** Slack's signing secret, Discord's public key, WhatsApp's app secret. Absent for Telegram. */
   signingSecret: z.string().trim().min(1).max(500).optional(),
+  /** A non-secret the platform needs beside the token: WhatsApp's phone number id, a Mac's address. */
+  extra: z.string().trim().min(1).max(500).optional(),
   agentId: idSchema,
   /** Omitted, the channel follows the agent's model role rather than pinning one. */
   modelBindingId: idSchema.optional(),

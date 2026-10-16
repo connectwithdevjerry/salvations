@@ -471,7 +471,17 @@ Both were assessed and neither fits a request-shaped deployment, so neither is h
 - [x] 🔒 Unlinked identities are minimal-privilege (`trust: 'unlinked'` on the run's principal)
 - [x] Throttled edits (the live draft) and inline-keyboard approvals on Telegram (§1.5.8)
 - [x] 🔒 `channelIdentities` linking flow (§1.5.8)
-- [ ] Channel capability degradation matrix + tests (no buttons on Slack, no threads on Telegram)
+- [x] Slack and Discord at parity with Telegram: approval buttons (Block Kit, message
+      components), pictures and clips (image block and file upload; embed and link), the live
+      draft, typing on Discord, voice clips on Slack. Discord's `/hive` command is created by
+      `register`, and the interaction is answered in the HTTP response (a word under the
+      command, the rewritten message for a press) so Discord never shows "did not respond".
+- [x] The hero's channel word rotates through where you can text it (Telegram, Slack,
+      Discord, the web, Claude.ai, ChatGPT). Only places that work today.
+- [ ] iMessage: no API from Apple. Every route is a third party holding the messages or a Mac
+      kept on, so it stays off the list. WhatsApp (Meta's Cloud API, the person's own Meta app)
+      is the honest next channel.
+- [ ] Channel capability matrix as a test: which adapter has which optional method
 - [ ] Discord over the Gateway once there is a worker that can hold a socket, so it is a
       conversation rather than a slash command
 - [x] First-party MCP servers: memory, knowledge, chat, web, Google Workspace, the agent gateway

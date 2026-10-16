@@ -83,9 +83,21 @@ export interface Choice {
   readonly data: string;
 }
 
+/**
+ * What to answer the platform's request with, when it wants more than "ok".
+ *
+ * Discord reads the HTTP response to an interaction as the bot's first
+ * word: a plain 200 is shown to the person as "the application did not
+ * respond", however well the reply that follows lands.
+ */
+export interface Ack {
+  readonly body: string;
+  readonly contentType: string;
+}
+
 /** The result of looking at an inbound HTTP request. */
 export type InboundResult =
-  | { readonly kind: 'message'; readonly message: InboundMessage }
+  | { readonly kind: 'message'; readonly message: InboundMessage; readonly ack?: Ack }
   | { readonly kind: 'choice'; readonly choice: InboundChoice }
   /**
    * Understood, but nothing to do — an edit, a reaction, a bot's own echo, or a
@@ -202,6 +214,14 @@ export interface ChannelAdapter {
    * without its buttons, so it cannot be answered twice from the chat.
    */
   settleChoice?(token: string, choice: InboundChoice, text: string, fetchImpl?: typeof fetch): Promise<void>;
+
+  /**
+   * Closes a question in the HTTP response itself, on a platform that reads
+   * that response as the answer to the press. Preferred over `settleChoice`
+   * when present: one round trip, and no window in which the press shows as
+   * failed.
+   */
+  ackChoice?(choice: InboundChoice, text: string): Ack;
 
   /**
    * Fetches audio the adapter previously referenced.

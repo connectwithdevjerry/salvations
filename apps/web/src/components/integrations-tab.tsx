@@ -477,10 +477,17 @@ function ConnectedChannel({
       </dl>
 
       {(entry.id === 'slack' || entry.id === 'discord') && (
-        <Copyable
-          label={entry.id === 'slack' ? 'Request URL' : 'Interactions endpoint URL'}
-          value={connection.webhookUrl}
-        />
+        <>
+          <Copyable
+            label={entry.id === 'slack' ? 'Request URL' : 'Interactions endpoint URL'}
+            value={connection.webhookUrl}
+          />
+          <p className="muted" style={{ margin: 0 }}>
+            {entry.id === 'slack'
+              ? 'Paste it twice in Slack: under Event Subscriptions, and under Interactivity & Shortcuts so buttons work.'
+              : 'Paste it on the application’s General Information page. The /hive command is already created.'}
+          </p>
+        </>
       )}
 
       {connection.lastError !== undefined && (

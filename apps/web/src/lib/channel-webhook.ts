@@ -31,8 +31,9 @@ export const webhookUrl = (type: string, channelDocId: string): string =>
  * next sweep rather than left waiting for the address to change.
  *   1: messages
  *   2: messages and button presses
+ *   3: the Discord slash command is created by us
  */
-export const WEBHOOK_SPEC = 2;
+export const WEBHOOK_SPEC = 3;
 
 /** The host this deployment calls its own. */
 const ownHost = (): string => new URL(env().PUBLIC_BASE_URL).host.toLowerCase();

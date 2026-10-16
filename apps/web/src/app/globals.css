@@ -1482,6 +1482,12 @@ td.danger { color: var(--danger); }
 .land-hero h1 { font-size: clamp(38px, 5vw, 60px); line-height: 1.04; letter-spacing: -0.035em; margin: 0 0 20px; max-width: 11ch; }
 .land-lede { font-size: 17px; color: var(--muted); line-height: 1.6; margin: 0 0 26px; max-width: 52ch; }
 .land-lede strong { color: var(--text); }
+.rotating-word { display: inline-block; vertical-align: baseline; color: var(--text); font-weight: 600; }
+.rotating-word-text { display: inline-block; animation: word-in 0.32s cubic-bezier(0.2, 0.7, 0.2, 1); }
+.rotating-word.out .rotating-word-text { animation: word-out 0.26s ease-in forwards; }
+@keyframes word-in { from { opacity: 0; transform: translateY(0.45em); } to { opacity: 1; transform: none; } }
+@keyframes word-out { to { opacity: 0; transform: translateY(-0.45em); } }
+@media (prefers-reduced-motion: reduce) { .rotating-word-text, .rotating-word.out .rotating-word-text { animation: none; opacity: 1; transform: none; } }
 .land-cta { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; }
 .land-ghost { color: var(--text); text-decoration: none; font-weight: 600; font-size: 14px; }
 .land-trust { font-size: 12.5px; color: var(--faint); margin: 14px 0 0; }

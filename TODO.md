@@ -314,6 +314,21 @@ platform exist beside the first three.
 - [x] A Telegram bot registered before button presses were asked for never heard a press, so
       Approve did nothing and said nothing. The webhook is re-registered the moment buttons are
       sent on a stale connection, and on the next inbound message; the daily sweep stays
+- [x] Drop and go: every role treats a bare link, name, file or photo as the whole brief, does the
+      job whole and asks once at the end. Marketing makes a ready-to-publish pack (hook, caption,
+      description, hashtags, times, platforms) and the picture or clip to go with it
+- [x] The studio: a first-party server (`studio`) with `create_image`, `create_video` and
+      `check_video`, drawn by the workspace's own OpenAI key through the provider port
+      (`generateImage`, `startVideo`, `videoJob`, `videoContent`; no vendor named outside the
+      adapter). What it makes is kept in the workspace's own `media` collection, capped at 15 MB,
+      and served by a signed link at `/api/media/<id>` that a chat platform can fetch. Telegram is
+      sent the picture itself after the words (`sendMedia`); a clip renders for minutes, so the
+      execute function stays up after the answer and sends it when it lands, and the link, the
+      check tool or the next look settle whatever was left. The web chat shows a studio link on
+      its own line as the picture or the player
+- [ ] Publishing where the post goes: Instagram and Facebook Pages (Meta Graph API), LinkedIn,
+      Shopify, Mailchimp are native adapters still to build, each with the vendor's own app and
+      review. Until then "publish" means the connected apps: mail, Notion, Canva, tasks
 - [x] More than one account per app: an assistant may connect the same app several times (two
       Google accounts, two Stripe accounts). Each connection gets its own alias (`google_workspace`,
       `google_workspace_2`), its own tokens and its own tool prefix; a name the person gives it

@@ -18,6 +18,7 @@
  */
 import type { Database } from '@salvations/db';
 import { bindingSource } from './binding-source';
+import { firstPartyBindings } from './first-party';
 
 interface Attachment {
   readonly bindingId: string;
@@ -32,7 +33,16 @@ export async function agentSnapshotFor<T extends { capabilityBindings: readonly 
   agentId: string,
   version: T,
 ): Promise<T> {
-  if (version.capabilityBindings.length > 0) return version;
+  if (version.capabilityBindings.length > 0) {
+    // A narrowed list is kept as chosen, but a first-party server that did
+    // not exist when it was saved is still every assistant's: a deploy that
+    // adds one must not leave older assistants without it.
+    const named = new Set(version.capabilityBindings.map((b) => b.bindingId));
+    const missing = firstPartyBindings(workspaceId)
+      .filter((entry) => !named.has(entry.binding.id))
+      .map((entry): Attachment => ({ bindingId: entry.binding.id, mode: 'all', tools: [] }));
+    return missing.length === 0 ? version : { ...version, capabilityBindings: [...version.capabilityBindings, ...missing] };
+  }
 
   // This assistant's own connections, plus the first-party servers. Another
   // assistant's GitHub is not this one's, however enabled it is.

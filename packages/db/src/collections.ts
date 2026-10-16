@@ -61,6 +61,7 @@ export const TENANT_COLLECTIONS = [
   'memoryEntries',
   'knowledgeDocuments',
   'knowledgeChunks',
+  'media',
 ] as const;
 
 /**

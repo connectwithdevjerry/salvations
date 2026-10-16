@@ -19,6 +19,7 @@ export * from './repositories/workspaces';
 export * from './repositories/users';
 export * from './repositories/api-keys';
 export * from './repositories/policies';
+export * from './repositories/media';
 export * from './services/permission-broker';
 export * from './repositories/conversations';
 export * from './repositories/message-mapper';

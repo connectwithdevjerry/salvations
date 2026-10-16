@@ -8,6 +8,7 @@
 import type {
   EmbeddingRequest, EmbeddingResult, GenerationRequest, ModelCapabilities,
   ProviderEvent, ProviderType, TokenCount, TranscriptionRequest, TranscriptionResult,
+  ImageRequest, ImageResult, VideoRequest, VideoJob,
 } from '../entities/model';
 
 export interface AgentProvider {
@@ -29,6 +30,18 @@ export interface AgentProvider {
    * at the moment of use that this workspace's provider cannot hear.
    */
   transcribe?(req: TranscriptionRequest): Promise<TranscriptionResult>;
+
+  /** A picture from words. Optional: most vendors of text do not draw. */
+  generateImage?(req: ImageRequest): Promise<ImageResult>;
+
+  /**
+   * A clip from words, as a job: started, then asked after, then fetched.
+   * Three methods rather than one that waits, because rendering outlives any
+   * request this host is allowed to hold open.
+   */
+  startVideo?(req: VideoRequest): Promise<VideoJob>;
+  videoJob?(jobId: string): Promise<VideoJob>;
+  videoContent?(jobId: string): Promise<Uint8Array>;
 
   /**
    * Asks the vendor whether these credentials work, before anything is stored.

@@ -32,4 +32,8 @@ export {
   createOpenClawServer, SERVER_NAME as GATEWAY_SERVER, MAX_MESSAGE as GATEWAY_MAX_MESSAGE,
   type OpenClawSource, type OpenClawAgent,
 } from './openclaw';
+export {
+  createStudioServer, SERVER_NAME as STUDIO_SERVER, MAX_PROMPT as STUDIO_MAX_PROMPT,
+  type StudioSource, type MediaShape,
+} from './studio';
 export { serveOverHttp, type HttpServerFactory } from './http';

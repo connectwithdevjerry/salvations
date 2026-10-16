@@ -235,7 +235,9 @@ export type PlatformReason =
   /** Resolving a token our own authorization server issued, by its hash. */
   | 'oauth-token-lookup'
   /** Refreshing vendor tokens that are about to expire, across all workspaces, before a run needs them. */
-  | 'token-refresh';
+  | 'token-refresh'
+  /** Serving a picture or clip by its id to whoever holds its signed link: a chat platform, a browser. */
+  | 'media-serve';
 
 export class PlatformDb {
   readonly #db: Db;

@@ -1,4 +1,5 @@
 import { Fragment, type ReactNode } from 'react';
+import { isMediaLine } from '@/lib/client/media-line';
 
 /**
  * The little markdown an answer actually uses.
@@ -49,11 +50,21 @@ function blocks(text: string): ReactNode[] {
 
     if (line.trim() === '') { i += 1; continue; }
 
+    // A studio link on its own line is the picture, not an address to click.
+    const media = isMediaLine(line);
+    if (media !== undefined) {
+      i += 1;
+      out.push(media.kind === 'video'
+        ? <video className="rt-media" controls playsInline preload="metadata" src={media.url} />
+        : <img className="rt-media" src={media.url} alt="" loading="lazy" />);
+      continue;
+    }
+
     // A paragraph runs until a blank line or something structural.
     const para: string[] = [];
     while (i < lines.length) {
       const l = lines[i] ?? '';
-      if (l.trim() === '' || l.startsWith('```') || /^\s*[-*•]\s+/.test(l) || /^\s*\d+[.)]\s+/.test(l)) break;
+      if (l.trim() === '' || l.startsWith('```') || /^\s*[-*•]\s+/.test(l) || /^\s*\d+[.)]\s+/.test(l) || isMediaLine(l) !== undefined) break;
       para.push(l);
       i += 1;
     }

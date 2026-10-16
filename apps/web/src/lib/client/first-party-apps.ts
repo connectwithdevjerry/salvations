@@ -10,4 +10,5 @@ export const FIRST_PARTY_APPS: readonly { id: string; alias: string; label: stri
   { id: 'mcb_first_party_conversation', alias: 'chat', label: 'Chat history' },
   { id: 'mcb_first_party_knowledge', alias: 'knowledge', label: 'Knowledge' },
   { id: 'mcb_first_party_web', alias: 'web', label: 'Web' },
+  { id: 'mcb_first_party_studio', alias: 'studio', label: 'Studio' },
 ];

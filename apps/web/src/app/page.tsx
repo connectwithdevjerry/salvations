@@ -147,6 +147,13 @@ export default async function Home() {
               <span className="mock-approve">Approve</span>
             </div>
           </Feature>
+          <Feature title="Drop a link, get the campaign" body="Paste your site, or the name of the new dish on the menu, from Telegram if you like. Marketing reads it, writes the title and caption that stop the thumb, makes the product picture and a short clip in its studio, and asks one thing: publish where?">
+            <div className="mock-approval">
+              <Icon name="spark" size={14} />
+              <span>New on the menu: <strong>smoky jollof pasta</strong>. Make the post.</span>
+              <span className="mock-approve">Pack ready</span>
+            </div>
+          </Feature>
           <Feature title="It remembers" body="How you like things done, who is who, what is in progress. It checks what it knows before it asks you again.">
             <div className="mock-chips">
               <span>Ada prefers replies before 9am</span><span>Ojo &amp; Sons, net 30</span><span>Sam handles deliveries</span><span>Never call after 6pm</span>

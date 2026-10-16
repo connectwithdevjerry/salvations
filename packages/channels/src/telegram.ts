@@ -231,6 +231,17 @@ export const telegramAdapter: ChannelAdapter = {
     }
   },
 
+  async sendMedia(token, chatRef, media, fetchImpl = globalThis.fetch): Promise<void> {
+    // Telegram fetches the link itself. A caption is capped by the platform
+    // at 1024 characters; anything longer travels as a message of its own.
+    const caption = media.caption !== undefined && media.caption.length <= 1024 ? media.caption : undefined;
+    await call(token, media.kind === 'video' ? 'sendVideo' : 'sendPhoto', {
+      chat_id: chatRef,
+      ...(media.kind === 'video' ? { video: media.url } : { photo: media.url }),
+      ...(caption !== undefined ? { caption } : {}),
+    }, fetchImpl);
+  },
+
   async sendChoices(token, chatRef, text, choices: readonly Choice[], fetchImpl = globalThis.fetch): Promise<string> {
     const sent = await call<{ message_id: number }>(token, 'sendMessage', {
       chat_id: chatRef,

@@ -492,6 +492,13 @@ Both were assessed and neither fits a request-shaped deployment, so neither is h
       drafts (Messages cannot edit).
 - [x] Approvals page: "Approve all" for the waiting tool calls, each its own decision on the
       server, questions that need an answer left alone.
+- [x] The front door's voice console is live: the browser's own speech recognition hears the
+      visitor, a scripted brain (`landing-brain.ts`, keyword rules over this page's facts) answers,
+      the browser reads it back. No key, no server, nothing sent anywhere, and the console says it is
+      a demo. A browser that cannot hear gets the still picture and a line saying which can.
+- [x] Approvals that cannot be answered are closed as the list is read (expired, or the run
+      moved on: cancelled, superseded, failed), with the reason as the decider, so the page and
+      the badge never show a question that "approve all" would meet as already gone.
 - [x] "Auto-approve for 20 min": a policy rule with an end (`PolicyRule.expiresAt`, skipped by
       the engine once past), written to the workspace by `PUT policies/auto-approve`, removed by
       `DELETE`. What is waiting is approved as it opens; a deny still wins; the banner on the

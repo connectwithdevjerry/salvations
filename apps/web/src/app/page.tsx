@@ -7,6 +7,7 @@ import { VendorMark } from '@/components/vendor-mark';
 import { AppLogo } from '@/components/app-logo';
 import { LandingApps } from '@/components/landing-apps';
 import { RotatingWord } from '@/components/rotating-word';
+import { LandingVoice } from '@/components/landing-voice';
 import { callerFromCookieHeader } from '@/lib/session';
 
 /**
@@ -179,6 +180,7 @@ export default async function Home() {
           <p className="land-sub">
             Open the Speak tab, press Start, and talk. It listens, answers in its own voice, and writes
             down everything it heard and said. The same assistant, the same memory, the same approvals.
+            Try the console here: it hears you in your browser and answers from this page.
           </p>
           <ul className="land-ticks">
             <li><Icon name="mic" size={16} /><span><strong>Hands free.</strong> Ask for the morning summary while you make the coffee.</span></li>
@@ -186,17 +188,7 @@ export default async function Home() {
             <li><Icon name="key" size={16} /><span><strong>Your key.</strong> Voice runs on your own OpenAI key. Text works with either provider.</span></li>
           </ul>
         </div>
-        <div className="mock-voice" aria-hidden>
-          <div className="mock-voice-top"><span>BEE // VOICE LINK</span><span className="mock-voice-live">LISTENING</span></div>
-          <div className="mock-voice-orb"><span className="mock-voice-ring" /><span className="mock-voice-core" /></div>
-          <div className="mock-voice-bars">
-            {Array.from({ length: 32 }, (_, i) => <span key={i} style={{ height: `${18 + Math.round(72 * Math.abs(Math.sin(i * 0.7 + 0.4)))}%` }} />)}
-          </div>
-          <div className="mock-voice-log">
-            <span>you</span><p>what is waiting on me today?</p>
-            <span>bee</span><p>Three things. Okoro&apos;s invoice query, Bright Lane&apos;s quote, and Tunde&apos;s delivery date. Want me to draft the replies?</p>
-          </div>
-        </div>
+        <LandingVoice />
       </section>
 
       {/* ---------------------------------------------------------- team -- */}

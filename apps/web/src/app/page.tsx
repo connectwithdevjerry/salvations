@@ -140,7 +140,7 @@ export default async function Home() {
               ))}
             </div>
           </Feature>
-          <Feature title="Nothing happens without you" body="Before it sends, deletes or pays for anything, it asks, here or right in the Telegram chat. One tap approves. Everything it did stays in Activity.">
+          <Feature title="Nothing happens without you" body="Before it sends, deletes or pays for anything, it asks, here or right in the Telegram chat. One tap approves, and one more says never ask again for that. Rules you write decide what runs, what asks and what never runs, for every assistant or one. Everything it did stays in Activity.">
             <div className="mock-approval">
               <Icon name="shield" size={14} />
               <span>Wants to <strong>archive 14 messages</strong> in Gmail.</span>
@@ -261,7 +261,7 @@ export default async function Home() {
         </div>
         <ul>
           <li><Icon name="key" size={16} /><span><strong>Your keys, encrypted.</strong> Envelope-encrypted in your own database, never shown again.</span></li>
-          <li><Icon name="shield" size={16} /><span><strong>Approval first.</strong> Anything that writes, sends, spends or deletes waits for you.</span></li>
+          <li><Icon name="shield" size={16} /><span><strong>Approval first.</strong> Anything that writes, sends, spends or deletes waits for you, unless a rule you wrote says otherwise.</span></li>
           <li><Icon name="agent" size={16} /><span><strong>Your own sign-in.</strong> No identity vendor, no data broker. Google is optional and direct.</span></li>
           <li><Icon name="pulse" size={16} /><span><strong>Everything on the record.</strong> Every run and every admin action in an audit trail you own, and a trace per run for your own collector.</span></li>
           <li><Icon name="plug" size={16} /><span><strong>Yours to take back.</strong> Disconnect an app and its tokens are revoked at the vendor, not just forgotten here.</span></li>

@@ -332,6 +332,13 @@ platform exist beside the first three.
 - [ ] Publishing where the post goes: Instagram and Facebook Pages (Meta Graph API), LinkedIn,
       Shopify, Mailchimp are native adapters still to build, each with the vendor's own app and
       review. Until then "publish" means the connected apps: mail, Notion, Canva, tasks
+- [x] Academic outreach, a role: a professor's name and a university become a considered cold
+      email. The assistant searches and browses for itself (the web `search` and `read_page`
+      tools, Google Programmable Search configured in production), reads the faculty page and
+      the lab, pulls the papers from the open Semantic Scholar API and arXiv, picks the paper
+      closest to the person's interest, summarises it into five core approaches, proposes one
+      improvement, weaves in the CV from the knowledge base, and asks for approval before
+      sending through the connected mail account. A weekly routine chases the unanswered
 - [x] More than one account per app: an assistant may connect the same app several times (two
       Google accounts, two Stripe accounts). Each connection gets its own alias (`google_workspace`,
       `google_workspace_2`), its own tokens and its own tool prefix; a name the person gives it

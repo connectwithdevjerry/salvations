@@ -152,6 +152,16 @@ export async function handleDelivery(
   }
 
   const message = judged.message;
+
+  // A platform that cannot sign is asked whether the message is real
+  // before anything is written. Answered 401 like a bad signature: it is
+  // the same failure by another route.
+  if (adapter.confirm !== undefined) {
+    const token = await repos.credentials.resolve(row.tokenCredentialId);
+    const real = token !== null && await adapter.confirm(token.expose(), message);
+    if (!real) return plain(401, 'unauthorized');
+  }
+
   // What the platform is told once the message is in hand. Discord shows
   // this response under the command, so it is a word rather than "ok".
   const done: DeliveryOutcome = judged.ack === undefined
@@ -211,7 +221,7 @@ export async function handleDelivery(
 
     // "typing…" from the moment the message lands, so the wait for the
     // executor to pick the run up is not a silence. The executor keeps it up.
-    await indicateTyping(row, message.chatRef, repos);
+    await indicateTyping(row, message.chatRef, repos, message.messageRef);
 
     const runId = await startRun(handle.db, row, heard, repos, channels);
     if (runId !== undefined) await channels.attachRun(row._id, message.messageRef, runId);
@@ -479,11 +489,40 @@ export function offeredCode(text: string): string {
 }
 
 
-async function indicateTyping(row: ChannelDoc, chatRef: string, repos: Repos): Promise<void> {
+async function indicateTyping(row: ChannelDoc, chatRef: string, repos: Repos, messageRef?: string): Promise<void> {
   const adapter = channelAdapter(row.type);
   if (adapter?.indicate === undefined) return;
   try {
     const token = await repos.credentials.resolve(row.tokenCredentialId);
-    if (token !== null) await adapter.indicate(token.expose(), chatRef);
+    if (token !== null) await adapter.indicate(token.expose(), chatRef, undefined, messageRef);
   } catch { /* a missing indicator is not a lost message */ }
+}
+
+/**
+ * A platform's GET probe before it will save the address.
+ *
+ * Meta sends one with a verify token and expects a challenge echoed back;
+ * everything else that probes is content with a 200. The connection's
+ * delivery secret is what the verify token is derived from, so a probe
+ * for an unknown connection, or with the wrong token, gets nothing.
+ */
+export async function handleProbe(type: string, channelDocId: string, query: URLSearchParams): Promise<DeliveryOutcome> {
+  const adapter = channelAdapter(type);
+  if (adapter === undefined) return plain(404, 'unknown channel');
+  if (adapter.verify === undefined) return plain(200, 'ok');
+
+  const handle = await db();
+  const platform = new PlatformDb(handle.db, 'channel-delivery');
+  const row = await platform
+    .collection<ChannelDoc>('channels')
+    .findOne({ _id: channelDocId, type } as never, { comment: platform.comment });
+  if (row === null) return plain(404, 'unknown channel');
+
+  const repos = repositories(handle.db, row.workspaceId);
+  const secret = row.secretCredentialId === null || row.secretCredentialId === undefined
+    ? undefined
+    : await repos.credentials.resolve(row.secretCredentialId);
+  const ack = adapter.verify(query, { webhookUrl: webhookUrl(type, channelDocId), webhookSecret: secret?.expose() ?? '' });
+  if (ack === undefined) return plain(403, 'forbidden');
+  return { status: 200, body: ack.body, contentType: ack.contentType };
 }

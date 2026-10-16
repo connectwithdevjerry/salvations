@@ -144,6 +144,48 @@ export interface ChannelAdapter {
   };
 
   /**
+   * A value the platform needs beside the token, that is not a secret.
+   *
+   * WhatsApp sends from a phone number named by an id; iMessage through a
+   * Mac needs the Mac's address. Declared here so the form asks for it,
+   * and composed into the stored token by `composeToken` so nothing above
+   * the adapter has to know there are two parts.
+   */
+  readonly extraField?: {
+    readonly label: string;
+    readonly help: string;
+    readonly placeholder?: string;
+  };
+
+  /** What `extraField` is called when the token itself has a better name than "bot token". */
+  readonly tokenLabel?: string;
+
+  /** Joins the token and the extra value into the one string that is stored. */
+  composeToken?(token: string, extra: string): string;
+
+  /**
+   * The value the person pastes into the platform's dashboard so the
+   * platform can prove it has the right address, derived from the delivery
+   * secret. Only a platform that probes with a GET before it will save a
+   * URL has one.
+   */
+  verifyToken?(context: VerifyContext): string;
+
+  /**
+   * Answers the platform's GET probe. The body to echo when the probe is
+   * genuine; undefined when it is not, which the caller turns into a 403.
+   */
+  verify?(query: URLSearchParams, context: VerifyContext): Ack | undefined;
+
+  /**
+   * Asks the platform whether a delivery is real, for a platform that
+   * cannot sign one. A person's own Mac posts plain JSON with no secret in
+   * it, so the only proof is to ask that Mac whether the message exists.
+   * Called after `receive` and before anything is written.
+   */
+  confirm?(token: string, message: InboundMessage, fetchImpl?: typeof fetch): Promise<boolean>;
+
+  /**
    * Proves a token works and says whose it is.
    *
    * Called before anything is stored, so a typo fails at the form rather than
@@ -186,9 +228,11 @@ export interface ChannelAdapter {
   /**
    * Shows the person that something is happening — "typing…" on a platform
    * that has it. Short-lived by the platform's design, so it is repeated while
-   * the work goes on. Absent where the platform has no such thing.
+   * the work goes on. Absent where the platform has no such thing. A
+   * platform that ties the indicator to the message being answered gets
+   * that message's ref when the caller has it.
    */
-  indicate?(token: string, chatRef: string, fetchImpl?: typeof fetch): Promise<void>;
+  indicate?(token: string, chatRef: string, fetchImpl?: typeof fetch, messageRef?: string): Promise<void>;
 
   /**
    * A message that will be rewritten as the answer arrives.

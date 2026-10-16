@@ -7,6 +7,7 @@ import { api, ws } from '@/lib/client/api';
 import { CapabilityReview } from '@/components/capability-review';
 import { Icon, Option } from '@/components/ui';
 import { SetupSteps, Copyable } from '@/components/setup-steps';
+import { ADDRESS_LABEL, ADDRESS_NOTE, EXTRA, SECONDARY, tokenLabelOf } from '@/lib/client/channel-fields';
 import { AppDialog, AppPickerDialog, ConnectedApps, RequestCard, type AppStatus } from '@/components/app-grid';
 import { CALLBACK_ERRORS, IntegrationSetup, authorise, type Binding } from '@/components/integration-setup';
 
@@ -24,6 +25,7 @@ import { CALLBACK_ERRORS, IntegrationSetup, authorise, type Binding } from '@/co
 interface Channel {
   id: string; channel: string; status: string; handle: string; displayName: string;
   agentId: string; webhookUrl: string; registeredWebhookUrl?: string; connectCode?: string; lastError?: string;
+  verifyToken?: string;
 }
 interface Agent { id: string; name: string }
 interface ModelBinding { id: string; name: string; modelId: string }
@@ -271,17 +273,6 @@ export function ChannelSetupFor({
 }
 
 
-/** Which platforms issue their own signing secret, and what to call it. */
-const SECONDARY: Record<string, { label: string; help: string }> = {
-  slack: {
-    label: 'Signing secret',
-    help: 'Under Basic Information → App Credentials. Not the bot token.',
-  },
-  discord: {
-    label: 'Application public key',
-    help: 'On the application\'s General Information page.',
-  },
-};
 
 function ChannelSetup({
   workspaceId, entry, connection, agents, models, onChanged, onError,
@@ -346,10 +337,12 @@ function ConnectForm({
 }) {
   const [token, setToken] = useState('');
   const [signingSecret, setSigningSecret] = useState('');
+  const [extra, setExtra] = useState('');
   const [agentId, setAgentId] = useState(agents[0]?.id ?? '');
   const [modelBindingId, setModelBindingId] = useState(models[0]?.id ?? '');
   const [busy, setBusy] = useState(false);
   const secondary = SECONDARY[entry.id];
+  const extraField = EXTRA[entry.id];
 
   return (
     <>
@@ -367,11 +360,13 @@ function ConnectForm({
               channel: entry.id,
               token,
               ...(secondary !== undefined ? { signingSecret } : {}),
+              ...(extraField !== undefined ? { extra } : {}),
               agentId,
               modelBindingId,
             });
             setToken('');
             setSigningSecret('');
+            setExtra('');
             onChanged();
           } catch (caught) {
             onError(caught instanceof Error ? caught.message : `Could not connect ${entry.name}.`);
@@ -380,8 +375,19 @@ function ConnectForm({
           }
         }}
       >
+        {extraField !== undefined && (
+          <div>
+            <label htmlFor={`extra-${entry.id}`}>{extraField.label}</label>
+            <input
+              id={`extra-${entry.id}`} type="text" required autoComplete="off"
+              placeholder={extraField.placeholder} value={extra} onChange={(e) => setExtra(e.target.value)}
+            />
+            <p className="muted" style={{ margin: '5px 0 0' }}>{extraField.help}</p>
+          </div>
+        )}
+
         <div>
-          <label htmlFor={`token-${entry.id}`}>Bot token</label>
+          <label htmlFor={`token-${entry.id}`}>{tokenLabelOf(entry.id)}</label>
           <input
             id={`token-${entry.id}`} type="password" required autoComplete="off"
             value={token} onChange={(e) => setToken(e.target.value)}
@@ -476,17 +482,11 @@ function ConnectedChannel({
         <div><dt>Answered by</dt><dd className="mono">{connection.agentId}</dd></div>
       </dl>
 
-      {(entry.id === 'slack' || entry.id === 'discord') && (
+      {ADDRESS_LABEL[entry.id] !== undefined && (
         <>
-          <Copyable
-            label={entry.id === 'slack' ? 'Request URL' : 'Interactions endpoint URL'}
-            value={connection.webhookUrl}
-          />
-          <p className="muted" style={{ margin: 0 }}>
-            {entry.id === 'slack'
-              ? 'Paste it twice in Slack: under Event Subscriptions, and under Interactivity & Shortcuts so buttons work.'
-              : 'Paste it on the application’s General Information page. The /hive command is already created.'}
-          </p>
+          <Copyable label={ADDRESS_LABEL[entry.id] as string} value={connection.webhookUrl} />
+          {connection.verifyToken !== undefined && <Copyable label="Verify token" value={connection.verifyToken} />}
+          <p className="muted" style={{ margin: 0 }}>{ADDRESS_NOTE[entry.id]}</p>
         </>
       )}
 

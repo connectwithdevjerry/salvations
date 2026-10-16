@@ -129,6 +129,13 @@ export async function handleDelivery(
       if (!await channels.claimDelivery(row._id, choice.deliveryRef)) return plain(200, 'ok');
       if (row.status !== 'connected') return plain(200, 'ok');
       const outcome = await decideFromChat({ database: handle.db, workspaceId: row.workspaceId, channelId: row._id, choice, repos });
+      console.log(JSON.stringify({ at: 'channel-inbound', channel: row._id, press: outcome.decided ? 'decided' : 'refused' }));
+      // A platform that reads the response as the answer to the press gets
+      // the rewritten message there, in one round trip.
+      if (adapter.ackChoice !== undefined) {
+        const ack = adapter.ackChoice(choice, outcome.text);
+        return { status: 200, body: ack.body, contentType: ack.contentType };
+      }
       const token = await repos.credentials.resolve(row.tokenCredentialId);
       if (token !== null) {
         if (adapter.settleChoice !== undefined) {
@@ -137,7 +144,6 @@ export async function handleDelivery(
           await adapter.send(token.expose(), choice.chatRef, outcome.text).catch(() => undefined);
         }
       }
-      console.log(JSON.stringify({ at: 'channel-inbound', channel: row._id, press: outcome.decided ? 'decided' : 'refused' }));
       return plain(200, 'ok');
     }
 
@@ -146,11 +152,16 @@ export async function handleDelivery(
   }
 
   const message = judged.message;
+  // What the platform is told once the message is in hand. Discord shows
+  // this response under the command, so it is a word rather than "ok".
+  const done: DeliveryOutcome = judged.ack === undefined
+    ? plain(200, 'ok')
+    : { status: 200, body: judged.ack.body, contentType: judged.ack.contentType };
 
   // A redelivery. Acknowledged so the platform stops retrying, and not acted
   // on, because somebody already did.
   if (!await channels.claimDelivery(row._id, message.messageRef)) {
-    return plain(200, 'ok');
+    return done;
   }
 
   await channels.recordDelivery(row._id);
@@ -165,7 +176,8 @@ export async function handleDelivery(
    */
   try {
     if (row.status !== 'connected') {
-      return await completeHandshake(channels, row, message, repos);
+      await completeHandshake(channels, row, message, repos);
+      return done;
     }
 
     // The connection is bound to ONE chat. A bot token that has leaked is a bot
@@ -173,7 +185,7 @@ export async function handleDelivery(
     // workspace's model budget and every credential its agent can reach.
     if (row.verifiedChatRef !== null && row.verifiedChatRef !== message.chatRef) {
       await reply(row, message.chatRef, 'This bot is already connected to another chat.', repos);
-      return plain(200, 'ok');
+      return done;
     }
 
     // A link code is answered and goes no further: it is not a message for
@@ -182,7 +194,7 @@ export async function handleDelivery(
     if (link !== undefined) {
       await reply(row, message.chatRef, link.text, repos);
       console.log(JSON.stringify({ at: 'channel-inbound', channel: row._id, link: link.linked ? 'linked' : 'refused' }));
-      return plain(200, 'ok');
+      return done;
     }
 
     /*
@@ -195,7 +207,7 @@ export async function handleDelivery(
      * answer makes no sense.
      */
     const heard = await hear(handle.db, row, message, repos);
-    if (heard === undefined) return plain(200, 'ok');
+    if (heard === undefined) return done;
 
     // "typing…" from the moment the message lands, so the wait for the
     // executor to pick the run up is not a silence. The executor keeps it up.
@@ -207,7 +219,7 @@ export async function handleDelivery(
       at: 'channel-inbound', channel: row._id, ...(runId !== undefined ? { runId } : { started: false }),
     }));
 
-    return plain(200, 'ok');
+    return done;
   } catch (caught) {
     await channels.releaseDelivery(row._id, message.messageRef).catch(() => undefined);
     await channels.recordFailure(
@@ -233,7 +245,7 @@ async function completeHandshake(
   row: ChannelDoc,
   message: InboundMessage,
   repos: Repos,
-): Promise<DeliveryOutcome> {
+): Promise<void> {
   const offered = offeredCode(message.text);
   const claimed = await channels.claim(row._id, offered, message.chatRef);
 
@@ -243,7 +255,7 @@ async function completeHandshake(
       'That code is not right, or it has expired. Open the integrations page for a new one.',
       repos,
     );
-    return plain(200, 'ok');
+    return;
   }
 
   await reply(
@@ -251,7 +263,6 @@ async function completeHandshake(
     'Connected. This chat is yours now — say anything and your agent will answer.',
     repos,
   );
-  return plain(200, 'ok');
 }
 
 /**

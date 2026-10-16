@@ -12,7 +12,9 @@
  * What each one can do is limited by what the platform offers a server that does
  * not hold a socket open. Telegram and Slack push to a URL, so those are real
  * conversations. Discord only pushes interactions, so it is a slash command —
- * stated here rather than discovered by someone whose DM went unanswered.
+ * stated here rather than discovered by someone whose DM went unanswered. On
+ * all three the assistant asks with buttons, shows pictures and clips, and
+ * rewrites its reply as it writes.
  */
 import type { CatalogEntry } from './types';
 
@@ -61,7 +63,7 @@ const DISCORD: CatalogEntry = {
   kind: 'channel',
   category: 'Chat',
   name: 'Discord',
-  summary: 'Ask your agent from any Discord channel with a /hive command.',
+  summary: 'Ask your agent from any Discord channel, or its DMs, with the /hive command. It answers with buttons, pictures and clips.',
   setup: 'bot_token',
   accent: '#5865F2',
   docs: 'https://discord.com/developers/docs/interactions/overview',
@@ -91,12 +93,13 @@ const DISCORD: CatalogEntry = {
     {
       title: 'Invite it where you want it',
       body: 'Under OAuth2 → URL Generator, tick "bot" and "applications.commands", then ' +
-        '"Send Messages". Open the URL it builds and pick a server.',
+        '"Send Messages" and "Embed Links". Open the URL it builds and pick a server. ' +
+        'The /hive command is created for you the moment you connect.',
     },
   ],
   scopes: [
     { label: 'Receive the /hive command wherever it is invited', scope: 'applications.commands', writes: false },
-    { label: 'Send messages in those channels', scope: 'bot:send_messages', writes: true },
+    { label: 'Send messages, buttons, pictures and clips in those channels', scope: 'bot:send_messages', writes: true },
   ],
 };
 
@@ -105,7 +108,7 @@ const SLACK: CatalogEntry = {
   kind: 'channel',
   category: 'Chat',
   name: 'Slack',
-  summary: 'Connect a Slack workspace for direct messages and channel mentions.',
+  summary: 'DM your agent in Slack, or mention it in a channel. Approve with a button, send a voice clip, get the picture back.',
   setup: 'bot_token',
   accent: '#611F69',
   docs: 'https://api.slack.com/quickstart',
@@ -117,8 +120,9 @@ const SLACK: CatalogEntry = {
     },
     {
       title: 'Give it the scopes it needs',
-      body: 'Under OAuth & Permissions → Bot Token Scopes, add chat:write, im:history ' +
-        'and app_mentions:read. Fewer than these and it cannot hold a conversation.',
+      body: 'Under OAuth & Permissions → Bot Token Scopes, add chat:write, im:history, ' +
+        'app_mentions:read, files:read and files:write. The first three are the ' +
+        'conversation; the last two are voice clips in and pictures and clips out.',
     },
     {
       title: 'Install it and copy the bot token',
@@ -136,10 +140,15 @@ const SLACK: CatalogEntry = {
         'you after connecting, then subscribe to message.im and app_mention. Slack ' +
         'checks the URL by challenging it, so it saves only if the connection works.',
     },
+    {
+      title: 'Turn on buttons',
+      body: 'Under Interactivity & Shortcuts, switch interactivity on and paste the same ' +
+        'request URL. That is how a press on Approve reaches your assistant.',
+    },
   ],
   scopes: [
-    { label: 'Read direct messages and mentions', scope: 'im:history, app_mentions:read', writes: false },
-    { label: 'Post messages as the bot', scope: 'chat:write', writes: true },
+    { label: 'Read direct messages, mentions and voice clips', scope: 'im:history, app_mentions:read, files:read', writes: false },
+    { label: 'Post messages, buttons, pictures and clips as the bot', scope: 'chat:write, files:write', writes: true },
   ],
 };
 

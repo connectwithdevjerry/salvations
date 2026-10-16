@@ -471,3 +471,243 @@ describe('slack', () => {
     expect(new ChannelError('slack', 'x').channelId).toBe('slack');
   });
 });
+
+describe('discord as a teammate', () => {
+  const { publicKey, privateKey } = generateKeyPairSync('ed25519');
+  const raw = publicKey.export({ format: 'der', type: 'spki' }).subarray(12).toString('hex');
+  const context = { webhookUrl: 'https://example.test/d', webhookSecret: raw };
+  const signed = (body: string, timestamp = '1700000000') =>
+    new Headers({
+      'x-signature-ed25519': signEd25519(null, Buffer.from(timestamp + body), privateKey).toString('hex'),
+      'x-signature-timestamp': timestamp,
+    });
+
+  /** A fetch that answers each call in turn and records them. */
+  function sequence(answers: readonly { body?: unknown; status?: number }[]) {
+    const calls: { url: string; init: RequestInit }[] = [];
+    let n = 0;
+    const impl = (async (url: string | URL | Request, init: RequestInit = {}) => {
+      calls.push({ url: String(url), init });
+      const answer = answers[n] ?? answers[answers.length - 1] ?? {};
+      n += 1;
+      const status = answer.status ?? 200;
+      return new Response(status === 204 ? null : JSON.stringify(answer.body ?? {}), {
+        status, headers: { 'content-type': 'application/json' },
+      });
+    }) as unknown as typeof fetch;
+    return { impl, calls };
+  }
+
+  it('creates the /hive command on the application when registered', async () => {
+    const { impl, calls } = sequence([{ body: { id: 'app_1' } }, { body: { id: 'cmd_1' } }]);
+    await discordAdapter.register('tok', context, impl);
+    expect(calls[0]?.url).toContain('/oauth2/applications/@me');
+    expect(calls[1]?.url).toContain('/applications/app_1/commands');
+    const command = JSON.parse(String(calls[1]?.init.body)) as { name: string; options: { name: string; required: boolean }[]; contexts: number[] };
+    expect(command.name).toBe('hive');
+    expect(command.options[0]).toMatchObject({ name: 'message', required: true });
+    // In a server and in the bot's DMs.
+    expect(command.contexts).toEqual([0, 1]);
+  });
+
+  it('answers a command in the response, so Discord never says the app did not respond', () => {
+    const body = JSON.stringify({
+      type: 2, id: 'int_1', channel_id: 'chan_1',
+      member: { user: { id: 'u1', username: 'ada' } },
+      data: { options: [{ name: 'message', value: 'hello' }] },
+    });
+    const result = discordAdapter.receive(body, signed(body), context);
+    expect(result.kind).toBe('message');
+    if (result.kind !== 'message') return;
+    expect(result.ack?.contentType).toBe('application/json');
+    expect(JSON.parse(result.ack?.body ?? '{}')).toEqual({ type: 4, data: { content: 'On it.' } });
+  });
+
+  it('reads a button press, with who pressed and what it carried', () => {
+    const body = JSON.stringify({
+      type: 3, id: 'int_9', token: 'itok', channel_id: 'chan_1',
+      user: { id: 'u1', username: 'ada' },
+      message: { id: 'msg_5' },
+      data: { custom_id: 'a:apr_1:y' },
+    });
+    expect(discordAdapter.receive(body, signed(body), context)).toEqual({
+      kind: 'choice',
+      choice: {
+        chatRef: 'chan_1', senderRef: 'u1', senderLabel: '@ada', data: 'a:apr_1:y',
+        callbackRef: 'int_9', messageRef: 'msg_5', deliveryRef: 'press:int_9',
+      },
+    });
+  });
+
+  it('settles a press in the response: the message rewritten without its buttons', () => {
+    const ack = discordAdapter.ackChoice?.({
+      chatRef: 'c', senderRef: 'u', senderLabel: '@u', data: 'd', callbackRef: 'i', messageRef: 'm', deliveryRef: 'press:i',
+    }, 'Approved. Carrying on.');
+    expect(JSON.parse(ack?.body ?? '{}')).toEqual({ type: 7, data: { content: 'Approved. Carrying on.', components: [] } });
+  });
+
+  it('sends the question with buttons and hands back the message', async () => {
+    const { impl, calls } = sequence([{ body: { id: 'msg_7' } }]);
+    const ref = await discordAdapter.sendChoices?.('tok', 'chan_1', 'Go ahead?', [
+      { label: 'Approve', data: 'a:1:y' }, { label: 'Not now', data: 'a:1:n' },
+    ], impl);
+    expect(ref).toBe('msg_7');
+    const sent = JSON.parse(String(calls[0]?.init.body)) as { content: string; components: { components: { label: string; custom_id: string; style: number }[] }[] };
+    expect(sent.content).toBe('Go ahead?');
+    expect(sent.components[0]?.components.map((b) => [b.label, b.custom_id, b.style])).toEqual([
+      ['Approve', 'a:1:y', 1], ['Not now', 'a:1:n', 2],
+    ]);
+  });
+
+  it('shows a picture as an embed and a clip as its link', async () => {
+    const { impl, calls } = sequence([{ body: { id: 'm1' } }, { body: { id: 'm2' } }]);
+    await discordAdapter.sendMedia?.('tok', 'chan_1', { kind: 'image', url: 'https://h/i.png' }, impl);
+    await discordAdapter.sendMedia?.('tok', 'chan_1', { kind: 'video', url: 'https://h/v.mp4', caption: 'The clip' }, impl);
+    expect(JSON.parse(String(calls[0]?.init.body))).toEqual({ embeds: [{ image: { url: 'https://h/i.png' } }] });
+    expect(JSON.parse(String(calls[1]?.init.body))).toEqual({ content: 'The clip\nhttps://h/v.mp4' });
+  });
+
+  it('types, and survives the empty 204 Discord answers with', async () => {
+    const { impl, calls } = sequence([{ status: 204 }]);
+    await expect(discordAdapter.indicate?.('tok', 'chan_1', impl)).resolves.toBeUndefined();
+    expect(calls[0]?.url).toContain('/channels/chan_1/typing');
+  });
+
+  it('posts a draft and rewrites it in place', async () => {
+    const { impl, calls } = sequence([{ body: { id: 'm1' } }, { body: { id: 'm1' } }]);
+    expect(await discordAdapter.sendDraft?.('tok', 'chan_1', 'Thinking', impl)).toBe('m1');
+    await discordAdapter.editDraft?.('tok', 'chan_1', 'm1', 'Done.', impl);
+    expect(calls[1]?.url).toContain('/channels/chan_1/messages/m1');
+    expect(calls[1]?.init.method).toBe('PATCH');
+  });
+});
+
+describe('slack as a teammate', () => {
+  const secret = 'signing-secret';
+  const context = { webhookUrl: 'https://example.test/s', webhookSecret: secret };
+  const signed = (body: string, contentType = 'application/json') => {
+    const timestamp = Math.floor(Date.now() / 1000);
+    const digest = createHmac('sha256', secret).update(`v0:${timestamp}:${body}`).digest('hex');
+    return new Headers({
+      'x-slack-signature': `v0=${digest}`,
+      'x-slack-request-timestamp': String(timestamp),
+      'content-type': contentType,
+    });
+  };
+
+  function sequence(answers: readonly unknown[]) {
+    const calls: { url: string; init: RequestInit }[] = [];
+    let n = 0;
+    const impl = (async (url: string | URL | Request, init: RequestInit = {}) => {
+      calls.push({ url: String(url), init });
+      const answer = answers[n] ?? answers[answers.length - 1] ?? { ok: true };
+      n += 1;
+      return answer instanceof Response ? answer : new Response(JSON.stringify(answer), { status: 200, headers: { 'content-type': 'application/json' } });
+    }) as unknown as typeof fetch;
+    return { impl, calls };
+  }
+
+  it('reads a button press from the form Slack posts, signed over the raw form', () => {
+    const payload = JSON.stringify({
+      type: 'block_actions',
+      user: { id: 'U1', username: 'ada' },
+      channel: { id: 'D1' },
+      message: { ts: '1.5' },
+      actions: [{ action_id: 'choice_0', value: 'a:apr_1:y' }],
+      trigger_id: 'trig_1',
+      response_url: 'https://hooks.slack.com/actions/x',
+    });
+    const body = `payload=${encodeURIComponent(payload)}`;
+    expect(slackAdapter.receive(body, signed(body, 'application/x-www-form-urlencoded'), context)).toEqual({
+      kind: 'choice',
+      choice: {
+        chatRef: 'D1', senderRef: 'U1', senderLabel: '@ada', data: 'a:apr_1:y',
+        callbackRef: 'https://hooks.slack.com/actions/x', messageRef: '1.5', deliveryRef: 'press:trig_1',
+      },
+    });
+  });
+
+  it('sends the question as blocks with buttons and hands back the ts', async () => {
+    const { impl, calls } = sequence([{ ok: true, ts: '2.1' }]);
+    const ref = await slackAdapter.sendChoices?.('xoxb', 'D1', 'Go ahead?', [
+      { label: 'Approve', data: 'a:1:y' }, { label: 'Not now', data: 'a:1:n' },
+    ], impl);
+    expect(ref).toBe('2.1');
+    const sent = JSON.parse(String(calls[0]?.init.body)) as { blocks: { type: string; elements?: { value: string; style?: string }[] }[] };
+    expect(sent.blocks.map((b) => b.type)).toEqual(['section', 'actions']);
+    expect(sent.blocks[1]?.elements?.map((e) => [e.value, e.style])).toEqual([['a:1:y', 'primary'], ['a:1:n', undefined]]);
+  });
+
+  it('settles a press by rewriting the message without its buttons', async () => {
+    const { impl, calls } = sequence([{ ok: true }]);
+    await slackAdapter.settleChoice?.('xoxb', {
+      chatRef: 'D1', senderRef: 'U1', senderLabel: '@ada', data: 'd', callbackRef: '', messageRef: '1.5', deliveryRef: 'press:t',
+    }, 'Approved. Carrying on.', impl);
+    expect(calls[0]?.url).toContain('/chat.update');
+    const sent = JSON.parse(String(calls[0]?.init.body)) as { ts: string; blocks: { type: string }[] };
+    expect(sent.ts).toBe('1.5');
+    expect(sent.blocks.map((b) => b.type)).toEqual(['section']);
+  });
+
+  it('reads a voice clip, which arrives as a file share', () => {
+    const body = JSON.stringify({
+      type: 'event_callback',
+      event: {
+        type: 'message', subtype: 'file_share', channel: 'D1', user: 'U1', text: '', ts: '3.1',
+        files: [{ id: 'F1', mimetype: 'audio/mp4', url_private_download: 'https://files.slack.com/f/F1/download', size: 1234, duration_ms: 2500 }],
+      },
+    });
+    expect(slackAdapter.receive(body, signed(body), context)).toEqual({
+      kind: 'message',
+      message: {
+        chatRef: 'D1', senderRef: 'U1', senderLabel: 'U1', text: '', messageRef: '3.1',
+        audio: { fileRef: 'https://files.slack.com/f/F1/download', mimeType: 'audio/mp4', durationSeconds: 2.5, sizeBytes: 1234 },
+      },
+    });
+  });
+
+  it('fetches the clip with the bot token, and only from Slack', async () => {
+    const { impl, calls } = sequence([new Response(new Uint8Array([1, 2, 3]), { status: 200 })]);
+    const bytes = await slackAdapter.fetchAudio?.('xoxb', { fileRef: 'https://files.slack.com/f/F1/download', mimeType: 'audio/mp4' }, impl);
+    expect(bytes?.byteLength).toBe(3);
+    expect(new Headers(calls[0]?.init.headers).get('authorization')).toBe('Bearer xoxb');
+
+    await expect(slackAdapter.fetchAudio?.('xoxb', { fileRef: 'https://evil.test/steal', mimeType: 'audio/mp4' }, impl))
+      .rejects.toThrow(/not on Slack/);
+  });
+
+  it('shows a picture as an image block', async () => {
+    const { impl, calls } = sequence([{ ok: true }]);
+    await slackAdapter.sendMedia?.('xoxb', 'D1', { kind: 'image', url: 'https://h/i.png', caption: 'The dish' }, impl);
+    const sent = JSON.parse(String(calls[0]?.init.body)) as { blocks: { type: string; image_url?: string }[] };
+    expect(sent.blocks.map((b) => b.type)).toEqual(['section', 'image']);
+    expect(sent.blocks[1]?.image_url).toBe('https://h/i.png');
+  });
+
+  it('uploads a clip in Slack\'s three steps so it plays in the channel', async () => {
+    const { impl, calls } = sequence([
+      new Response(new Uint8Array([9, 9]), { status: 200, headers: { 'content-type': 'video/mp4' } }),
+      { ok: true, upload_url: 'https://files.slack.com/upload/v1/abc', file_id: 'F9' },
+      new Response('OK', { status: 200 }),
+      { ok: true },
+    ]);
+    await slackAdapter.sendMedia?.('xoxb', 'D1', { kind: 'video', url: 'https://h/v.mp4', caption: 'The clip' }, impl);
+    expect(calls.map((c) => c.url)).toEqual([
+      'https://h/v.mp4',
+      'https://slack.com/api/files.getUploadURLExternal',
+      'https://files.slack.com/upload/v1/abc',
+      'https://slack.com/api/files.completeUploadExternal',
+    ]);
+    // The ticket is asked for as a form, which is the one shape that method takes.
+    expect(String(calls[1]?.init.body)).toBe('filename=clip.mp4&length=2');
+    expect(JSON.parse(String(calls[3]?.init.body))).toMatchObject({ channel_id: 'D1', files: [{ id: 'F9' }], initial_comment: 'The clip' });
+  });
+
+  it('posts a draft and rewrites it in place', async () => {
+    const { impl, calls } = sequence([{ ok: true, ts: '4.0' }, { ok: true }]);
+    expect(await slackAdapter.sendDraft?.('xoxb', 'D1', 'Thinking', impl)).toBe('4.0');
+    await slackAdapter.editDraft?.('xoxb', 'D1', '4.0', 'Done.', impl);
+    expect(calls[1]?.url).toContain('/chat.update');
+    expect(JSON.parse(String(calls[1]?.init.body))).toEqual({ channel: 'D1', ts: '4.0', text: 'Done.' });
+  });
+});

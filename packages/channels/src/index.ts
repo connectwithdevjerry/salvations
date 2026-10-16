@@ -8,8 +8,8 @@
  */
 export * from './port';
 export { telegramAdapter, chunk, SECRET_HEADER } from './telegram';
-export { discordAdapter, split } from './discord';
-export { slackAdapter, MAX_SKEW_SECONDS } from './slack';
+export { discordAdapter, split, COMMAND_NAME, COMMAND_ACK } from './discord';
+export { slackAdapter, MAX_SKEW_SECONDS, SCOPES as SLACK_SCOPES } from './slack';
 
 import type { ChannelAdapter } from './port';
 import { telegramAdapter } from './telegram';

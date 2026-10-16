@@ -8,7 +8,7 @@
 export * from './types';
 export { CHANNELS } from './channels';
 export { INTEGRATIONS } from './integrations';
-export { ROLES, CORE_ROLE_IDS, TEAM_GROUP, roleById, roleSystemPrompt, type AssistantRole, type RoleRoutine } from './roles';
+export { ROLES, CORE_ROLE_IDS, TEAM_GROUP, DROP_AND_GO, roleById, roleSystemPrompt, dropAndGoFor, dropAndGoSection, type AssistantRole, type RoleRoutine } from './roles';
 export * from './plans';
 export * from './prompt';
 export * from './models';

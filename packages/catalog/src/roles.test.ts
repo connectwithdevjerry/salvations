@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CORE_ROLE_IDS, ROLES, roleById, roleSystemPrompt } from './roles';
+import { CORE_ROLE_IDS, DROP_AND_GO, ROLES, dropAndGoFor, roleById, roleSystemPrompt } from './roles';
 import { isDefaultSystemPrompt } from './prompt';
 
 describe('the team', () => {
@@ -10,7 +10,21 @@ describe('the team', () => {
     for (const role of ROLES) {
       expect(role.starters).toHaveLength(3);
       expect(role.duties.length).toBeGreaterThan(100);
+      // Every role says what a bare drop means for it: a link, a name, a photo.
+      expect(role.dropAndGo.length).toBeGreaterThan(80);
     }
+  });
+
+  it('owes an older assistant the drop-and-go rule, with its role\'s examples', () => {
+    const old = 'You are Finance, the assistant of Okoro Trading.\n\n## Your role: Finance\n\nYou look after the money side.';
+    const extra = dropAndGoFor(old);
+    expect(extra).toContain(DROP_AND_GO);
+    expect(extra).toContain('receipt');
+    // A new assistant already carries it.
+    const fresh = roleSystemPrompt(roleById('finance')!, { assistantName: 'Finance', businessName: 'Okoro Trading' });
+    expect(dropAndGoFor(fresh)).toBeUndefined();
+    // No role heading: the shared rule alone.
+    expect(dropAndGoFor('You are a helpful assistant.')).toBe(DROP_AND_GO);
   });
 
   it('writes the role under the identity and above the shared conduct', () => {

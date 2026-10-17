@@ -33,6 +33,10 @@ export {
   type OpenClawSource, type OpenClawAgent,
 } from './openclaw';
 export {
+  createMetaPublishingServer, SERVER_NAME as META_PUBLISHING_SERVER, MAX_CAPTION as META_MAX_CAPTION,
+  type MetaPublishingSource, type SocialAccount, type PublishedPost, type PendingPost,
+} from './meta-publishing';
+export {
   createStudioServer, SERVER_NAME as STUDIO_SERVER, MAX_PROMPT as STUDIO_MAX_PROMPT,
   type StudioSource, type MediaShape,
 } from './studio';

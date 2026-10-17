@@ -12,7 +12,7 @@
  * would let it ask.
  */
 import {
-  createConversationServer, createGoogleWorkspaceServer, createKnowledgeServer, createMemoryServer, createOpenClawServer, createStudioServer, createWebServer, linkedPair,
+  createConversationServer, createGoogleWorkspaceServer, createKnowledgeServer, createMemoryServer, createMetaPublishingServer, createOpenClawServer, createStudioServer, createWebServer, linkedPair,
   type ConversationSource, type ServerContext,
 } from '@salvations/servers';
 import { ConversationRepository, toMessage } from '@salvations/db';
@@ -24,6 +24,7 @@ import { createWebSource } from './web-service';
 import { createMemorySource } from './memory-service';
 import { createKnowledgeSource } from './knowledge-service';
 import { GOOGLE_WORKSPACE_ALIAS, createGoogleSource } from './google-workspace';
+import { META_PUBLISHING_ALIAS, createMetaSource } from './meta-publishing';
 import { OPENCLAW_ALIAS, createOpenClawSource } from './openclaw';
 import { nativeAliasMatches } from './native-alias';
 import { ScopedDb, type McpServerBindingDoc } from '@salvations/db';
@@ -65,6 +66,19 @@ async function build(alias: string, input: OpenerInput, bindingId?: string) {
     // two Google accounts knows which inbox it is about to search.
     const account = await accountLabel(input.database, workspaceId, bindingId);
     return createGoogleWorkspaceServer(input.context, createGoogleSource({
+      database: input.database,
+      workspaceId,
+      bindingId,
+      userId: input.createdBy,
+    }), account !== undefined ? { account } : {});
+  }
+
+  if (nativeAliasMatches(alias, META_PUBLISHING_ALIAS) && bindingId !== undefined) {
+    // The person's Facebook pages and Instagram accounts, under the grant
+    // filed for this binding. Named like the Google account, for the same
+    // reason: two connections must read as two.
+    const account = await accountLabel(input.database, workspaceId, bindingId);
+    return createMetaPublishingServer(input.context, createMetaSource({
       database: input.database,
       workspaceId,
       bindingId,

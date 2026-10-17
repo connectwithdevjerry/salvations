@@ -14,6 +14,7 @@ import { errorResponse, ok } from '@/lib/http';
 import { workspaceRoute } from '@/lib/route';
 import { actorIdOf } from '@/lib/principal';
 import { revokeGoogleTokens } from '@/lib/google-workspace';
+import { revokeMetaTokens } from '@/lib/meta-publishing';
 
 export const runtime = 'nodejs';
 
@@ -31,12 +32,15 @@ export const DELETE = workspaceRoute<{ bindingId: string }>('mcp:install', async
   const connections = scoped.collection<OAuthConnectionDoc>('oauthConnections');
   const rows = await connections.find({ bindingId: binding._id } as never);
   let revoked = 0;
-  if (server?.catalogId === 'google_workspace') {
+  const revoke = server?.catalogId === 'google_workspace' ? revokeGoogleTokens
+    : server?.catalogId === 'meta_publishing' ? revokeMetaTokens
+      : undefined;
+  if (revoke !== undefined) {
     for (const row of rows) {
       try {
-        if (await revokeGoogleTokens(ctx.database, ctx.workspaceId, row.scopeKey)) revoked += 1;
+        if (await revoke(ctx.database, ctx.workspaceId, row.scopeKey)) revoked += 1;
       } catch {
-        // Already revoked, or Google unreachable: the row goes either way.
+        // Already revoked, or the vendor unreachable: the row goes either way.
       }
     }
   }

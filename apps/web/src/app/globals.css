@@ -1602,6 +1602,11 @@ td.danger { color: var(--danger); }
 .mock-voice-log span { color: #5b7aa6; text-transform: uppercase; font-size: 10px; letter-spacing: 0.1em; padding-top: 3px; }
 .mock-voice-log p { margin: 0; }
 .mock-voice-idle { color: #5b7aa6; }
+/* A long list kept to a window: it scrolls, the page does not. */
+.scroll-list { max-height: 420px; overflow: auto; border: 1px solid var(--border); border-radius: 12px; padding: 10px; overscroll-behavior: contain; }
+.scroll-list > .card { margin: 0 0 10px; }
+.scroll-list > .card:last-child { margin-bottom: 0; }
+.scroll-list > table thead th { position: sticky; top: -10px; background: var(--bg); z-index: 1; }
 .mock-voice-core { transition: transform 80ms linear; }
 .live-voice.listening .mock-voice-ring { animation: spin 1.6s linear infinite; }
 .live-voice.speaking .mock-voice-ring { border-top-color: #60a5fa; border-right-color: #60a5fa; }

@@ -15,6 +15,7 @@ import { workspaceRoute } from '@/lib/route';
 import { actorIdOf } from '@/lib/principal';
 import { oauthProviderFor } from '@/lib/mcp-auth';
 import { beginGoogleConsent, googleOAuthClient, googleStore } from '@/lib/google-workspace';
+import { beginMetaConsent, metaOAuthClient, metaStore } from '@/lib/meta-publishing';
 import { discoverAndRecord } from '@/lib/discovery-service';
 import { OAUTH_CALLBACK_PATH, OAUTH_PENDING_COOKIE, OAUTH_PENDING_COOKIE_SECONDS } from '@/lib/oauth-config';
 import { secureCookies } from '@/lib/session';
@@ -49,6 +50,21 @@ export const POST = workspaceRoute<{ bindingId: string }>('mcp:install', async (
     }
     const begun = beginGoogleConsent(client);
     await googleStore(ctx.database, ctx.workspaceId).savePending(scopeKeyString(scope), {
+      state: begun.state, codeVerifier: begun.codeVerifier, authorizationUrl: begun.authorizationUrl, createdAt: Date.now(),
+    });
+    return withPendingCookie(ok({ status: 'pending_auth', authorizationUrl: begun.authorizationUrl }), {
+      workspaceId: ctx.workspaceId, bindingId: binding._id, ...(userId !== undefined ? { userId } : {}),
+    });
+  }
+
+  if (server?.transport === 'in_process' && server.catalogId === 'meta_publishing') {
+    // Meta's consent, with this deployment's Meta app.
+    const client = metaOAuthClient();
+    if (client === undefined) {
+      return errorResponse(503, 'not_configured', 'This deployment has no Meta app configured. Set META_APP_ID and META_APP_SECRET.');
+    }
+    const begun = beginMetaConsent(client);
+    await metaStore(ctx.database, ctx.workspaceId).savePending(scopeKeyString(scope), {
       state: begun.state, codeVerifier: begun.codeVerifier, authorizationUrl: begun.authorizationUrl, createdAt: Date.now(),
     });
     return withPendingCookie(ok({ status: 'pending_auth', authorizationUrl: begun.authorizationUrl }), {

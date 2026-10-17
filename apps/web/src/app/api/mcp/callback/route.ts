@@ -20,6 +20,8 @@ import { oauthProviderFor, oauthStore } from '@/lib/mcp-auth';
 import { discoverAndRecord } from '@/lib/discovery-service';
 import { firstPartyOpener } from '@/lib/first-party-open';
 import { GOOGLE_ISSUER, exchangeGoogleCode, googleOAuthClient, googleStore } from '@/lib/google-workspace';
+import { META_ISSUER, exchangeMetaCode, metaOAuthClient, metaStore } from '@/lib/meta-publishing';
+import type { MongoOAuthCredentialStore } from '@salvations/db';
 import { OAUTH_CALLBACK_PATH, OAUTH_PENDING_COOKIE } from '@/lib/oauth-config';
 import { env } from '@/lib/env';
 import type { PendingConsent } from '@/app/api/workspaces/[workspaceId]/mcp/bindings/[bindingId]/authorize/route';
@@ -97,7 +99,23 @@ export async function GET(request: Request): Promise<Response> {
     : userScope(pending.workspaceId, binding._id, pending.userId);
 
   if (server?.transport === 'in_process' && server.catalogId === 'google_workspace') {
-    return finishGoogle(request, database, pending, binding, scope, { code, state });
+    const client = googleOAuthClient();
+    return finishNative(database, pending, binding, scope, { code, state }, {
+      store: googleStore(database, pending.workspaceId),
+      issuer: GOOGLE_ISSUER,
+      exchange: client === undefined ? undefined : (answer, filed) => exchangeGoogleCode(client, answer, filed.codeVerifier),
+      label: 'google',
+    });
+  }
+
+  if (server?.transport === 'in_process' && server.catalogId === 'meta_publishing') {
+    const client = metaOAuthClient();
+    return finishNative(database, pending, binding, scope, { code, state }, {
+      store: metaStore(database, pending.workspaceId),
+      issuer: META_ISSUER,
+      exchange: client === undefined ? undefined : (answer) => exchangeMetaCode(client, answer),
+      label: 'meta',
+    });
   }
 
   const serverUrl = server?.url;
@@ -136,34 +154,41 @@ export async function GET(request: Request): Promise<Response> {
 }
 
 /**
- * Back from Google. The state must be the one filed when consent began, the
- * code is exchanged with our client secret and the PKCE verifier, and the
- * tokens go into the store under the binding's scope. Then the adapter is
- * opened once to record what it offers, exactly as a remote server would be.
+ * Back from a vendor whose adapter is ours (Google, Meta). The state must
+ * be the one filed when consent began, the code is exchanged by the
+ * vendor's own rule, and the tokens go into the store under the binding's
+ * scope. Then the adapter is opened once to record what it offers, exactly
+ * as a remote server would be.
  */
-async function finishGoogle(
-  request: Request,
+interface NativeFinish {
+  readonly store: MongoOAuthCredentialStore;
+  readonly issuer: string;
+  /** Absent when the deployment has no client for this vendor. */
+  readonly exchange: ((code: string, filed: { codeVerifier: string }) => Promise<unknown>) | undefined;
+  readonly label: string;
+}
+
+async function finishNative(
   database: Awaited<ReturnType<typeof db>>['db'],
   pending: PendingConsent,
   binding: McpServerBindingDoc,
   scope: ConnectionScopeKey,
   answer: { code: string; state: string },
+  vendor: NativeFinish,
 ): Promise<Response> {
-  const store = googleStore(database, pending.workspaceId);
   const key = scopeKeyString(scope);
-  const filed = await store.loadPending(key);
+  const filed = await vendor.store.loadPending(key);
   if (filed === undefined || filed.state !== answer.state) {
     return back(pending.workspaceId, { error: 'mcp_failed' }, binding.agentId);
   }
-  const client = googleOAuthClient();
-  if (client === undefined) return back(pending.workspaceId, { error: 'mcp_failed' }, binding.agentId);
+  if (vendor.exchange === undefined) return back(pending.workspaceId, { error: 'mcp_failed' }, binding.agentId);
 
   try {
-    const tokens = await exchangeGoogleCode(client, answer.code, filed.codeVerifier);
-    await store.saveTokens(key, GOOGLE_ISSUER, tokens);
-    await store.clearPending(key);
+    const tokens = await vendor.exchange(answer.code, filed);
+    await vendor.store.saveTokens(key, vendor.issuer, tokens as Record<string, unknown>);
+    await vendor.store.clearPending(key);
   } catch (caught) {
-    console.error('[google callback]', caught instanceof Error ? caught.message : caught);
+    console.error(`[${vendor.label} callback]`, caught instanceof Error ? caught.message : caught);
     return back(pending.workspaceId, { error: 'mcp_failed' }, binding.agentId);
   }
 
@@ -183,7 +208,6 @@ async function finishGoogle(
     },
     refresh: true,
   });
-  void request;
   if (outcome.error !== undefined) {
     return back(pending.workspaceId, { error: 'mcp_discovery', alias: binding.alias, detail: outcome.error.slice(0, 240) }, binding.agentId);
   }

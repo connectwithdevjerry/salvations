@@ -492,6 +492,16 @@ Both were assessed and neither fits a request-shaped deployment, so neither is h
       drafts (Messages cannot edit).
 - [x] Approvals page: "Approve all" for the waiting tool calls, each its own decision on the
       server, questions that need an answer left alone.
+- [x] Instagram & Facebook publishing, a first-party server over Meta's Graph API on the
+      deployment's own Meta app (`META_APP_ID`/`META_APP_SECRET`): consent on Meta's screen,
+      short token traded for a sixty-day one, renewed by the sweep in its last week; pages and
+      linked Instagram accounts listed, posts to a page (text, link, picture, clip), Instagram
+      pictures and reels in Meta's two steps with the processing wait handed back as a creation
+      id. Every publishing tool is a non-idempotent write, so policy asks first. Marketing's
+      duties say to publish there once the person says yes. The callback's native finish is
+      shared between Google and Meta.
+- [x] Integrations tab: the capabilities awaiting review scroll inside a window, and the
+      approved list is folded behind "Show the N approved tools" with a filter.
 - [x] The front door's voice console is live: the browser's own speech recognition hears the
       visitor, a scripted brain (`landing-brain.ts`, keyword rules over this page's facts) answers,
       the browser reads it back. No key, no server, nothing sent anywhere, and the console says it is

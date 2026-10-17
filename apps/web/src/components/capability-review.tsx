@@ -38,6 +38,15 @@ export function CapabilityReview({
   onChanged?: () => void;
 }) {
   const [capabilities, setCapabilities] = useState<Capability[]>();
+  // The approved list is the long one, and it is not what the person came
+  // to do: it stays folded until asked for, and scrolls when it is.
+  const [showApproved, setShowApproved] = useState(false);
+  const [filter, setFilter] = useState('');
+  const matchesFilter = (capability: { canonicalName: string; description?: string | undefined }): boolean => {
+    const needle = filter.trim().toLowerCase();
+    if (needle === '') return true;
+    return capability.canonicalName.toLowerCase().includes(needle) || (capability.description ?? '').toLowerCase().includes(needle);
+  };
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string>();
   const [busy, setBusy] = useState(false);
@@ -85,6 +94,7 @@ export function CapabilityReview({
 
       {error !== undefined && <p className="error">{error}</p>}
 
+      {needsReview.length > 0 && <div className="scroll-list">
       {needsReview.map((capability) => (
         <div key={capability.id} className="card">
           <div className="row">
@@ -140,6 +150,7 @@ export function CapabilityReview({
           )}
         </div>
       ))}
+      </div>}
 
       {needsReview.length > 0 && (
         <button className="primary" disabled={busy || selected.size === 0} onClick={() => void approve()}>
@@ -148,12 +159,28 @@ export function CapabilityReview({
       )}
 
       {approved.length > 0 && (
-        <table style={{ marginTop: 20 }}>
+        <div className="row" style={{ marginTop: 20, gap: 10, flexWrap: 'wrap' }}>
+          <button type="button" onClick={() => setShowApproved((v) => !v)} aria-expanded={showApproved}>
+            {showApproved ? 'Hide' : 'Show'} the {approved.length} approved tool{approved.length === 1 ? '' : 's'}
+          </button>
+          {showApproved && (
+            <input
+              type="search" aria-label="Find a tool" placeholder="Find a tool"
+              style={{ flex: 1, minWidth: 160, maxWidth: 320 }}
+              value={filter} onChange={(e) => setFilter(e.target.value)}
+            />
+          )}
+        </div>
+      )}
+
+      {approved.length > 0 && showApproved && (
+        <div className="scroll-list" style={{ marginTop: 10 }}>
+        <table style={{ margin: 0 }}>
           <thead>
             <tr><th>Tool</th><th>Description</th><th>Approved</th></tr>
           </thead>
           <tbody>
-            {approved.map((capability) => (
+            {approved.filter(matchesFilter).map((capability) => (
               <tr key={capability.id}>
                 <td className="mono">{capability.canonicalName}</td>
                 <td className="muted">{capability.description ?? '—'}</td>
@@ -166,6 +193,7 @@ export function CapabilityReview({
             ))}
           </tbody>
         </table>
+        </div>
       )}
     </>
   );

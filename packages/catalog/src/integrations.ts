@@ -45,6 +45,46 @@ const GOOGLE_WORKSPACE: CatalogEntry = {
   ],
 };
 
+const META_PUBLISHING: CatalogEntry = {
+  id: 'meta_publishing',
+  kind: 'integration',
+  name: 'Instagram & Facebook',
+  summary: 'Post what marketing made: a picture and caption to Instagram, a post, picture or clip to a Facebook page. Each post waits for your yes.',
+  category: 'Design & content',
+  setup: 'oauth',
+  accent: '#E1306C',
+  docs: 'https://developers.facebook.com/docs/instagram-platform/content-publishing',
+  // Meta publishes no MCP server for the Graph API, so this one is ours:
+  // Facebook pages and Instagram professional accounts over the Graph API,
+  // authorised on Meta's own consent screen with the deployment's Meta app.
+  native: { alias: 'meta_publishing' },
+  steps: [
+    {
+      title: 'Have a Facebook page, and an Instagram professional account linked to it',
+      body: 'Instagram publishing works through the page an Instagram business or creator ' +
+        'account is linked to. Link them under the page\'s settings, or in Meta Business Suite.',
+      link: { label: 'Open Meta Business Suite', url: 'https://business.facebook.com/' },
+    },
+    {
+      title: 'Review what you are granting',
+      body: 'Every permission below is listed on Meta\'s own consent screen too. Tick the pages ' +
+        'and Instagram accounts the assistant may post to; untick the rest.',
+    },
+    {
+      title: 'Sign in and consent',
+      body: 'You will be sent to Facebook, and back here afterwards. The token stays on our ' +
+        'server; your password never reaches us at all.',
+    },
+  ],
+  scopes: [
+    { label: 'See the pages you manage', scope: 'pages_show_list', writes: false },
+    { label: 'Read a page\'s posts and engagement', scope: 'pages_read_engagement', writes: false },
+    { label: 'Post to your pages', scope: 'pages_manage_posts', writes: true },
+    { label: 'See the Instagram account linked to a page', scope: 'instagram_basic', writes: false },
+    { label: 'Post to that Instagram account', scope: 'instagram_content_publish', writes: true },
+  ],
+};
+
 /**
  * A self-hosted agent gateway: the person's own assistant, on their own
  * machine.
@@ -235,4 +275,4 @@ const VENDORS: readonly CatalogEntry[] = [
   vendor({ id: 'supabase', name: 'Supabase', summary: 'Databases, auth, storage and SQL.', category: 'Product & code', accent: '#3ECF8E', url: 'https://mcp.supabase.com/mcp', docs: 'https://supabase.com/docs/guides/getting-started/mcp', reads: 'Read projects and data', writes: 'Run SQL and change projects' }),
 ];
 
-export const INTEGRATIONS: readonly CatalogEntry[] = [GOOGLE_WORKSPACE, GITHUB, NOTION, LINEAR, ...VENDORS, AGENT_GATEWAY];
+export const INTEGRATIONS: readonly CatalogEntry[] = [GOOGLE_WORKSPACE, META_PUBLISHING, GITHUB, NOTION, LINEAR, ...VENDORS, AGENT_GATEWAY];

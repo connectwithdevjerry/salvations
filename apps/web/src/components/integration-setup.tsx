@@ -296,6 +296,24 @@ function GatewaySetup({
 export function NativeSetupNote({ entry }: { entry: CatalogEntry }) {
   const [origin, setOrigin] = useState('');
   useEffect(() => { setOrigin(window.location.origin); }, []);
+  if (entry.id === 'meta_publishing') {
+    return (
+      <div className="card" style={{ marginTop: 14 }}>
+        <strong>Before the first connection, in your Meta app</strong>
+        <ol className="steps-list" style={{ margin: '8px 0 0' }}>
+          <li>
+            Under Facebook Login for Business → Settings, add this valid OAuth redirect URI:
+            <div style={{ marginTop: 6 }}><Copyable label="Redirect URI" value={`${origin}/api/mcp/callback`} /></div>
+          </li>
+          <li>Add the Instagram product to the app, and set the app ID and secret on this deployment.</li>
+          <li>
+            While the app is in development mode, only its admins, developers and testers can connect.
+            Posting for anyone else needs App Review for the five permissions above.
+          </li>
+        </ol>
+      </div>
+    );
+  }
   if (entry.id !== 'google_workspace') return null;
   return (
     <div className="card" style={{ marginTop: 14 }}>

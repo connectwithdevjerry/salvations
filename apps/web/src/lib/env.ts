@@ -36,6 +36,17 @@ const schema = z.object({
   GOOGLE_WORKSPACE_CLIENT_SECRET: z.string().min(1).optional(),
 
   /**
+   * The Meta app behind the Instagram & Facebook integration.
+   *
+   * Optional. From developers.facebook.com: an app with Facebook Login for
+   * Business and the Instagram product on it, with <PUBLIC_BASE_URL>/api/mcp/callback
+   * among its valid OAuth redirect URIs. Without these the integration is
+   * listed and says what it needs.
+   */
+  META_APP_ID: z.string().min(1).optional(),
+  META_APP_SECRET: z.string().min(1).optional(),
+
+  /**
    * OAuth clients registered by hand with vendors whose MCP servers accept
    * neither a client metadata document nor dynamic registration (Asana,
    * HubSpot). JSON, keyed by the vendor's domain:
@@ -117,6 +128,12 @@ const schema = z.object({
   {
     message: 'Set both GOOGLE_WORKSPACE_CLIENT_ID and GOOGLE_WORKSPACE_CLIENT_SECRET, or neither.',
     path: ['GOOGLE_WORKSPACE_CLIENT_ID'],
+  },
+).refine(
+  (value) => (value.META_APP_ID === undefined) === (value.META_APP_SECRET === undefined),
+  {
+    message: 'Set both META_APP_ID and META_APP_SECRET, or neither.',
+    path: ['META_APP_ID'],
   },
 ).refine(
   (value) => (value.SMTP_URL === undefined) === (value.MAIL_FROM === undefined),

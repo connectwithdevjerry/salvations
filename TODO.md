@@ -500,6 +500,15 @@ Both were assessed and neither fits a request-shaped deployment, so neither is h
       id. Every publishing tool is a non-idempotent write, so policy asks first. Marketing's
       duties say to publish there once the person says yes. The callback's native finish is
       shared between Google and Meta.
+- [x] LinkedIn publishing, a first-party server over the Posts API on the deployment's own
+      LinkedIn app (`LINKEDIN_CLIENT_ID`/`SECRET`, `LINKEDIN_SCOPES` for page posting): consent on
+      LinkedIn's screen, sixty-day tokens with refresh where the app has it, the sweep renewing in
+      the last week; the person and the pages they administer as authors; a post with words, a
+      link, or a picture uploaded in LinkedIn's two steps. No clips yet (multi-part upload).
+- [x] Shopify, a first-party server over the Admin GraphQL API with a custom-app token the
+      merchant makes in their own admin (the gateway-token form, relabelled): search, read, create
+      as a draft with price and picture, update, add a picture, put on sale, recent orders. The
+      store is asked who it is before anything is stored.
 - [x] Integrations tab: the capabilities awaiting review scroll inside a window, and the
       approved list is folded behind "Show the N approved tools" with a filter.
 - [x] The front door's voice console is live: the browser's own speech recognition hears the

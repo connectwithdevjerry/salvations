@@ -196,6 +196,12 @@ function AccountCard({
  * to pressing the button and not a surprise in a chat. Reconnecting with a
  * new token or address is the same form again.
  */
+/** What the address and the token are called, per app that takes them. */
+const TOKEN_FORM: Readonly<Record<string, { url: string; urlPlaceholder: string; token: string; checking: string }>> = {
+  shopify: { url: 'Shop domain', urlPlaceholder: 'my-store.myshopify.com', token: 'Admin API access token', checking: 'Asking the store…' },
+};
+const GATEWAY_FORM = { url: 'Gateway address', urlPlaceholder: 'https://claw.example.com', token: 'Gateway token', checking: 'Checking the gateway…' };
+
 function GatewaySetup({
   workspaceId, agentId, entry, binding, onChanged, onError,
 }: {
@@ -211,6 +217,7 @@ function GatewaySetup({
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState(false);
   const connected = binding !== undefined && binding.status === 'connected';
+  const form = TOKEN_FORM[entry.id] ?? GATEWAY_FORM;
 
   return (
     <div className="stack" style={{ gap: 10 }}>
@@ -254,14 +261,14 @@ function GatewaySetup({
             }}
           >
             <div>
-              <label htmlFor={`gateway-url-${entry.id}`}>Gateway address</label>
+              <label htmlFor={`gateway-url-${entry.id}`}>{form.url}</label>
               <input
-                id={`gateway-url-${entry.id}`} type="url" required placeholder="https://claw.example.com"
+                id={`gateway-url-${entry.id}`} type={entry.id === 'shopify' ? 'text' : 'url'} required placeholder={form.urlPlaceholder}
                 value={url} onChange={(e) => setUrl(e.target.value)}
               />
             </div>
             <div>
-              <label htmlFor={`gateway-token-${entry.id}`}>Gateway token</label>
+              <label htmlFor={`gateway-token-${entry.id}`}>{form.token}</label>
               <input
                 id={`gateway-token-${entry.id}`} type="password" required autoComplete="off"
                 value={token} onChange={(e) => setToken(e.target.value)}
@@ -272,7 +279,7 @@ function GatewaySetup({
             )}
             <div className="row" style={{ justifyContent: 'flex-start', gap: 8 }}>
               <button className="primary" type="submit" disabled={busy || url.trim() === '' || token.trim() === ''}>
-                {busy ? 'Checking the gateway…' : connected ? 'Update connection' : `Connect ${entry.name}`}
+                {busy ? form.checking : connected ? 'Update connection' : `Connect ${entry.name}`}
               </button>
               {editing && <button type="button" className="ghost" onClick={() => setEditing(false)}>Cancel</button>}
             </div>
@@ -310,6 +317,21 @@ export function NativeSetupNote({ entry }: { entry: CatalogEntry }) {
             While the app is in development mode, only its admins, developers and testers can connect.
             Posting for anyone else needs App Review for the five permissions above.
           </li>
+        </ol>
+      </div>
+    );
+  }
+  if (entry.id === 'linkedin') {
+    return (
+      <div className="card" style={{ marginTop: 14 }}>
+        <strong>Before the first connection, in your LinkedIn app</strong>
+        <ol className="steps-list" style={{ margin: '8px 0 0' }}>
+          <li>
+            Under Auth → OAuth 2.0 settings, add this redirect URL:
+            <div style={{ marginTop: 6 }}><Copyable label="Redirect URL" value={`${origin}/api/mcp/callback`} /></div>
+          </li>
+          <li>Under Products, add “Share on LinkedIn” and “Sign In with LinkedIn using OpenID Connect”. Both are granted on request.</li>
+          <li>For company pages, add “Community Management API” too, which LinkedIn reviews, and set the page scopes on this deployment.</li>
         </ol>
       </div>
     );

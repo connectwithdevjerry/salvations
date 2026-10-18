@@ -20,6 +20,7 @@ import { tickSchedules } from '@/lib/schedule-tick';
 import { refreshStaleWebhooks } from '@/lib/channel-webhook';
 import { refreshExpiringGoogleTokens } from '@/lib/google-workspace';
 import { refreshExpiringMetaTokens } from '@/lib/meta-publishing';
+import { refreshExpiringLinkedInTokens } from '@/lib/linkedin';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -115,8 +116,15 @@ async function sweep(): Promise<Response> {
     error: caught instanceof Error ? caught.message : String(caught),
   }));
 
+  const linkedInTokens = await refreshExpiringLinkedInTokens(handle.db).catch((caught: unknown) => ({
+    considered: 0,
+    refreshed: 0,
+    failed: 0,
+    error: caught instanceof Error ? caught.message : String(caught),
+  }));
+
   return Response.json(
-    { ...swept, retriggered: orphaned.length, schedules, webhooks, tokens, metaTokens },
+    { ...swept, retriggered: orphaned.length, schedules, webhooks, tokens, metaTokens, linkedInTokens },
     { status: 200 },
   );
 }

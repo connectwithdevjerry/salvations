@@ -85,6 +85,74 @@ const META_PUBLISHING: CatalogEntry = {
   ],
 };
 
+const LINKEDIN: CatalogEntry = {
+  id: 'linkedin',
+  kind: 'integration',
+  name: 'LinkedIn',
+  summary: 'Post as you, or as a company page you administer: the words, a link, or a picture. Each post waits for your yes.',
+  category: 'Design & content',
+  setup: 'oauth',
+  accent: '#0A66C2',
+  docs: 'https://learn.microsoft.com/linkedin/marketing/community-management/shares/posts-api',
+  native: { alias: 'linkedin' },
+  steps: [
+    {
+      title: 'Review what you are granting',
+      body: 'Posting as yourself needs only the permissions below. Posting as a company page ' +
+        'needs the page\'s admin role and an app with LinkedIn\'s Community Management product.',
+    },
+    {
+      title: 'Sign in and consent',
+      body: 'You will be sent to LinkedIn, and back here afterwards. The token stays on our ' +
+        'server; your password never reaches us at all.',
+    },
+  ],
+  scopes: [
+    { label: 'Know who you are', scope: 'openid profile', writes: false },
+    { label: 'Post on your behalf', scope: 'w_member_social', writes: true },
+  ],
+};
+
+const SHOPIFY: CatalogEntry = {
+  id: 'shopify',
+  kind: 'integration',
+  name: 'Shopify',
+  summary: 'Your store\'s products and orders. List the new dish or product as a draft with its picture and price, put it on sale when you say so.',
+  category: 'Money & sales',
+  setup: 'gateway_token',
+  accent: '#95BF47',
+  docs: 'https://help.shopify.com/en/manual/apps/app-types/custom-apps',
+  native: { alias: 'shopify' },
+  steps: [
+    {
+      title: 'Make a custom app in your Shopify admin',
+      body: 'Settings → Apps and sales channels → Develop apps → Create an app. Name it for ' +
+        'this assistant. It is yours: nothing of ours is installed.',
+      link: { label: 'Open your admin', url: 'https://admin.shopify.com/' },
+    },
+    {
+      title: 'Give it the Admin API scopes below, then install it',
+      body: 'Under Configuration → Admin API integration, tick read_products, write_products ' +
+        'and read_orders. Save, then press Install app.',
+    },
+    {
+      title: 'Copy the Admin API access token',
+      body: 'Under API credentials, reveal the token once and copy it. Shopify shows it once; ' +
+        'if you lose it, uninstall and reinstall the app for a new one.',
+    },
+    {
+      title: 'Paste the shop domain and the token below',
+      body: 'The domain is the my-store.myshopify.com one, not your custom domain. We ask the ' +
+        'store who it is before anything is saved.',
+    },
+  ],
+  scopes: [
+    { label: 'Read products', scope: 'read_products', writes: false },
+    { label: 'Create and change products, pictures and prices', scope: 'write_products', writes: true },
+    { label: 'Read orders', scope: 'read_orders', writes: false },
+  ],
+};
+
 /**
  * A self-hosted agent gateway: the person's own assistant, on their own
  * machine.
@@ -275,4 +343,4 @@ const VENDORS: readonly CatalogEntry[] = [
   vendor({ id: 'supabase', name: 'Supabase', summary: 'Databases, auth, storage and SQL.', category: 'Product & code', accent: '#3ECF8E', url: 'https://mcp.supabase.com/mcp', docs: 'https://supabase.com/docs/guides/getting-started/mcp', reads: 'Read projects and data', writes: 'Run SQL and change projects' }),
 ];
 
-export const INTEGRATIONS: readonly CatalogEntry[] = [GOOGLE_WORKSPACE, META_PUBLISHING, GITHUB, NOTION, LINEAR, ...VENDORS, AGENT_GATEWAY];
+export const INTEGRATIONS: readonly CatalogEntry[] = [GOOGLE_WORKSPACE, META_PUBLISHING, LINKEDIN, SHOPIFY, GITHUB, NOTION, LINEAR, ...VENDORS, AGENT_GATEWAY];

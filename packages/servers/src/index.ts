@@ -37,6 +37,14 @@ export {
   type MetaPublishingSource, type SocialAccount, type PublishedPost, type PendingPost,
 } from './meta-publishing';
 export {
+  createShopifyServer, SERVER_NAME as SHOPIFY_SERVER, MAX_RESULTS as SHOPIFY_MAX_RESULTS,
+  type ShopifySource, type ShopInfo, type Product as ShopifyProduct, type Order as ShopifyOrder,
+} from './shopify';
+export {
+  createLinkedInServer, SERVER_NAME as LINKEDIN_SERVER, MAX_POST as LINKEDIN_MAX_POST,
+  type LinkedInSource, type LinkedInAuthor, type LinkedInPost,
+} from './linkedin';
+export {
   createStudioServer, SERVER_NAME as STUDIO_SERVER, MAX_PROMPT as STUDIO_MAX_PROMPT,
   type StudioSource, type MediaShape,
 } from './studio';

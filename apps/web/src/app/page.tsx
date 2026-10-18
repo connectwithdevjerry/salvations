@@ -157,7 +157,7 @@ export default async function Home() {
               <span className="mock-approve">Approve</span>
             </div>
           </Feature>
-          <Feature title="Drop a link, get the campaign" body="Paste your site, or the name of the new dish on the menu, from Telegram if you like. Marketing reads it, writes the title and caption that stop the thumb, makes the product picture and a short clip in its studio, and asks one thing: publish where? Say yes, and it posts to your Instagram and Facebook page.">
+          <Feature title="Drop a link, get the campaign" body="Paste your site, or the name of the new dish on the menu, from Telegram if you like. Marketing reads it, writes the title and caption that stop the thumb, makes the product picture and a short clip in its studio, and asks one thing: publish where? Say yes, and it posts to Instagram, Facebook and LinkedIn, and lists the product in your Shopify store.">
             <div className="mock-approval">
               <Icon name="spark" size={14} />
               <span>New on the menu: <strong>smoky jollof pasta</strong>. Make the post.</span>

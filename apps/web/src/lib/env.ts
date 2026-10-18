@@ -47,6 +47,17 @@ const schema = z.object({
   META_APP_SECRET: z.string().min(1).optional(),
 
   /**
+   * The LinkedIn app behind the LinkedIn integration. Optional. From the
+   * LinkedIn developer portal, with the Share on LinkedIn and Sign In with
+   * LinkedIn products, and <PUBLIC_BASE_URL>/api/mcp/callback among its
+   * redirect URLs. LINKEDIN_SCOPES overrides what consent asks for, for an
+   * app that also has Community Management (page posting).
+   */
+  LINKEDIN_CLIENT_ID: z.string().min(1).optional(),
+  LINKEDIN_CLIENT_SECRET: z.string().min(1).optional(),
+  LINKEDIN_SCOPES: z.string().min(1).optional(),
+
+  /**
    * OAuth clients registered by hand with vendors whose MCP servers accept
    * neither a client metadata document nor dynamic registration (Asana,
    * HubSpot). JSON, keyed by the vendor's domain:
@@ -134,6 +145,12 @@ const schema = z.object({
   {
     message: 'Set both META_APP_ID and META_APP_SECRET, or neither.',
     path: ['META_APP_ID'],
+  },
+).refine(
+  (value) => (value.LINKEDIN_CLIENT_ID === undefined) === (value.LINKEDIN_CLIENT_SECRET === undefined),
+  {
+    message: 'Set both LINKEDIN_CLIENT_ID and LINKEDIN_CLIENT_SECRET, or neither.',
+    path: ['LINKEDIN_CLIENT_ID'],
   },
 ).refine(
   (value) => (value.SMTP_URL === undefined) === (value.MAIL_FROM === undefined),

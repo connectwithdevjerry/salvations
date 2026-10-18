@@ -17,11 +17,12 @@ import { actorIdOf } from '@/lib/principal';
 import { discoverAndRecord } from '@/lib/discovery-service';
 import { firstPartyOpener } from '@/lib/first-party-open';
 import { normaliseGatewayUrl, probeGateway } from '@/lib/openclaw';
+import { normaliseShopDomain, probeShop } from '@/lib/shopify';
 
 export const runtime = 'nodejs';
 
 const schema = z.object({
-  url: z.string().trim().min(8).max(500),
+  url: z.string().trim().min(5).max(500),
   token: z.string().trim().min(8).max(500),
 });
 
@@ -31,13 +32,23 @@ export const POST = workspaceRoute<{ bindingId: string }>('mcp:install', async (
   const binding = await bindings.findOne({ _id: params.bindingId } as never);
   if (binding === null) return errorResponse(404, 'not_found', 'Connection not found.');
   const server = await mcpServerById(ctx.database, ctx.workspaceId, binding.mcpServerId);
-  if (server?.catalogId !== 'openclaw') return errorResponse(422, 'unsupported', 'This connection is not an agent gateway.');
+  const kind = server?.catalogId;
+  if (kind !== 'openclaw' && kind !== 'shopify') return errorResponse(422, 'unsupported', 'This connection does not take an address and a token.');
 
+  // Two apps take an address and a token: the person's own gateway, and
+  // their Shopify store. Each is asked who it is before anything is stored.
   let url: string;
   let agents: readonly { id: string }[];
   try {
-    url = normaliseGatewayUrl(input.url);
-    agents = await probeGateway(url, input.token);
+    if (kind === 'shopify') {
+      const domain = normaliseShopDomain(input.url);
+      const shop = await probeShop(domain, input.token);
+      url = `https://${domain}`;
+      agents = [{ id: shop.name }];
+    } else {
+      url = normaliseGatewayUrl(input.url);
+      agents = await probeGateway(url, input.token);
+    }
   } catch (caught) {
     const message = caught instanceof Error ? caught.message : 'The gateway could not be reached.';
     await bindings.updateOne({ _id: binding._id } as never, { $set: { 'health.lastError': message } } as never);
@@ -45,7 +56,7 @@ export const POST = workspaceRoute<{ bindingId: string }>('mcp:install', async (
   }
 
   const credential = await ctx.repos.credentials.store({
-    name: 'Agent gateway token',
+    name: kind === 'shopify' ? 'Shopify Admin API token' : 'Agent gateway token',
     kind: 'api_key',
     plaintext: input.token,
     createdBy: actorIdOf(ctx.principal),

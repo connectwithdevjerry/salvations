@@ -15,6 +15,7 @@ import { workspaceRoute } from '@/lib/route';
 import { actorIdOf } from '@/lib/principal';
 import { revokeGoogleTokens } from '@/lib/google-workspace';
 import { revokeMetaTokens } from '@/lib/meta-publishing';
+import { revokeLinkedInTokens } from '@/lib/linkedin';
 
 export const runtime = 'nodejs';
 
@@ -34,7 +35,8 @@ export const DELETE = workspaceRoute<{ bindingId: string }>('mcp:install', async
   let revoked = 0;
   const revoke = server?.catalogId === 'google_workspace' ? revokeGoogleTokens
     : server?.catalogId === 'meta_publishing' ? revokeMetaTokens
-      : undefined;
+      : server?.catalogId === 'linkedin' ? revokeLinkedInTokens
+        : undefined;
   if (revoke !== undefined) {
     for (const row of rows) {
       try {

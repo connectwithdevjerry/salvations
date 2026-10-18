@@ -21,6 +21,7 @@ import { discoverAndRecord } from '@/lib/discovery-service';
 import { firstPartyOpener } from '@/lib/first-party-open';
 import { GOOGLE_ISSUER, exchangeGoogleCode, googleOAuthClient, googleStore } from '@/lib/google-workspace';
 import { META_ISSUER, exchangeMetaCode, metaOAuthClient, metaStore } from '@/lib/meta-publishing';
+import { LINKEDIN_ISSUER, exchangeLinkedInCode, linkedInOAuthClient, linkedInStore } from '@/lib/linkedin';
 import type { MongoOAuthCredentialStore } from '@salvations/db';
 import { OAUTH_CALLBACK_PATH, OAUTH_PENDING_COOKIE } from '@/lib/oauth-config';
 import { env } from '@/lib/env';
@@ -115,6 +116,16 @@ export async function GET(request: Request): Promise<Response> {
       issuer: META_ISSUER,
       exchange: client === undefined ? undefined : (answer) => exchangeMetaCode(client, answer),
       label: 'meta',
+    });
+  }
+
+  if (server?.transport === 'in_process' && server.catalogId === 'linkedin') {
+    const client = linkedInOAuthClient();
+    return finishNative(database, pending, binding, scope, { code, state }, {
+      store: linkedInStore(database, pending.workspaceId),
+      issuer: LINKEDIN_ISSUER,
+      exchange: client === undefined ? undefined : (answer) => exchangeLinkedInCode(client, answer),
+      label: 'linkedin',
     });
   }
 

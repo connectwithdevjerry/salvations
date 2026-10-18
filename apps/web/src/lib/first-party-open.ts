@@ -12,7 +12,7 @@
  * would let it ask.
  */
 import {
-  createConversationServer, createGoogleWorkspaceServer, createKnowledgeServer, createMemoryServer, createMetaPublishingServer, createOpenClawServer, createStudioServer, createWebServer, linkedPair,
+  createConversationServer, createGoogleWorkspaceServer, createKnowledgeServer, createLinkedInServer, createMemoryServer, createMetaPublishingServer, createOpenClawServer, createShopifyServer, createStudioServer, createWebServer, linkedPair,
   type ConversationSource, type ServerContext,
 } from '@salvations/servers';
 import { ConversationRepository, toMessage } from '@salvations/db';
@@ -25,6 +25,8 @@ import { createMemorySource } from './memory-service';
 import { createKnowledgeSource } from './knowledge-service';
 import { GOOGLE_WORKSPACE_ALIAS, createGoogleSource } from './google-workspace';
 import { META_PUBLISHING_ALIAS, createMetaSource } from './meta-publishing';
+import { LINKEDIN_ALIAS, createLinkedInSource } from './linkedin';
+import { SHOPIFY_ALIAS, createShopifySource } from './shopify';
 import { OPENCLAW_ALIAS, createOpenClawSource } from './openclaw';
 import { nativeAliasMatches } from './native-alias';
 import { ScopedDb, type McpServerBindingDoc } from '@salvations/db';
@@ -83,6 +85,27 @@ async function build(alias: string, input: OpenerInput, bindingId?: string) {
       workspaceId,
       bindingId,
       userId: input.createdBy,
+    }), account !== undefined ? { account } : {});
+  }
+
+  if (nativeAliasMatches(alias, LINKEDIN_ALIAS) && bindingId !== undefined) {
+    const account = await accountLabel(input.database, workspaceId, bindingId);
+    return createLinkedInServer(input.context, createLinkedInSource({
+      database: input.database,
+      workspaceId,
+      bindingId,
+      userId: input.createdBy,
+    }), account !== undefined ? { account } : {});
+  }
+
+  if (nativeAliasMatches(alias, SHOPIFY_ALIAS) && bindingId !== undefined) {
+    // The merchant's own store: the domain on the server row, the Admin
+    // API token in the credential store.
+    const account = await accountLabel(input.database, workspaceId, bindingId);
+    return createShopifyServer(input.context, createShopifySource({
+      database: input.database,
+      workspaceId,
+      bindingId,
     }), account !== undefined ? { account } : {});
   }
 

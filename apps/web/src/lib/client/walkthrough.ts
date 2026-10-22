@@ -69,7 +69,7 @@ export function stepsFor(context: TourContext): readonly TourStep[] {
         path: agentPath,
         target: 'ways',
         title: 'Ways to talk',
-        body: `Where ${name} answers: Telegram, WhatsApp or iMessage from your phone, Slack or Discord at work, this chat in the browser, or out loud on the Speak tab. In every one of them you approve with a tap, pictures and clips land in the chat, and a voice note comes back as text first. Pick one here and connect it on the spot: the setup steps scroll inside their own box, and the fields to fill stay right below them.`,
+        body: `Where ${name} answers: Telegram, WhatsApp or iMessage from your phone, Slack or Discord at work, this chat in the browser, or out loud on the Speak tab. In every one of them you approve with a tap, pictures and clips land in the chat, and a voice note comes back as text first. Pick one here and connect it on the spot: the setup steps scroll inside their own box, the fields to fill stay right below them, and once connected a short list says what tends to go wrong on that platform and how to fix it.`,
       },
       {
         id: 'documents',

@@ -521,7 +521,16 @@ Both were assessed and neither fits a request-shaped deployment, so neither is h
 - [x] Connecting a channel: the numbered setup steps (six for WhatsApp) sit in their own
       scrolling box with a capped height, so the address and token fields below never leave
       the dialog. One component (`SetupSteps`), so the same box serves Ways to talk, the tools
-      panel and the new-assistant wizard.
+      panel and the new-assistant wizard. The scrollbar is always drawn.
+- [x] Slack setup tells the truth about Slack's own app settings: a step for App Home → Show
+      Tabs → Messages Tab (without it a DM to the app says "Sending messages to this app has
+      been turned off"), the install step says where the Bot User OAuth Token appears, and the
+      signing-secret step says it lives on a different page (Basic Information).
+- [x] Once a channel is connected, an "If something looks off" panel (`AFTER_CONNECT` in
+      `channel-fields.ts`) lists the platform's usual snags with the fix: Slack's messages-tab
+      setting, inviting the app to a channel, reinstalling after a scope change, the request
+      URL saving only after connecting; Meta's test-number recipients and the 24-hour window;
+      Discord's command refresh. Shown in the tools tab and the new-assistant wizard.
 - [x] The front door's voice console is live: the browser's own speech recognition hears the
       visitor, a scripted brain (`landing-brain.ts`, keyword rules over this page's facts) answers,
       the browser reads it back. No key, no server, nothing sent anywhere, and the console says it is

@@ -45,7 +45,7 @@ export function stepsFor(context: TourContext): readonly TourStep[] {
       path: '/agents',
       target: 'create-assistant',
       title: 'Build your team',
-      body: 'Start with a team: a manager, marketing, sales, support and a personal assistant, each with its job written in. Or make one assistant with the role you choose. Give any of them almost nothing, a link, a dish, a photo, and they do the whole job and ask once at the end. Marketing has a studio for pictures and clips.',
+      body: 'Start with a team: a manager, marketing, sales, support and a personal assistant, each with its job written in. Or make one assistant with the role you choose, academic outreach included. Give any of them almost nothing, a link, a dish, a photo, a professor\'s name, and they do the whole job and ask once at the end. Marketing has a studio for pictures and clips, and publishes to Instagram, Facebook, LinkedIn and Shopify once you say yes.',
     }]
     : [
       {
@@ -54,7 +54,7 @@ export function stepsFor(context: TourContext): readonly TourStep[] {
         target: 'tab-chat',
         activate: true,
         title: 'Chat',
-        body: `Talk to ${name} here exactly as you would on Telegram. Chats can be renamed or deleted from the row above the messages.`,
+        body: `Talk to ${name} here exactly as you would on Telegram or WhatsApp. Chats can be renamed or deleted from the row above the messages.`,
       },
       {
         id: 'speak',
@@ -69,7 +69,7 @@ export function stepsFor(context: TourContext): readonly TourStep[] {
         path: agentPath,
         target: 'ways',
         title: 'Ways to talk',
-        body: `Where ${name} answers: Telegram, Discord or Slack from your phone, this chat in the browser, or out loud on the Speak tab. Pick one here and connect it on the spot. Link your own chat account in Settings so it knows it is you.`,
+        body: `Where ${name} answers: Telegram, WhatsApp or iMessage from your phone, Slack or Discord at work, this chat in the browser, or out loud on the Speak tab. In every one of them you approve with a tap, pictures and clips land in the chat, and a voice note comes back as text first. Pick one here and connect it on the spot.`,
       },
       {
         id: 'documents',
@@ -93,7 +93,7 @@ export function stepsFor(context: TourContext): readonly TourStep[] {
         target: 'tab-integrations',
         activate: true,
         title: 'Integrations',
-        body: 'What it is connected to. Add an app opens the whole catalogue; each connects on the vendor’s own consent screen and can be disconnected here. An app can be connected more than once, such as two Google accounts; name each so the assistant knows which is which. Anything that changes something waits for your approval first.',
+        body: 'What it is connected to. Add an app opens the whole catalogue: Gmail and Calendar, Instagram and Facebook, LinkedIn, Shopify, GitHub, Notion and more, each on the vendor’s own consent screen. An app can be connected more than once, such as two Google accounts; name each so the assistant knows which is which. Anything that changes something waits for your approval first.',
       },
       {
         id: 'model',
@@ -117,7 +117,7 @@ export function stepsFor(context: TourContext): readonly TourStep[] {
     {
       id: 'welcome',
       title: 'Welcome to HIVE',
-      body: 'Assistants that answer on Telegram, learn from your documents and act in your tools, with your approval before anything consequential. This takes about a minute.',
+      body: 'Assistants that answer wherever you text, Telegram, WhatsApp, iMessage, Slack or Discord, learn from your documents and act in your tools, with your approval before anything consequential. This takes about a minute.',
     },
     {
       id: 'assistants',
@@ -138,13 +138,13 @@ export function stepsFor(context: TourContext): readonly TourStep[] {
       id: 'models',
       target: 'nav-models',
       title: 'Models',
-      body: 'Connect your own OpenAI or Claude API key. Keys are encrypted and stored in your own database. Voice notes on Telegram need an OpenAI key.',
+      body: 'Connect your own OpenAI or Claude API key. Keys are encrypted and stored in your own database. Voice notes, and the studio’s pictures and clips, need an OpenAI key.',
     },
     {
       id: 'approvals',
       target: 'nav-approvals',
       title: 'Approvals',
-      body: 'Before an assistant sends, deletes or pays for something, it asks you here, or in the Telegram chat with a tap. A dot on this tab means something is waiting. The rules at the bottom of the page decide what asks, what just runs and what never runs, for every assistant or one.',
+      body: 'Before an assistant sends, posts, deletes or pays for something, it asks you here, or in the chat it came from with a tap. A dot on this tab means something is waiting. Approve all clears the queue in one go, and Auto-approve for 20 minutes lets everything run while you test, then asks again on its own. The rules at the bottom decide what asks, what just runs and what never runs, for every assistant or one.',
     },
     {
       id: 'activity',

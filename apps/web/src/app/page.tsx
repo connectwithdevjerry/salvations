@@ -150,7 +150,7 @@ export default async function Home() {
               ))}
             </div>
           </Feature>
-          <Feature title="Nothing happens without you" body="Before it sends, deletes or pays for anything, it asks, here or right in the Telegram chat. One tap approves, and one more says never ask again for that. Rules you write decide what runs, what asks and what never runs, for every assistant or one. Everything it did stays in Activity.">
+          <Feature title="Nothing happens without you" body="Before it sends, posts, deletes or pays for anything, it asks, here or right in the chat it came from. One tap approves, and one more says never ask again for that. Approve everything for twenty minutes while you test, and the questions come back on their own. Rules you write decide what runs, what asks and what never runs. Everything it did stays in Activity.">
             <div className="mock-approval">
               <Icon name="shield" size={14} />
               <span>Wants to <strong>archive 14 messages</strong> in Gmail.</span>
@@ -186,6 +186,7 @@ export default async function Home() {
             <li><Icon name="mic" size={16} /><span><strong>Hands free.</strong> Ask for the morning summary while you make the coffee.</span></li>
             <li><Icon name="chat" size={16} /><span><strong>Written down.</strong> Every word, both ways, in the transcript beside the console.</span></li>
             <li><Icon name="key" size={16} /><span><strong>Your key.</strong> Voice runs on your own OpenAI key. Text works with either provider.</span></li>
+            <li><Icon name="arrow" size={16} /><span><strong>Try it here.</strong> The console beside this hears you in your browser and answers from this page. A demo, nothing sent anywhere.</span></li>
           </ul>
         </div>
         <LandingVoice />
@@ -273,6 +274,7 @@ export default async function Home() {
           <li><Icon name="agent" size={16} /><span><strong>Your own sign-in.</strong> No identity vendor, no data broker. Google is optional and direct.</span></li>
           <li><Icon name="pulse" size={16} /><span><strong>Everything on the record.</strong> Every run and every admin action in an audit trail you own, and a trace per run for your own collector.</span></li>
           <li><Icon name="plug" size={16} /><span><strong>Yours to take back.</strong> Disconnect an app and its tokens are revoked at the vendor, not just forgotten here.</span></li>
+          <li><Icon name="chat" size={16} /><span><strong>No one in the middle.</strong> Every message is signed by its platform or checked with it before anything is written, and iMessage runs on a Mac you own, because Apple offers no other honest way.</span></li>
         </ul>
       </section>
 
@@ -299,7 +301,7 @@ export default async function Home() {
             <p className="muted">We set it up around your business: the documents, the integrations, the routines, the people.</p>
             <ul>
               <li><Icon name="check" size={14} />Your assistants designed and written with you</li>
-              <li><Icon name="check" size={14} />Telegram, mail and calendar connected and tested</li>
+              <li><Icon name="check" size={14} />Your channels, mail, calendar and publishing connected and tested</li>
               <li><Icon name="check" size={14} />Team roles, spend caps and approvals set up</li>
               <li><Icon name="check" size={14} />A walkthrough for your team</li>
             </ul>

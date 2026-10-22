@@ -625,7 +625,15 @@ button.google {
 
 /* ------------------------------------------------------------- setup ----- */
 
-.steps { list-style: none; counter-reset: step; margin: 4px 0 0; padding: 0; display: grid; gap: 16px; }
+.steps-scroll {
+  max-height: 340px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  overscroll-behavior: contain;
+}
+.steps { list-style: none; counter-reset: step; margin: 0; padding: 0; display: grid; gap: 16px; }
 .steps li { display: flex; gap: 12px; align-items: flex-start; }
 .steps-num {
   display: grid;

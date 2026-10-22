@@ -7,7 +7,7 @@ import { api, ws } from '@/lib/client/api';
 import { CapabilityReview } from '@/components/capability-review';
 import { Icon, Option } from '@/components/ui';
 import { SetupSteps, Copyable } from '@/components/setup-steps';
-import { ADDRESS_LABEL, ADDRESS_NOTE, EXTRA, SECONDARY, tokenLabelOf } from '@/lib/client/channel-fields';
+import { ADDRESS_LABEL, ADDRESS_NOTE, AFTER_CONNECT, EXTRA, SECONDARY, tokenLabelOf } from '@/lib/client/channel-fields';
 import { AppDialog, AppPickerDialog, ConnectedApps, RequestCard, type AppStatus } from '@/components/app-grid';
 import { CALLBACK_ERRORS, IntegrationSetup, authorise, type Binding } from '@/components/integration-setup';
 
@@ -488,6 +488,18 @@ function ConnectedChannel({
           {connection.verifyToken !== undefined && <Copyable label="Verify token" value={connection.verifyToken} />}
           <p className="muted" style={{ margin: 0 }}>{ADDRESS_NOTE[entry.id]}</p>
         </>
+      )}
+
+      {(AFTER_CONNECT[entry.id] ?? []).length > 0 && (
+        <div className="note" style={{ alignItems: 'flex-start' }}>
+          <span className="tile" aria-hidden><Icon name="shield" size={16} /></span>
+          <span style={{ flex: 1 }}>
+            <strong>If something looks off</strong>
+            <ul className="steps-list" style={{ marginTop: 6 }}>
+              {(AFTER_CONNECT[entry.id] ?? []).map((line) => <li key={line}>{line}</li>)}
+            </ul>
+          </span>
+        </div>
       )}
 
       {connection.lastError !== undefined && (

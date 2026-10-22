@@ -627,12 +627,17 @@ button.google {
 
 .steps-scroll {
   max-height: 340px;
-  overflow: auto;
+  overflow-y: scroll;
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 12px 14px;
   overscroll-behavior: contain;
 }
+/* The scrollbar stays drawn, so the box reads as scrollable before anyone scrolls it. */
+.steps-scroll, .scroll-list { scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; scrollbar-gutter: stable; }
+.steps-scroll::-webkit-scrollbar, .scroll-list::-webkit-scrollbar { width: 10px; }
+.steps-scroll::-webkit-scrollbar-track, .scroll-list::-webkit-scrollbar-track { background: transparent; }
+.steps-scroll::-webkit-scrollbar-thumb, .scroll-list::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 999px; border: 2px solid transparent; background-clip: padding-box; }
 .steps { list-style: none; counter-reset: step; margin: 0; padding: 0; display: grid; gap: 16px; }
 .steps li { display: flex; gap: 12px; align-items: flex-start; }
 .steps-num {
@@ -1611,7 +1616,7 @@ td.danger { color: var(--danger); }
 .mock-voice-log p { margin: 0; }
 .mock-voice-idle { color: #5b7aa6; }
 /* A long list kept to a window: it scrolls, the page does not. */
-.scroll-list { max-height: 420px; overflow: auto; border: 1px solid var(--border); border-radius: 12px; padding: 10px; overscroll-behavior: contain; }
+.scroll-list { max-height: 420px; overflow-y: scroll; border: 1px solid var(--border); border-radius: 12px; padding: 10px; overscroll-behavior: contain; }
 .scroll-list > .card { margin: 0 0 10px; }
 .scroll-list > .card:last-child { margin-bottom: 0; }
 .scroll-list > table thead th { position: sticky; top: -10px; background: var(--bg); z-index: 1; }

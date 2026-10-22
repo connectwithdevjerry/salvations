@@ -518,6 +518,10 @@ Both were assessed and neither fits a request-shaped deployment, so neither is h
       store is asked who it is before anything is stored.
 - [x] Integrations tab: the capabilities awaiting review scroll inside a window, and the
       approved list is folded behind "Show the N approved tools" with a filter.
+- [x] Connecting a channel: the numbered setup steps (six for WhatsApp) sit in their own
+      scrolling box with a capped height, so the address and token fields below never leave
+      the dialog. One component (`SetupSteps`), so the same box serves Ways to talk, the tools
+      panel and the new-assistant wizard.
 - [x] The front door's voice console is live: the browser's own speech recognition hears the
       visitor, a scripted brain (`landing-brain.ts`, keyword rules over this page's facts) answers,
       the browser reads it back. No key, no server, nothing sent anywhere, and the console says it is

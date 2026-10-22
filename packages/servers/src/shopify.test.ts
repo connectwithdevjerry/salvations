@@ -21,6 +21,7 @@ function source(): ShopifySource & { calls: { op: string; args: unknown[] }[] } 
     async createProduct(input) { calls.push({ op: 'createProduct', args: [input] }); return product({ title: input.title, status: input.status }); },
     async updateProduct(id, patch) { calls.push({ op: 'updateProduct', args: [id, patch] }); return product({ id, ...(patch.status !== undefined ? { status: patch.status } : {}) }); },
     async addProductImage(...args) { calls.push({ op: 'addProductImage', args }); return product({ imageCount: 2 }); },
+    async addProductVideo(...args) { calls.push({ op: 'addProductVideo', args }); return product({ imageCount: 2 }); },
     async recentOrders(limit) { calls.push({ op: 'recentOrders', args: [limit] }); return [{ name: '#1001', createdAt: '2026-10-17T10:00:00Z', customer: 'Ada', total: '4500.00 NGN', financialStatus: 'PAID' }]; },
   };
 }
@@ -40,7 +41,7 @@ describe('the Shopify server', () => {
     const { tools } = await client.listTools();
     const byName = new Map(tools.map((t) => [t.name, t.annotations]));
     for (const name of ['shop_info', 'search_products', 'get_product', 'recent_orders']) expect(byName.get(name)?.readOnlyHint, name).toBe(true);
-    for (const name of ['create_product', 'update_product', 'add_product_image', 'publish_product']) expect(byName.get(name)?.readOnlyHint, name).toBe(false);
+    for (const name of ['create_product', 'update_product', 'add_product_image', 'add_product_video', 'publish_product']) expect(byName.get(name)?.readOnlyHint, name).toBe(false);
     await close();
   });
 
@@ -70,6 +71,15 @@ describe('the Shopify server', () => {
     const { client, close } = await connect(source());
     const result = await client.callTool({ name: 'update_product', arguments: { id: 'x', price: 'four thousand' } });
     expect(result.isError).toBe(true);
+    await close();
+  });
+
+  it('attaches a clip the studio made to a product', async () => {
+    const deps = source();
+    const { client, close } = await connect(deps);
+    const result = await client.callTool({ name: 'add_product_video', arguments: { id: 'gid://shopify/Product/1', video_url: 'https://h/v.mp4', alt: 'The pasta, plated' } });
+    expect(deps.calls[0]).toEqual({ op: 'addProductVideo', args: ['gid://shopify/Product/1', 'https://h/v.mp4', 'The pasta, plated'] });
+    expect(textOf(result)).toContain('Clip added');
     await close();
   });
 

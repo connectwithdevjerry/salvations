@@ -42,7 +42,7 @@ export {
 } from './shopify';
 export {
   createLinkedInServer, SERVER_NAME as LINKEDIN_SERVER, MAX_POST as LINKEDIN_MAX_POST,
-  type LinkedInSource, type LinkedInAuthor, type LinkedInPost,
+  type LinkedInSource, type LinkedInAuthor, type LinkedInPost, type LinkedInPending,
 } from './linkedin';
 export {
   createStudioServer, SERVER_NAME as STUDIO_SERVER, MAX_PROMPT as STUDIO_MAX_PROMPT,

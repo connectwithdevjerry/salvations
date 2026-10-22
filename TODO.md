@@ -504,10 +504,12 @@ Both were assessed and neither fits a request-shaped deployment, so neither is h
       LinkedIn app (`LINKEDIN_CLIENT_ID`/`SECRET`, `LINKEDIN_SCOPES` for page posting): consent on
       LinkedIn's screen, sixty-day tokens with refresh where the app has it, the sweep renewing in
       the last week; the person and the pages they administer as authors; a post with words, a
-      link, or a picture uploaded in LinkedIn's two steps. No clips yet (multi-part upload).
+      link, a picture uploaded in LinkedIn's two steps, or a clip uploaded in LinkedIn's parts
+      (initialise with the size, PUT each range keeping the ETag, finalise), posted once LinkedIn
+      says it is available, the video id handed back when that takes longer than one call.
 - [x] Shopify, a first-party server over the Admin GraphQL API with a custom-app token the
       merchant makes in their own admin (the gateway-token form, relabelled): search, read, create
-      as a draft with price and picture, update, add a picture, put on sale, recent orders. The
+      as a draft with price and picture, update, add a picture or a clip (Shopify fetches and processes the mp4), put on sale, recent orders. The
       store is asked who it is before anything is stored.
 - [x] Integrations tab: the capabilities awaiting review scroll inside a window, and the
       approved list is folded behind "Show the N approved tools" with a filter.

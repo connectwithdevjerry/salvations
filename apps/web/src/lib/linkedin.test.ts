@@ -87,6 +87,45 @@ describe('publishing on LinkedIn', () => {
     expect(body.content.media.id).toBe('urn:li:image:5');
   });
 
+  it("uploads a clip in LinkedIn's parts, finalises with the ETags, and posts once it is available", async () => {
+    const bytes = new Uint8Array(10);
+    const { impl, calls } = stub([
+      { when: /GET https:\/\/h\/v\.mp4/, body: Array.from(bytes) },
+      { when: /POST .*\/rest\/videos\?action=initializeUpload/, body: { value: { video: 'urn:li:video:3', uploadToken: 'tok-3', uploadInstructions: [
+        { uploadUrl: 'https://upload.linkedin.test/p/1', firstByte: 0, lastByte: 5 }, { uploadUrl: 'https://upload.linkedin.test/p/2', firstByte: 6, lastByte: 9 },
+      ] } } },
+      { when: /PUT https:\/\/upload\.linkedin\.test\/p\/1/, status: 201, headers: { etag: 'e1' } },
+      { when: /PUT https:\/\/upload\.linkedin\.test\/p\/2/, status: 201, headers: { etag: 'e2' } },
+      { when: /POST .*\/rest\/videos\?action=finalizeUpload/, status: 200 },
+      { when: /GET .*\/rest\/videos\/urn/, body: { status: 'AVAILABLE' } },
+      { when: /POST .*\/rest\/posts/, status: 201, headers: { 'x-restli-id': 'urn:li:share:12' } },
+    ]);
+    const posted = await linkedInPublishing(token, impl, 0).publishPost({ authorUrn: 'urn:li:person:abc', text: 'Weekend offer', videoUrl: 'https://h/v.mp4' });
+    expect(posted).toEqual({ urn: 'urn:li:share:12', url: 'https://www.linkedin.com/feed/update/urn:li:share:12' });
+    const finalize = calls.find((c) => c.url.includes('finalizeUpload'));
+    expect(JSON.parse(String(finalize?.body))).toEqual({ finalizeUploadRequest: { video: 'urn:li:video:3', uploadToken: 'tok-3', uploadedPartIds: ['e1', 'e2'] } });
+    const postBody = JSON.parse(String(calls[calls.length - 1]?.body)) as { content: { media: { id: string } } };
+    expect(postBody.content.media.id).toBe('urn:li:video:3');
+  });
+
+  it('hands back the video id while LinkedIn is still processing, and finishes later', async () => {
+    const { impl } = stub([
+      { when: /GET https:\/\/h\/v\.mp4/, body: [1, 2] },
+      { when: /initializeUpload/, body: { value: { video: 'urn:li:video:4', uploadToken: 't', uploadInstructions: [{ uploadUrl: 'https://upload.linkedin.test/p/1', firstByte: 0, lastByte: 1 }] } } },
+      { when: /PUT /, status: 201, headers: { etag: 'e' } },
+      { when: /finalizeUpload/, status: 200 },
+      { when: /GET .*\/rest\/videos\/urn/, body: { status: 'PROCESSING' } },
+    ]);
+    const api = linkedInPublishing(token, impl, 0);
+    expect(await api.publishPost({ authorUrn: 'urn:li:person:abc', text: 'x', videoUrl: 'https://h/v.mp4' })).toEqual({ videoUrn: 'urn:li:video:4', status: 'processing' });
+
+    const later = stub([
+      { when: /GET .*\/rest\/videos\/urn/, body: { status: 'AVAILABLE' } },
+      { when: /POST .*\/rest\/posts/, status: 201, headers: { 'x-restli-id': 'urn:li:share:13' } },
+    ]);
+    expect(await linkedInPublishing(token, later.impl, 0).finishVideoPost({ authorUrn: 'urn:li:person:abc', text: 'x', videoUrn: 'urn:li:video:4' })).toMatchObject({ urn: 'urn:li:share:13' });
+  });
+
   it("says LinkedIn's refusal in words a person can act on", async () => {
     const { impl } = stub([{ when: /POST .*\/rest\/posts/, status: 403, body: { message: 'Not enough permissions' } }]);
     await expect(linkedInPublishing(token, impl).publishPost({ authorUrn: 'urn:li:person:abc', text: 'x' })).rejects.toThrow(/Share on LinkedIn/);

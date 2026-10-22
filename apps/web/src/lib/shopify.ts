@@ -117,15 +117,16 @@ export function shopifyApi(domain: string, token: string, fetchImpl: typeof fetc
     userErrors(data.productVariantsBulkUpdate.userErrors, 'set the price');
   }
 
-  async function attachImage(productId: string, url: string, alt?: string): Promise<void> {
+  async function attachMedia(productId: string, url: string, kind: 'IMAGE' | 'VIDEO', alt?: string): Promise<void> {
     const data = await call<{ productCreateMedia: { mediaUserErrors: { message: string }[] } }>(
       `mutation($productId: ID!, $media: [CreateMediaInput!]!) {
         productCreateMedia(productId: $productId, media: $media) { mediaUserErrors { field message } }
       }`,
-      { productId, media: [{ originalSource: url, mediaContentType: 'IMAGE', ...(alt !== undefined ? { alt } : {}) }] },
+      { productId, media: [{ originalSource: url, mediaContentType: kind, ...(alt !== undefined ? { alt } : {}) }] },
     );
-    userErrors(data.productCreateMedia.mediaUserErrors, 'add the picture');
+    userErrors(data.productCreateMedia.mediaUserErrors, kind === 'IMAGE' ? 'add the picture' : 'add the clip');
   }
+  const attachImage = (productId: string, url: string, alt?: string) => attachMedia(productId, url, 'IMAGE', alt);
 
   async function getProduct(id: string): Promise<ShopifyProduct | undefined> {
     const data = await call<{ product: GProduct | null }>(`query($id: ID!) { product(id: $id) { ${PRODUCT_FIELDS} } }`, { id });
@@ -202,6 +203,13 @@ export function shopifyApi(domain: string, token: string, fetchImpl: typeof fetc
       return updated;
     },
 
+    async addProductVideo(id, url, alt) {
+      await attachMedia(id, url, 'VIDEO', alt);
+      const updated = await getProduct(id);
+      if (updated === undefined) throw new Error('No product with that id.');
+      return updated;
+    },
+
     async recentOrders(limit): Promise<ShopifyOrder[]> {
       const data = await call<{ orders: { nodes: {
         name: string; createdAt: string; displayFinancialStatus?: string | null; displayFulfillmentStatus?: string | null;
@@ -255,6 +263,7 @@ export function createShopifySource(options: {
     createProduct: async (input) => (await resolve()).createProduct(input),
     updateProduct: async (id, patch) => (await resolve()).updateProduct(id, patch),
     addProductImage: async (id, url, alt) => (await resolve()).addProductImage(id, url, alt),
+    addProductVideo: async (id, url, alt) => (await resolve()).addProductVideo(id, url, alt),
     recentOrders: async (n) => (await resolve()).recentOrders(n),
   };
 }

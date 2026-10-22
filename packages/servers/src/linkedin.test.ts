@@ -11,7 +11,12 @@ function source(): LinkedInSource & { calls: unknown[] } {
   return {
     calls,
     async listAuthors() { return [{ urn: 'urn:li:person:abc', name: 'Ada Okoro', kind: 'person' }, { urn: 'urn:li:organization:7', name: 'Okoro Trading', kind: 'organization' }]; },
-    async publishPost(input) { calls.push(input); return { urn: 'urn:li:share:9', url: 'https://www.linkedin.com/feed/update/urn:li:share:9' }; },
+    async publishPost(input) {
+      calls.push(input);
+      if (input.videoUrl !== undefined) return { videoUrn: 'urn:li:video:3', status: 'processing' };
+      return { urn: 'urn:li:share:9', url: 'https://www.linkedin.com/feed/update/urn:li:share:9' };
+    },
+    async finishVideoPost(input) { calls.push(input); return { urn: 'urn:li:share:11', url: 'https://www.linkedin.com/feed/update/urn:li:share:11' }; },
   };
 }
 
@@ -41,6 +46,17 @@ describe('the LinkedIn server', () => {
     const result = await client.callTool({ name: 'publish_linkedin_post', arguments: { author: 'urn:li:person:abc', text: 'We opened a second kitchen.', link: 'https://okoro.example/news' } });
     expect(deps.calls[0]).toEqual({ authorUrn: 'urn:li:person:abc', text: 'We opened a second kitchen.', link: 'https://okoro.example/news' });
     expect(textOf(result)).toContain('linkedin.com/feed/update');
+    await close();
+  });
+
+  it('hands back the video id while a clip processes, and finishes the post on the second call', async () => {
+    const deps = source();
+    const { client, close } = await connect(deps);
+    const first = await client.callTool({ name: 'publish_linkedin_post', arguments: { author: 'urn:li:person:abc', text: 'Weekend offer', video_url: 'https://h/v.mp4' } });
+    expect(textOf(first)).toContain('urn:li:video:3');
+    const second = await client.callTool({ name: 'finish_linkedin_post', arguments: { author: 'urn:li:person:abc', text: 'Weekend offer', video: 'urn:li:video:3' } });
+    expect(deps.calls[1]).toEqual({ authorUrn: 'urn:li:person:abc', text: 'Weekend offer', videoUrn: 'urn:li:video:3' });
+    expect(textOf(second)).toContain('urn:li:share:11');
     await close();
   });
 

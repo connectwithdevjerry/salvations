@@ -47,6 +47,15 @@ describe('the Admin API', () => {
     expect(calls[2]?.body.variables).toMatchObject({ media: [{ originalSource: 'https://h/i.png', mediaContentType: 'IMAGE' }] });
   });
 
+  it('attaches a clip as video media Shopify fetches itself', async () => {
+    const { impl, calls } = graph([
+      { when: /productCreateMedia/, data: { productCreateMedia: { mediaUserErrors: [] } } },
+      { when: /product\(id/, data: { product: PRODUCT } },
+    ]);
+    await shopifyApi('okoro.myshopify.com', 'shpat_x', impl).addProductVideo('gid://shopify/Product/1', 'https://h/v.mp4', 'Plated');
+    expect(calls[0]?.body.variables).toEqual({ productId: 'gid://shopify/Product/1', media: [{ originalSource: 'https://h/v.mp4', mediaContentType: 'VIDEO', alt: 'Plated' }] });
+  });
+
   it("says Shopify's refusal in words, and a missing scope as the scope", async () => {
     const { impl } = graph([{ when: /productCreate\(/, data: { productCreate: { product: null, userErrors: [{ field: ['title'], message: 'Title can\'t be blank' }] } } }]);
     await expect(shopifyApi('okoro.myshopify.com', 'shpat_x', impl).createProduct({ title: '', status: 'DRAFT' })).rejects.toThrow(/would not create the product: Title/);

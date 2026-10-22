@@ -57,6 +57,8 @@ export interface ShopifySource {
     title?: string; descriptionHtml?: string; tags?: readonly string[]; status?: 'DRAFT' | 'ACTIVE' | 'ARCHIVED'; price?: string;
   }): Promise<Product>;
   addProductImage(id: string, url: string, alt?: string): Promise<Product>;
+  /** A clip on the product page. Shopify fetches and processes it; it appears once ready. */
+  addProductVideo(id: string, url: string, alt?: string): Promise<Product>;
   recentOrders(limit: number): Promise<readonly Order[]>;
 }
 
@@ -186,6 +188,20 @@ export function createShopifyServer(_context: ServerContext, source: ShopifySour
   }, async (args) => {
     const product = await source.addProductImage(args.id, args.image_url, args.alt);
     return text(`Picture added. ${product.title} now has ${product.imageCount} picture${product.imageCount === 1 ? '' : 's'}.`);
+  });
+
+  server.registerTool('add_product_video', {
+    title: 'Add a clip to a product',
+    description: d('Attach a clip by public https link (mp4), such as one the studio made. Shopify fetches it and shows it on the product page once processed, usually within a minute.'),
+    inputSchema: {
+      id: z.string().trim().min(1).max(120),
+      video_url: z.string().url(),
+      alt: z.string().trim().max(200).optional().describe('What the clip shows, for people who cannot see it.'),
+    },
+    annotations: write,
+  }, async (args) => {
+    const product = await source.addProductVideo(args.id, args.video_url, args.alt);
+    return text(`Clip added to ${product.title}. Shopify is processing it; it shows on the product page when ready.`);
   });
 
   server.registerTool('publish_product', {

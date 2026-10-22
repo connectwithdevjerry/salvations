@@ -15,7 +15,7 @@
  * Posts API: https://learn.microsoft.com/linkedin/marketing/community-management/shares/posts-api
  */
 import { scopeKeyString, workspaceScope, userScope } from '@salvations/mcp';
-import type { LinkedInAuthor, LinkedInPost, LinkedInSource } from '@salvations/servers';
+import type { LinkedInAuthor, LinkedInPending, LinkedInPost, LinkedInSource } from '@salvations/servers';
 import { MongoOAuthCredentialStore, ScopedDb, type Database, type McpServerBindingDoc, PlatformDb, type OAuthConnectionDoc } from '@salvations/db';
 import { randomBytes } from 'node:crypto';
 import { env } from './env';
@@ -34,6 +34,10 @@ export const LINKEDIN_VERSION = '202509';
 
 /** What the app asks for by default: the person's own posts. Page posting needs the Community Management product. */
 export const DEFAULT_SCOPES = 'openid profile w_member_social';
+
+/** How long a clip is waited for in one call before the model is handed the video id. */
+const VIDEO_WAIT_MS = 45_000;
+const VIDEO_POLL_MS = 3_000;
 
 interface StoredTokens {
   access_token: string;
@@ -101,7 +105,7 @@ function failure(status: number, body: string): Error {
 }
 
 /** The LinkedIn calls, given a way to get the token. Split from the store so it can be tested with a stub fetch. */
-export function linkedInPublishing(accessToken: () => Promise<string>, fetchImpl: typeof fetch): LinkedInSource {
+export function linkedInPublishing(accessToken: () => Promise<string>, fetchImpl: typeof fetch, videoWaitMs = VIDEO_WAIT_MS): LinkedInSource {
   async function call(path: string, init: RequestInit = {}): Promise<Response> {
     const token = await accessToken();
     const response = await fetchImpl(`${API}${path}`, {
@@ -148,30 +152,91 @@ export function linkedInPublishing(accessToken: () => Promise<string>, fetchImpl
     return init.value.image;
   }
 
+  /**
+   * A clip, in LinkedIn's parts: initialise with the size, PUT each byte
+   * range to its own URL keeping the ETag, finalise with the ETags. The
+   * video then processes on LinkedIn's side and a post may only name it
+   * once it is available.
+   */
+  async function uploadVideo(ownerUrn: string, videoUrl: string): Promise<string> {
+    const fetched = await fetchImpl(videoUrl);
+    if (!fetched.ok) throw new Error(`Could not fetch the clip to upload (${fetched.status}).`);
+    const bytes = new Uint8Array(await fetched.arrayBuffer());
+    const init = await (await call('/rest/videos?action=initializeUpload', json({
+      initializeUploadRequest: { owner: ownerUrn, fileSizeBytes: bytes.byteLength, uploadCaptions: false, uploadThumbnail: false },
+    }))).json() as {
+      value: { video: string; uploadToken: string; uploadInstructions: { uploadUrl: string; firstByte: number; lastByte: number }[] };
+    };
+    const token = await accessToken();
+    const etags: string[] = [];
+    for (const part of init.value.uploadInstructions) {
+      const put = await fetchImpl(part.uploadUrl, {
+        method: 'PUT',
+        headers: { authorization: `Bearer ${token}`, 'content-type': 'application/octet-stream' },
+        body: bytes.slice(part.firstByte, part.lastByte + 1),
+      });
+      if (!put.ok) throw new Error(`LinkedIn refused part of the clip (${put.status}).`);
+      const etag = put.headers.get('etag');
+      if (etag === null) throw new Error('LinkedIn took a part of the clip without saying which.');
+      etags.push(etag);
+    }
+    await call('/rest/videos?action=finalizeUpload', json({
+      finalizeUploadRequest: { video: init.value.video, uploadToken: init.value.uploadToken, uploadedPartIds: etags },
+    }));
+    return init.value.video;
+  }
+
+  async function videoStatus(videoUrn: string): Promise<string> {
+    const video = await (await call(`/rest/videos/${encodeURIComponent(videoUrn)}`)).json() as { status?: string };
+    return video.status ?? 'PROCESSING';
+  }
+
+  async function post(authorUrn: string, text: string, content: Record<string, unknown> | undefined): Promise<LinkedInPost> {
+    const response = await call('/rest/posts', json({
+      author: authorUrn,
+      commentary: text,
+      visibility: 'PUBLIC',
+      distribution: { feedDistribution: 'MAIN_FEED', targetEntities: [], thirdPartyDistributionChannels: [] },
+      lifecycleState: 'PUBLISHED',
+      isReshareDisabledByAuthor: false,
+      ...(content !== undefined ? { content } : {}),
+    }));
+    const urn = response.headers.get('x-restli-id') ?? response.headers.get('x-linkedin-id') ?? '';
+    if (urn === '') throw new Error('LinkedIn accepted the post but did not say which it is.');
+    return { urn, url: `https://www.linkedin.com/feed/update/${urn}` };
+  }
+
+  /** Posts once the clip is available, or hands back the video id when it is still processing. */
+  async function postWhenReady(authorUrn: string, text: string, videoUrn: string): Promise<LinkedInPost | LinkedInPending> {
+    const deadline = Date.now() + videoWaitMs;
+    for (;;) {
+      const status = await videoStatus(videoUrn);
+      if (status === 'AVAILABLE') break;
+      if (status === 'PROCESSING_FAILED') throw new Error('LinkedIn could not process that clip. An mp4 between 3 seconds and 10 minutes, under 200MB, at a public https link.');
+      if (Date.now() >= deadline) return { videoUrn, status: 'processing' };
+      await new Promise((resolve) => setTimeout(resolve, VIDEO_POLL_MS));
+    }
+    return post(authorUrn, text, { media: { id: videoUrn, title: text.slice(0, 100) } });
+  }
+
   return {
     async listAuthors() {
       return [await me(), ...(await organizations())];
     },
 
-    async publishPost(input): Promise<LinkedInPost> {
+    async publishPost(input): Promise<LinkedInPost | LinkedInPending> {
+      if (input.videoUrl !== undefined) {
+        return postWhenReady(input.authorUrn, input.text, await uploadVideo(input.authorUrn, input.videoUrl));
+      }
       const content = input.imageUrl !== undefined
         ? { media: { id: await uploadImage(input.authorUrn, input.imageUrl), altText: input.text.slice(0, 200) } }
         : input.link !== undefined
           ? { article: { source: input.link, ...(input.linkTitle !== undefined ? { title: input.linkTitle } : {}) } }
           : undefined;
-      const response = await call('/rest/posts', json({
-        author: input.authorUrn,
-        commentary: input.text,
-        visibility: 'PUBLIC',
-        distribution: { feedDistribution: 'MAIN_FEED', targetEntities: [], thirdPartyDistributionChannels: [] },
-        lifecycleState: 'PUBLISHED',
-        isReshareDisabledByAuthor: false,
-        ...(content !== undefined ? { content } : {}),
-      }));
-      const urn = response.headers.get('x-restli-id') ?? response.headers.get('x-linkedin-id') ?? '';
-      if (urn === '') throw new Error('LinkedIn accepted the post but did not say which it is.');
-      return { urn, url: `https://www.linkedin.com/feed/update/${urn}` };
+      return post(input.authorUrn, input.text, content);
     },
+
+    finishVideoPost: (input) => postWhenReady(input.authorUrn, input.text, input.videoUrn),
   };
 }
 

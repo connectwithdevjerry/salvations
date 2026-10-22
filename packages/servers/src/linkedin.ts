@@ -7,9 +7,10 @@
  * grant, so no tool takes a token and no prompt can post as somebody else.
  *
  * Every publishing tool is a write that cannot be repeated, which is what
- * makes policy stop and show the person the exact words first. LinkedIn
- * has no clips here yet: its video upload is a multi-part dance this
- * server does not do, and the tool says so rather than failing late.
+ * makes policy stop and show the person the exact words first. A clip is
+ * uploaded in LinkedIn's parts and then processed on their side; when
+ * that takes longer than one call, the model is handed the video's id and
+ * finishes the post with it.
  */
 import { McpServer } from '@modelcontextprotocol/server';
 import { z } from 'zod';
@@ -28,12 +29,18 @@ export interface LinkedInAuthor {
 
 export interface LinkedInPost { readonly urn: string; readonly url: string }
 
+/** A clip LinkedIn is still processing: finish the post with `finish_linkedin_post`. */
+export interface LinkedInPending { readonly videoUrn: string; readonly status: 'processing' }
+
 export interface LinkedInSource {
   listAuthors(): Promise<readonly LinkedInAuthor[]>;
   publishPost(input: {
-    authorUrn: string; text: string; link?: string; linkTitle?: string; imageUrl?: string;
-  }): Promise<LinkedInPost>;
+    authorUrn: string; text: string; link?: string; linkTitle?: string; imageUrl?: string; videoUrl?: string;
+  }): Promise<LinkedInPost | LinkedInPending>;
+  finishVideoPost(input: { authorUrn: string; text: string; videoUrn: string }): Promise<LinkedInPost | LinkedInPending>;
 }
+
+const isPending = (result: LinkedInPost | LinkedInPending): result is LinkedInPending => 'videoUrn' in result;
 
 const text = (value: string) => ({ content: [{ type: 'text' as const, text: value }] });
 
@@ -54,12 +61,16 @@ export function createLinkedInServer(_context: ServerContext, source: LinkedInSo
     return text(authors.map((a) => `${a.kind === 'person' ? 'You' : 'Page'}: ${a.name} (author ${a.urn})`).join('\n'));
   });
 
+  const outcome = (result: LinkedInPost | LinkedInPending) => (isPending(result)
+    ? text(`LinkedIn is still processing the clip (video ${result.videoUrn}). Call finish_linkedin_post with the same author and text, and that video id, in a moment.`)
+    : text(`Published to LinkedIn. ${result.url}`));
+
   server.registerTool('publish_linkedin_post', {
     title: 'Publish a LinkedIn post',
     description: d(
-      'Post now, as the person or a page: the words, with a link or a picture (a public https jpeg or png, '
-      + 'such as one the studio made). Clips are not supported here yet. This publishes for real; it cannot '
-      + 'be taken back from here.',
+      'Post now, as the person or a page: the words, with a link, a picture (a public https jpeg or png) or a '
+      + 'clip (a public https mp4), such as one the studio made. A clip may take a minute to process; if the '
+      + 'answer says so, call finish_linkedin_post. This publishes for real; it cannot be taken back from here.',
     ),
     inputSchema: {
       author: z.string().trim().min(1).max(80).describe('From list_authors.'),
@@ -67,20 +78,34 @@ export function createLinkedInServer(_context: ServerContext, source: LinkedInSo
       link: z.string().url().optional().describe('A link to share with the post.'),
       link_title: z.string().trim().max(200).optional(),
       image_url: z.string().url().optional().describe('A public https picture to attach.'),
+      video_url: z.string().url().optional().describe('A public https mp4 to attach.'),
     },
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
   }, async (args) => {
-    if (args.link !== undefined && args.image_url !== undefined) {
-      return { content: [{ type: 'text' as const, text: 'One of a link or a picture, not both.' }], isError: true };
+    const attachments = [args.link, args.image_url, args.video_url].filter((v) => v !== undefined).length;
+    if (attachments > 1) {
+      return { content: [{ type: 'text' as const, text: 'One of a link, a picture or a clip, not more.' }], isError: true };
     }
     const posted = await source.publishPost({
       authorUrn: args.author, text: args.text,
       ...(args.link !== undefined ? { link: args.link } : {}),
       ...(args.link_title !== undefined ? { linkTitle: args.link_title } : {}),
       ...(args.image_url !== undefined ? { imageUrl: args.image_url } : {}),
+      ...(args.video_url !== undefined ? { videoUrl: args.video_url } : {}),
     });
-    return text(`Published to LinkedIn. ${posted.url}`);
+    return outcome(posted);
   });
+
+  server.registerTool('finish_linkedin_post', {
+    title: 'Finish a LinkedIn post with a clip',
+    description: d('Publishes the post whose clip LinkedIn was still processing when publish_linkedin_post was called.'),
+    inputSchema: {
+      author: z.string().trim().min(1).max(80),
+      text: z.string().trim().min(1).max(MAX_POST),
+      video: z.string().trim().min(1).max(120).describe('The video id from the earlier answer.'),
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+  }, async (args) => outcome(await source.finishVideoPost({ authorUrn: args.author, text: args.text, videoUrn: args.video })));
 
   return server;
 }

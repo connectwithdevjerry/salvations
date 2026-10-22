@@ -4,8 +4,12 @@ Companion to [ARCHITECTURE.md](./ARCHITECTURE.md) and the documents in [docs/](.
 
 **Current state:** Phase 1 complete through §1.10 and Phase 1.5 through §1.5.8, plus the plan
 gate (10-day trial or subscription before the first assistant), the rules editor on the Approvals
-page, and apps connected more than once; what remains in Phase 1 is the manual acceptance pass
-and the runbooks.
+page with "Approve all" and a twenty-minute auto-approve window, apps connected more than once,
+five channels at parity (Telegram, WhatsApp, iMessage via the person's own Mac, Slack, Discord)
+with buttons, pictures, clips and voice notes where each platform allows, a studio for pictures
+and clips, every role able to take a bare link or name and do the whole job, an Academic outreach
+role that searches, and publishing to Instagram, Facebook, LinkedIn and Shopify once the person
+says yes; what remains in Phase 1 is the manual acceptance pass and the runbooks.
 The catalogue direction — named, hard-coded integrations rather than a generic MCP URL box —
 was set after Phase 1 and supersedes the "no integrations in Phase 1" line that was here.
 
@@ -212,8 +216,9 @@ platform exist beside the first three.
 ### 1.5.1 Channels — done
 
 - [x] `packages/catalog` — CHANNELS and INTEGRATIONS with setup steps, granted scopes, brand colour
-- [x] `packages/channels` — `ChannelAdapter` port + Telegram, Discord, Slack
-- [x] 🔒 Per-platform delivery authentication: echoed secret, HMAC-SHA256, Ed25519
+- [x] `packages/channels` — `ChannelAdapter` port + Telegram, WhatsApp, iMessage (own Mac), Slack, Discord
+- [x] 🔒 Per-platform delivery authentication: echoed secret, HMAC-SHA256 (Slack, WhatsApp),
+      Ed25519 (Discord), and a confirm round trip to the person's own Mac where nothing can sign
 - [x] 🔒 Replay windows — a valid signature over a stale body is rejected
 - [x] 🔒 Ownership handshake — a bot token proves nothing about who pasted it
 - [x] 🔒 Delivery de-duplication on a unique index; the claim is released if the work fails
@@ -528,7 +533,8 @@ Both were assessed and neither fits a request-shaped deployment, so neither is h
 - [ ] Channel capability matrix as a test: which adapter has which optional method
 - [ ] Discord over the Gateway once there is a worker that can hold a socket, so it is a
       conversation rather than a slash command
-- [x] First-party MCP servers: memory, knowledge, chat, web, Google Workspace, the agent gateway
+- [x] First-party MCP servers: memory, knowledge, chat, web, studio, Google Workspace, Instagram &
+      Facebook, LinkedIn, Shopify, the agent gateway
 - [x] In-process transport — same client interface, same `ToolGateway`
 - [ ] 🔒 Verify no runtime back doors were added for our own servers
 

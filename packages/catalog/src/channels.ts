@@ -33,7 +33,7 @@ const TELEGRAM: CatalogEntry = {
     {
       title: 'Open BotFather',
       body: 'BotFather is Telegram\'s own bot for making bots. Open it in the app you ' +
-        'already use — it is the account with the blue verified tick.',
+        'already use. It is the account with the blue verified tick.',
       link: { label: 'Open @BotFather', url: 'https://t.me/BotFather' },
     },
     {
@@ -46,7 +46,7 @@ const TELEGRAM: CatalogEntry = {
       title: 'Paste the token it gives you',
       body: 'BotFather replies with a line beginning "Use this token to access the HTTP ' +
         'API". Paste that token below. It goes straight into encrypted storage and is ' +
-        'never shown again — if you lose it, /token gets you a new one.',
+        'never shown again. If you lose it, /token gets you a new one.',
     },
     {
       title: 'Say hello',
@@ -127,14 +127,23 @@ const SLACK: CatalogEntry = {
         'conversation; the last two are voice clips in and pictures and clips out.',
     },
     {
-      title: 'Install it and copy the bot token',
-      body: 'Press Install to Workspace. The Bot User OAuth Token starts with "xoxb-". ' +
-        'That is the one — the user token starting "xoxp-" is not.',
+      title: 'Let people message it',
+      body: 'Under App Home → Show Tabs, turn the Messages Tab on and tick "Allow users to ' +
+        'send Slash commands and messages from the messages tab". Without this, a DM to ' +
+        'the app shows "Sending messages to this app has been turned off".',
     },
     {
-      title: 'Copy the signing secret too',
-      body: 'Under Basic Information → App Credentials. It is not the bot token: Slack ' +
-        'signs deliveries with this one and authorises calls with the other.',
+      title: 'Install it and copy the bot token',
+      body: 'Under Install App in the left menu, press Install to Workspace and allow it. ' +
+        'The Bot User OAuth Token then appears on that same page, and on OAuth & ' +
+        'Permissions under OAuth Tokens. It starts with "xoxb-". The user token ' +
+        'starting "xoxp-" is not the one.',
+    },
+    {
+      title: 'Copy the signing secret from a different page',
+      body: 'It is not with the token. Go to Basic Information → App Credentials and ' +
+        'copy Signing Secret. Slack signs deliveries with this one and authorises ' +
+        'calls with the other, so both are needed.',
     },
     {
       title: 'Point its events at us',

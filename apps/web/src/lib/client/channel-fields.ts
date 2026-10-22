@@ -62,3 +62,24 @@ export const ADDRESS_NOTE: Readonly<Record<string, string>> = {
   discord: 'Paste it on the application’s General Information page. The /hive command is already created.',
   whatsapp: 'Under WhatsApp → Configuration in your Meta app, with the verify token below. Then subscribe to the messages field.',
 };
+
+/**
+ * What tends to go wrong in the platform's own app after the connection
+ * exists, and the fix for each. Shown beside the address once connected,
+ * because this is the moment people find out.
+ */
+export const AFTER_CONNECT: Readonly<Record<string, readonly string[]>> = {
+  slack: [
+    'A DM to the app says "Sending messages to this app has been turned off": in the Slack app settings go to App Home → Show Tabs, turn the Messages Tab on and tick "Allow users to send Slash commands and messages from the messages tab".',
+    'The app does not answer in a channel until it is invited: type /invite @ followed by its name in that channel, then mention it.',
+    'Changed the scopes after installing? Slack asks you to reinstall the app. Do that, then paste the bot token again here if it changed.',
+    'Slack rejected the request URL? It only saves once this connection exists, so paste the address after connecting, not before.',
+  ],
+  whatsapp: [
+    'Meta\'s test number only talks to phone numbers added as recipients under WhatsApp → API Setup. Your own number can be added there.',
+    'The assistant can message someone only within 24 hours of their last message. Outside that window a reply needs an approved template.',
+  ],
+  discord: [
+    'The /hive command can take a minute to show up in a server. If it is still missing, reopen Discord so it refreshes the command list.',
+  ],
+};

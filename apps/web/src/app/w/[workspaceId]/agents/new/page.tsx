@@ -8,7 +8,7 @@ import { DEFAULT_AGENT_NAME, INTEGRATIONS, ROLES, type AssistantRole, type Catal
 import { api, ws } from '@/lib/client/api';
 import { BrandMark, Icon, StepDots, Tile } from '@/components/ui';
 import { SetupSteps, Copyable } from '@/components/setup-steps';
-import { ADDRESS_LABEL, ADDRESS_NOTE, EXTRA, SECONDARY, tokenLabelOf } from '@/lib/client/channel-fields';
+import { ADDRESS_LABEL, ADDRESS_NOTE, AFTER_CONNECT, EXTRA, SECONDARY, tokenLabelOf } from '@/lib/client/channel-fields';
 import { Qr } from '@/components/qr';
 import { GroupPicker } from '@/components/group-picker';
 import { VendorCards, keyStatesOf, vendorCopy } from '@/components/vendor-mark';
@@ -796,6 +796,18 @@ function Handshake({
           {connection.verifyToken !== undefined && <Copyable label="Verify token" value={connection.verifyToken} />}
           <p className="muted" style={{ margin: 0 }}>{ADDRESS_NOTE[entry.id]}</p>
         </>
+      )}
+
+      {(AFTER_CONNECT[entry.id] ?? []).length > 0 && (
+        <div className="note" style={{ alignItems: 'flex-start' }}>
+          <span className="tile" aria-hidden><Icon name="shield" size={16} /></span>
+          <span style={{ flex: 1 }}>
+            <strong>If something looks off</strong>
+            <ul className="steps-list" style={{ marginTop: 6 }}>
+              {(AFTER_CONNECT[entry.id] ?? []).map((line) => <li key={line}>{line}</li>)}
+            </ul>
+          </span>
+        </div>
       )}
 
       {!telegram && (

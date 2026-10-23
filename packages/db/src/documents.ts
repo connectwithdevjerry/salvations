@@ -379,6 +379,23 @@ export interface ChannelDoc extends TenantDoc {
   /** Set once the handshake completes. Until then nothing is answered. */
   verifiedChatRef?: string | null;
   /**
+   * Present when the platform was connected through this deployment's own
+   * app (Slack's "Add to Slack") rather than a bot the person made. The
+   * platform then delivers to one shared address for every such connection,
+   * and the workspace it names is what routes a delivery here. There is no
+   * handshake: the person consented on the platform's own screen, and
+   * everyone in that workspace may talk to the assistant.
+   */
+  install?: {
+    /** The platform's id for the workspace or server: Slack's team id. */
+    teamRef: string;
+    teamName: string;
+    /** Who pressed the button, on the platform. */
+    installerRef: string;
+    /** The platform's id for our app there. */
+    appRef: string;
+  } | null;
+  /**
    * The address last registered with the platform. Compared with the address
    * the deployment now has, so a moved site re-points its bots rather than
    * leaving them delivering to the old one.

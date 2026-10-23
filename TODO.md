@@ -526,6 +526,16 @@ Both were assessed and neither fits a request-shaped deployment, so neither is h
       Tabs → Messages Tab (without it a DM to the app says "Sending messages to this app has
       been turned off"), the install step says where the Bot User OAuth Token appears, and the
       signing-secret step says it lives on a different page (Basic Information).
+- [x] "Add to Slack": one Slack app owned by the deployment (`SLACK_CLIENT_ID`/`SECRET`/
+      `SIGNING_SECRET`), installed into any workspace from a button. The state through Slack's
+      redirect is a signed token naming workspace, assistant and person (`slack-app.ts`); the
+      callback refuses anyone else, redeems the code with Basic auth, proves the token with
+      auth.test, and stores a connection that is live at once (`ChannelDoc.install`, no
+      handshake, every chat in that workspace allowed). Slack delivers for every such workspace
+      to one shared address (`/api/channels/slack/app`), signed with the app's secret and routed
+      by the team id inside the delivery (`handleSharedDelivery`). One Slack workspace maps to one
+      HIVE workspace. Disconnecting revokes the token at Slack. The do-it-yourself path with the
+      person's own app stays behind "Prefer your own Slack app?".
 - [x] Once a channel is connected, an "If something looks off" panel (`AFTER_CONNECT` in
       `channel-fields.ts`) lists the platform's usual snags with the fix: Slack's messages-tab
       setting, inviting the app to a channel, reinstalling after a scope change, the request

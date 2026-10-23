@@ -228,6 +228,8 @@ export const INDEXES: Readonly<Partial<Record<CollectionName, readonly IndexDef[
       rationale: 'one connection per platform per workspace; two would race for deliveries' },
     { name: 'bot_ref', key: { 'identity.botRef': 1 },
       rationale: 'an inbound delivery names the bot, never the workspace' },
+    { name: 'install_team', key: { type: 1, 'install.teamRef': 1 }, options: { sparse: true },
+      rationale: 'a delivery to the shared app address names the platform workspace, never ours' },
   ],
 
   channelIdentities: [

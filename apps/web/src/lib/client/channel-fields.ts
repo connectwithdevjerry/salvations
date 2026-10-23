@@ -83,3 +83,26 @@ export const AFTER_CONNECT: Readonly<Record<string, readonly string[]>> = {
     'The /hive command can take a minute to show up in a server. If it is still missing, reopen Discord so it refreshes the command list.',
   ],
 };
+
+/** The one-press connection, where this deployment has an app of its own. */
+export const ONE_CLICK: Readonly<Record<string, { title: string; lede: string; button: string; manual: string }>> = {
+  slack: {
+    title: 'Add it to your Slack in one press',
+    lede: 'Slack asks you to allow it, and you are back here connected. Everyone in that workspace can then message it, and each person gets their own thread.',
+    button: 'Add to Slack',
+    manual: 'Prefer your own Slack app? Do it the long way',
+  },
+};
+
+/** What to say beside a connection made through this deployment\'s own app. */
+export const INSTALLED_NOTE: Readonly<Record<string, string>> = {
+  slack: 'Connected through HIVE\'s own Slack app. Nothing to paste into Slack: messages already reach it.',
+};
+
+/** The snags that remain once the app did the setup. */
+export const AFTER_INSTALL: Readonly<Record<string, readonly string[]>> = {
+  slack: [
+    'The app does not answer in a channel until it is invited: type /invite @ followed by its name in that channel, then mention it.',
+    'Disconnecting here revokes its token, so Slack stops reaching it at once. To remove the app from Slack entirely as well, do that under Slack\'s app settings.',
+  ],
+};

@@ -625,6 +625,9 @@ button.google {
 
 /* ------------------------------------------------------------- setup ----- */
 
+.one-click { display: flex; gap: 14px; align-items: flex-start; }
+.one-click strong { font-size: 15px; }
+
 .steps-scroll {
   max-height: 340px;
   overflow-y: scroll;

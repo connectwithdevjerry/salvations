@@ -33,8 +33,11 @@ export interface CreateChannelInput {
   readonly tokenCredentialId: string;
   readonly secretCredentialId?: string | undefined;
   readonly identity: ChannelDoc['identity'];
-  readonly connectCode: string;
-  readonly connectCodeTtlMs: number;
+  /** The handshake code. Required unless the connection is an install, which needs none. */
+  readonly connectCode?: string | undefined;
+  readonly connectCodeTtlMs?: number | undefined;
+  /** Connected through the deployment's own app: live at once, no handshake. */
+  readonly install?: ChannelDoc['install'] | undefined;
   readonly createdBy: string;
 }
 
@@ -79,6 +82,15 @@ export class ChannelRepository {
     const now = new Date();
     await this.#channels.deleteOne({ type: input.type } as never);
 
+    // An install has already been consented to on the platform's own screen
+    // by somebody who administers that workspace, so it is live at once. A
+    // pasted token proves nothing about who pasted it, so it waits for the
+    // handshake.
+    const installed = input.install !== undefined && input.install !== null;
+    if (!installed && (input.connectCode === undefined || input.connectCodeTtlMs === undefined)) {
+      throw new Error('A connection that is not an install needs a connect code.');
+    }
+
     return this.#channels.insertOne({
       _id: newId(IdPrefix.channel),
       type: input.type,
@@ -86,14 +98,14 @@ export class ChannelRepository {
       modelBindingId: input.modelBindingId ?? null,
       tokenCredentialId: input.tokenCredentialId,
       secretCredentialId: input.secretCredentialId ?? null,
-      status: 'pending_verification',
+      status: installed ? 'connected' : 'pending_verification',
       identity: input.identity,
-      connect: {
-        code: input.connectCode,
-        expiresAt: new Date(now.getTime() + input.connectCodeTtlMs),
-      },
+      connect: installed || input.connectCode === undefined || input.connectCodeTtlMs === undefined
+        ? null
+        : { code: input.connectCode, expiresAt: new Date(now.getTime() + input.connectCodeTtlMs) },
       verifiedChatRef: null,
-      health: { lastOkAt: null, lastDeliveryAt: null, consecutiveFailures: 0, lastError: null },
+      install: input.install ?? null,
+      health: { lastOkAt: installed ? now : null, lastDeliveryAt: null, consecutiveFailures: 0, lastError: null },
       createdBy: input.createdBy,
       createdAt: now,
       updatedAt: now,

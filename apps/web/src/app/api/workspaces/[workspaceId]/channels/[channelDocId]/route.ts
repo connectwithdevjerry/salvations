@@ -6,12 +6,13 @@
  * expires in half an hour and finding a bot in a chat app is a task people
  * abandon halfway through and come back to.
  */
-import { channelAdapter } from '@salvations/channels';
+import { channelAdapter, revokeSlackToken } from '@salvations/channels';
 import { ChannelRepository } from '@salvations/db';
 import { errorResponse, ok } from '@/lib/http';
 import { workspaceRoute } from '@/lib/route';
 import { connectCode } from '@/lib/connect-code';
-import { CONNECT_CODE_TTL_MS, webhookUrl } from '@/lib/channel-inbound';
+import { CONNECT_CODE_TTL_MS } from '@/lib/channel-inbound';
+import { deliveryUrlOf } from '@/lib/channel-webhook';
 
 export const runtime = 'nodejs';
 
@@ -31,6 +32,12 @@ export const DELETE = workspaceRoute<{ channelDocId: string }>(
       // Best-effort. A token that has already been revoked at the platform
       // cannot be used to unregister, and that must not block disconnecting.
       if (token !== null) await adapter.unregister(token.expose()).catch(() => undefined);
+      // A token Slack issued to this deployment's own app is revoked at
+      // Slack as well, so disconnecting here is disconnecting there: the
+      // workspace has to press the button again to come back.
+      if (token !== null && row.type === 'slack' && row.install !== null && row.install !== undefined) {
+        await revokeSlackToken(token.expose()).catch(() => undefined);
+      }
     }
 
     await channels.disconnect(row._id);
@@ -57,7 +64,7 @@ export const POST = workspaceRoute<{ channelDocId: string }>(
       handle: row.identity.handle,
       displayName: row.identity.displayName,
       agentId: row.agentId,
-      webhookUrl: webhookUrl(row.type, row._id),
+      webhookUrl: deliveryUrlOf(row),
       connectCode: row.connect?.code,
     });
   },

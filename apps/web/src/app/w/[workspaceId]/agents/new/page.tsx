@@ -9,6 +9,7 @@ import { api, ws } from '@/lib/client/api';
 import { BrandMark, Icon, StepDots, Tile } from '@/components/ui';
 import { SetupSteps, Copyable } from '@/components/setup-steps';
 import { ADDRESS_LABEL, ADDRESS_NOTE, AFTER_CONNECT, EXTRA, SECONDARY, tokenLabelOf } from '@/lib/client/channel-fields';
+import { OneClickConnect } from '@/components/one-click-connect';
 import { Qr } from '@/components/qr';
 import { GroupPicker } from '@/components/group-picker';
 import { VendorCards, keyStatesOf, vendorCopy } from '@/components/vendor-mark';
@@ -284,7 +285,7 @@ function AgentStep({
 
 interface Channel {
   id: string; channel: string; status: string; handle: string; agentId: string; verifyToken?: string;
-  webhookUrl: string; connectCode?: string; lastError?: string;
+  webhookUrl: string; connectCode?: string; lastError?: string; installed?: boolean; teamName?: string;
 }
 
 /** Telegram's own bot for making bots, as a link a phone can open. */
@@ -313,6 +314,7 @@ function ChannelStep({
 }) {
   const [open, setOpen] = useState<string>('telegram');
   const [channels, setChannels] = useState<Channel[]>([]);
+  const [oneClick, setOneClick] = useState<string[]>([]);
   const [hovered, setHovered] = useState<TalkWay>();
   const way = hovered ?? WAYS.find((w) => w.id === open) ?? WAYS[0]!;
   const entry = way.entry;
@@ -321,8 +323,8 @@ function ChannelStep({
   const reload = useCallback(() => {
     // Only THIS agent's connections: another agent's bot is not a way to
     // talk to this one.
-    void api.get<{ items: Channel[] }>(`${ws(workspaceId)}/channels`)
-      .then((r) => setChannels(r.items.filter((c) => c.agentId === agentId)))
+    void api.get<{ items: Channel[]; oneClick?: string[] }>(`${ws(workspaceId)}/channels`)
+      .then((r) => { setChannels(r.items.filter((c) => c.agentId === agentId)); setOneClick(r.oneClick ?? []); })
       .catch(() => undefined);
   }, [workspaceId, agentId]);
 
@@ -352,8 +354,11 @@ function ChannelStep({
           <div className="note">
             <span className="tile" aria-hidden><Icon name="chat" size={16} /></span>
             <span>
-              <strong>{agentName} just texted you.</strong> Check Telegram — that chat is yours
-              now, and only you can use it.
+              {connected.installed === true ? (
+                <><strong>{agentName} is in {connected.teamName ?? 'your workspace'} now.</strong> Open {connected.channel === 'slack' ? 'Slack' : connected.channel} and say hello.</>
+              ) : (
+                <><strong>{agentName} just texted you.</strong> Check {connected.channel === 'telegram' ? 'Telegram' : connected.channel}: that chat is yours now, and only you can use it.</>
+              )}
             </span>
           </div>
           <div className="wizard-foot">
@@ -399,6 +404,16 @@ function ChannelStep({
                       onDone={reload}
                       onError={onError}
                     />
+                  ) : oneClick.includes(entry.id) ? (
+                    <OneClickConnect workspaceId={workspaceId} agentId={agentId} entry={entry} onError={(m) => { if (m !== undefined) onError(m); }}>
+                      <ConnectForm
+                        workspaceId={workspaceId}
+                        entry={entry}
+                        agentId={agentId}
+                        onDone={reload}
+                        onError={onError}
+                      />
+                    </OneClickConnect>
                   ) : (
                     <ConnectForm
                       workspaceId={workspaceId}

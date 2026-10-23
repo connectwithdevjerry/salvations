@@ -35,6 +35,16 @@ export const CALLBACK_ERRORS: Readonly<Record<string, string>> = {
   mcp_gone: 'That connection no longer exists.',
   mcp_failed: 'The vendor rejected the consent. Connect again; if it repeats, the server may have changed.',
   mcp_discovery: 'Consent worked, but the server would not list its tools. Try authorising again.',
+  slack_not_configured: 'This deployment has no Slack app of its own yet. Connect Slack the long way, with your own app.',
+  slack_state: 'That consent took too long, or started somewhere else. Press Add to Slack again.',
+  slack_denied: 'You cancelled on Slack\'s screen. Nothing was connected.',
+  slack_incomplete: 'Slack sent an incomplete response. Press Add to Slack again.',
+  slack_signed_out: 'You were signed out before Slack sent you back. Sign in and press Add to Slack again.',
+  slack_wrong_person: 'That consent belongs to a different account than the one signed in here.',
+  slack_agent_gone: 'That assistant no longer exists.',
+  slack_limit: 'Your plan has no room for another channel.',
+  slack_elsewhere: 'That Slack workspace is already connected to another HIVE workspace. Disconnect it there first.',
+  slack_failed: 'Slack did not complete the install.',
 };
 
 /**

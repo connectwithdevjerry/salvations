@@ -13,6 +13,7 @@ import { channelAdapter } from '@salvations/channels';
 import { ChannelRepository, PlatformDb, type ChannelDoc, type Database } from '@salvations/db';
 import { env } from './env';
 import { repositories } from './repositories';
+import { slackAppWebhookUrl } from './slack-app';
 
 /**
  * Where a platform delivers for one connection.
@@ -22,6 +23,18 @@ import { repositories } from './repositories';
  */
 export const webhookUrl = (type: string, channelDocId: string): string =>
   `${env().PUBLIC_BASE_URL.replace(/\/$/, '')}/api/channels/${type}/${channelDocId}`;
+
+/**
+ * Where a platform delivers for THIS connection.
+ *
+ * A bot somebody made has an address of its own. A workspace that installed
+ * this deployment's app shares one address with every other such workspace,
+ * because the platform holds one request URL per app.
+ */
+export function deliveryUrlOf(row: Pick<ChannelDoc, 'type' | '_id' | 'install'>): string {
+  if (row.install !== null && row.install !== undefined && row.type === 'slack') return slackAppWebhookUrl();
+  return webhookUrl(row.type, row._id);
+}
 
 /**
  * What our registration asks the platform for, as a version.
@@ -65,7 +78,7 @@ export async function registerWebhook(database: Database, row: ChannelDoc): Prom
     ? undefined
     : await repos.credentials.resolve(row.secretCredentialId);
 
-  const url = webhookUrl(row.type, row._id);
+  const url = deliveryUrlOf(row);
   await adapter.register(token.expose(), { webhookUrl: url, webhookSecret: secret?.expose() ?? '' });
   await new ChannelRepository(database, row.workspaceId).recordWebhook(row._id, url, WEBHOOK_SPEC);
   return url;
@@ -92,7 +105,7 @@ export async function refreshStaleWebhooks(database: Database): Promise<WebhookR
   let updated = 0;
   let failed = 0;
   const stale = rows.filter((row) =>
-    row.webhookUrl !== webhookUrl(row.type, row._id) || (row.webhookSpec ?? 1) !== WEBHOOK_SPEC);
+    row.webhookUrl !== deliveryUrlOf(row) || (row.webhookSpec ?? 1) !== WEBHOOK_SPEC);
   for (const row of stale) {
     try {
       await registerWebhook(database, row);

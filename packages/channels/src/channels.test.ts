@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { channelAdapter, CHANNEL_IDS, ChannelError } from './index';
 import { telegramAdapter, chunk, SECRET_HEADER, MAX_AUDIO_BYTES } from './telegram';
 import { discordAdapter } from './discord';
-import { slackAdapter, MAX_SKEW_SECONDS } from './slack';
+import { slackAdapter, slackTeamOf, MAX_SKEW_SECONDS } from './slack';
 import { whatsappAdapter, whatsappVerifyToken } from './whatsapp';
 import { imessageAdapter } from './imessage';
 
@@ -967,5 +967,16 @@ describe('imessage, through a Mac of your own', () => {
     const bytes = await imessageAdapter.fetchAudio?.(token, { fileRef: 'att_1', mimeType: 'audio/mpeg' }, impl);
     expect(bytes?.byteLength).toBe(3);
     expect(calls[0]?.url).toBe('https://quiet-river.trycloudflare.com/api/v1/attachment/att_1/download?password=s3cret');
+  });
+});
+
+describe('slack: which workspace a delivery came from', () => {
+  it('reads the team from an event, from a press, and from nothing else', () => {
+    expect(slackTeamOf(JSON.stringify({ type: 'event_callback', team_id: 'T_1', event: { type: 'message' } }))).toBe('T_1');
+    const press = `payload=${encodeURIComponent(JSON.stringify({ type: 'block_actions', team: { id: 'T_2', domain: 'acme' } }))}`;
+    expect(slackTeamOf(press)).toBe('T_2');
+    expect(slackTeamOf(JSON.stringify({ type: 'url_verification', challenge: 'c' }))).toBeUndefined();
+    expect(slackTeamOf('not json')).toBeUndefined();
+    expect(slackTeamOf('payload=%7B')).toBeUndefined();
   });
 });

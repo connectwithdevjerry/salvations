@@ -102,6 +102,37 @@ const SLACK_ERRORS: Readonly<Record<string, string>> = {
   not_in_channel: 'The bot is not in that channel yet.',
 };
 
+/**
+ * Which Slack workspace a delivery came from.
+ *
+ * Needed when one Slack app serves many connections: an event names its
+ * workspace as `team_id` at the top level, a button press as `team.id`
+ * inside the form's `payload`. Undefined for a URL challenge, which belongs
+ * to no workspace, and for anything unparseable.
+ */
+export function slackTeamOf(raw: string): string | undefined {
+  const isForm = raw.startsWith('payload=');
+  const text = isForm ? new URLSearchParams(raw).get('payload') : raw;
+  if (text === null) return undefined;
+  try {
+    const body = JSON.parse(text) as { team_id?: unknown; team?: { id?: unknown } };
+    if (typeof body.team_id === 'string') return body.team_id;
+    if (typeof body.team?.id === 'string') return body.team.id;
+    return undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Revokes a bot token at Slack. For a token issued to this deployment's own
+ * app: once revoked, the installation is dead until the workspace installs
+ * the app again. Best effort; a token Slack no longer knows is already gone.
+ */
+export async function revokeSlackToken(token: string, fetchImpl: typeof fetch = globalThis.fetch): Promise<void> {
+  await callForm(token, 'auth.revoke', {}, fetchImpl);
+}
+
 /** The first audio file on a message, as something the caller can fetch later. */
 function audioIn(files: readonly SlackFile[] | undefined): InboundAudio | undefined {
   const file = files?.find((f) => typeof f.mimetype === 'string' && f.mimetype.startsWith('audio/'));

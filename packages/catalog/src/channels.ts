@@ -110,7 +110,7 @@ const SLACK: CatalogEntry = {
   kind: 'channel',
   category: 'Chat',
   name: 'Slack',
-  summary: 'DM your agent in Slack, or mention it in a channel. Approve with a button, send a voice clip, get the picture back.',
+  summary: 'Add it to your Slack workspace with one press, then DM it or mention it in a channel. Approve with a button, send a voice clip, get the picture back.',
   setup: 'bot_token',
   accent: '#611F69',
   docs: 'https://api.slack.com/quickstart',

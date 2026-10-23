@@ -58,6 +58,19 @@ const schema = z.object({
   LINKEDIN_SCOPES: z.string().min(1).optional(),
 
   /**
+   * The Slack app behind "Add to Slack". Optional; all three or none.
+   *
+   * One app, owned by this deployment, that any Slack workspace installs
+   * from a button. From api.slack.com/apps → Basic Information → App
+   * Credentials. Without these, Slack is still offered, with the person
+   * making their own app and pasting its token. See .env.example for what
+   * the app itself needs set.
+   */
+  SLACK_CLIENT_ID: z.string().min(1).optional(),
+  SLACK_CLIENT_SECRET: z.string().min(1).optional(),
+  SLACK_SIGNING_SECRET: z.string().min(1).optional(),
+
+  /**
    * OAuth clients registered by hand with vendors whose MCP servers accept
    * neither a client metadata document nor dynamic registration (Asana,
    * HubSpot). JSON, keyed by the vendor's domain:
@@ -151,6 +164,16 @@ const schema = z.object({
   {
     message: 'Set both LINKEDIN_CLIENT_ID and LINKEDIN_CLIENT_SECRET, or neither.',
     path: ['LINKEDIN_CLIENT_ID'],
+  },
+).refine(
+  (value) => {
+    const set = [value.SLACK_CLIENT_ID, value.SLACK_CLIENT_SECRET, value.SLACK_SIGNING_SECRET]
+      .filter((v) => v !== undefined).length;
+    return set === 0 || set === 3;
+  },
+  {
+    message: 'Set SLACK_CLIENT_ID, SLACK_CLIENT_SECRET and SLACK_SIGNING_SECRET together, or none of them.',
+    path: ['SLACK_CLIENT_ID'],
   },
 ).refine(
   (value) => (value.SMTP_URL === undefined) === (value.MAIL_FROM === undefined),

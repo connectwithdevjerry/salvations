@@ -23,9 +23,10 @@ import { linkFromChat } from './chat-link';
 import { decideFromChat } from './channel-approvals';
 import { spendGate } from './limits';
 import type { ChannelDoc } from '@salvations/db';
-import { channelAdapter, type InboundMessage, type VerifyContext } from '@salvations/channels';
+import { channelAdapter, slackTeamOf, type ChannelAdapter, type InboundMessage, type InboundResult, type VerifyContext } from '@salvations/channels';
 import { NO_EAR, transcribeAudio } from './transcribe';
 import { deliveredToOldAddress, registerWebhook, webhookUrl, WEBHOOK_SPEC } from './channel-webhook';
+import { slackApp, slackAppWebhookUrl } from './slack-app';
 import {
   DEFAULT_BUDGET, asId, type RunId, type UserId, type WorkspaceId,
 } from '@salvations/core';
@@ -79,7 +80,6 @@ export async function handleDelivery(
   if (row === null) return plain(404, 'unknown channel');
 
   const repos = repositories(handle.db, row.workspaceId);
-  const channels = new ChannelRepository(handle.db, row.workspaceId);
 
   const secret = row.secretCredentialId === null || row.secretCredentialId === undefined
     ? undefined
@@ -106,6 +106,64 @@ export async function handleDelivery(
       console.log(JSON.stringify({ at: 'channel-inbound', channel: row._id, webhook: 'refresh_failed', error: caught instanceof Error ? caught.message : String(caught) }));
     });
   }
+
+  return act(handle.db, row, adapter, judged);
+}
+
+/**
+ * A delivery to the address shared by every workspace that installed this
+ * deployment's own app.
+ *
+ * Slack holds one request URL per app, so a workspace that pressed "Add to
+ * Slack" cannot be given an address of its own. The app's one signing
+ * secret authenticates the delivery, and the workspace id inside it says
+ * which connection it is for. A workspace nobody connected is acknowledged
+ * and ignored: an error would make Slack retry, and then give up on the
+ * app for everyone.
+ */
+export async function handleSharedDelivery(type: string, raw: string, headers: Headers): Promise<DeliveryOutcome> {
+  const app = type === 'slack' ? slackApp() : undefined;
+  const adapter = channelAdapter(type);
+  if (app === undefined || adapter === undefined) return plain(404, 'unknown channel');
+
+  const judged = adapter.receive(raw, headers, { webhookUrl: slackAppWebhookUrl(), webhookSecret: app.signingSecret });
+  if (judged.kind === 'rejected') return plain(401, 'unauthorized');
+  if (judged.kind === 'challenge') return { status: 200, body: judged.body, contentType: judged.contentType };
+  if (judged.kind === 'ignored') return plain(200, 'ok');
+
+  const teamRef = slackTeamOf(raw);
+  if (teamRef === undefined) return plain(200, 'ok');
+
+  const handle = await db();
+  // Unscoped by declaration: the delivery names Slack's workspace, and which
+  // of ours that maps to is exactly the question.
+  const platform = new PlatformDb(handle.db, 'channel-delivery');
+  const row = await platform
+    .collection<ChannelDoc>('channels')
+    .findOne({ type, 'install.teamRef': teamRef, status: { $ne: 'disabled' } } as never, { comment: platform.comment });
+  if (row === null) {
+    console.log(JSON.stringify({ at: 'channel-inbound', shared: type, team: teamRef, outcome: 'no_connection' }));
+    return plain(200, 'ok');
+  }
+
+  return act(handle.db, row, adapter, judged);
+}
+
+/**
+ * What happens once a delivery has been authenticated and its connection
+ * found. The same for an address of the connection's own and for the shared
+ * one: from here the platform's workspace is forgotten and ours is all that
+ * matters.
+ */
+async function act(
+  database: Awaited<ReturnType<typeof db>>['db'],
+  row: ChannelDoc,
+  adapter: ChannelAdapter,
+  judged: InboundResult,
+): Promise<DeliveryOutcome> {
+  const handle = { db: database };
+  const repos = repositories(handle.db, row.workspaceId);
+  const channels = new ChannelRepository(handle.db, row.workspaceId);
 
   switch (judged.kind) {
     case 'rejected':

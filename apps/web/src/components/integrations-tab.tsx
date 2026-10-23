@@ -7,7 +7,8 @@ import { api, ws } from '@/lib/client/api';
 import { CapabilityReview } from '@/components/capability-review';
 import { Icon, Option } from '@/components/ui';
 import { SetupSteps, Copyable } from '@/components/setup-steps';
-import { ADDRESS_LABEL, ADDRESS_NOTE, AFTER_CONNECT, EXTRA, SECONDARY, tokenLabelOf } from '@/lib/client/channel-fields';
+import { ADDRESS_LABEL, ADDRESS_NOTE, AFTER_CONNECT, AFTER_INSTALL, EXTRA, INSTALLED_NOTE, SECONDARY, tokenLabelOf } from '@/lib/client/channel-fields';
+import { OneClickConnect } from '@/components/one-click-connect';
 import { AppDialog, AppPickerDialog, ConnectedApps, RequestCard, type AppStatus } from '@/components/app-grid';
 import { CALLBACK_ERRORS, IntegrationSetup, authorise, type Binding } from '@/components/integration-setup';
 
@@ -26,7 +27,11 @@ interface Channel {
   id: string; channel: string; status: string; handle: string; displayName: string;
   agentId: string; webhookUrl: string; registeredWebhookUrl?: string; connectCode?: string; lastError?: string;
   verifyToken?: string;
+  /** Connected through this deployment's own app: nothing to paste, no handshake. */
+  installed?: boolean; teamName?: string;
 }
+/** The channels list, with which platforms this deployment connects in one press. */
+interface ChannelList { items: Channel[]; oneClick?: string[] }
 interface Agent { id: string; name: string }
 interface ModelBinding { id: string; name: string; modelId: string }
 
@@ -41,6 +46,7 @@ const STATUS: Record<string, { label: string; tone: string }> = {
 export function IntegrationsTab({ workspaceId, agentId }: { workspaceId: string; agentId: string }) {
   const router = useRouter();
   const [channels, setChannels] = useState<Channel[]>([]);
+  const [oneClick, setOneClick] = useState<string[]>([]);
   const [notice, setNotice] = useState<string>();
   const [bindings, setBindings] = useState<Binding[]>([]);
   const [agents, setAgents] = useState<Agent[]>([]);
@@ -50,8 +56,8 @@ export function IntegrationsTab({ workspaceId, agentId }: { workspaceId: string;
   const [error, setError] = useState<string>();
 
   const reload = useCallback(() => {
-    void api.get<{ items: Channel[] }>(`${ws(workspaceId)}/channels`)
-      .then((r) => setChannels(r.items.filter((c) => c.agentId === agentId))).catch(() => undefined);
+    void api.get<ChannelList>(`${ws(workspaceId)}/channels`)
+      .then((r) => { setChannels(r.items.filter((c) => c.agentId === agentId)); setOneClick(r.oneClick ?? []); }).catch(() => undefined);
     void api.get<{ items: Binding[] }>(`${ws(workspaceId)}/mcp/bindings?agent=${encodeURIComponent(agentId)}`)
       .then((r) => setBindings(r.items)).catch(() => undefined);
   }, [workspaceId, agentId]);
@@ -65,10 +71,16 @@ export function IntegrationsTab({ workspaceId, agentId }: { workspaceId: string;
   useEffect(() => {
     const query = new URLSearchParams(window.location.search);
     const connected = query.get('connected');
+    const channel = query.get('channel');
     const failed = query.get('error');
     if (connected !== null) {
       const tools = Number(query.get('tools') ?? '0');
       setNotice(`${connected} is connected — ${tools} ${tools === 1 ? 'tool' : 'tools'} available to this assistant.`);
+    } else if (channel !== null) {
+      // Back from a platform's own consent screen with a channel connected.
+      const team = query.get('team');
+      setNotice(`${channel} is connected${team !== null && team !== '' ? ` to ${team}` : ''}. Open ${channel} and say hello.`);
+      setOpenId(channel.toLowerCase());
     } else if (failed !== null) {
       // The server's own words, when the callback had them: "the Gmail API
       // is not enabled" is a fix; "would not list its tools" is a shrug.
@@ -76,7 +88,7 @@ export function IntegrationsTab({ workspaceId, agentId }: { workspaceId: string;
       const base = CALLBACK_ERRORS[failed] ?? 'That connection could not be completed.';
       setError(detail !== null && detail !== '' ? `${base} The server said: ${detail}` : base);
     }
-    if (connected !== null || failed !== null) router.replace(`/w/${workspaceId}/agents/${agentId}?tab=integrations`);
+    if (connected !== null || channel !== null || failed !== null) router.replace(`/w/${workspaceId}/agents/${agentId}?tab=integrations`);
   }, [router, workspaceId, agentId]);
 
   useEffect(() => {
@@ -175,6 +187,7 @@ export function IntegrationsTab({ workspaceId, agentId }: { workspaceId: string;
               connection={connectionOf(open)}
               agents={agents}
               models={models}
+              oneClick={oneClick}
               onChanged={reload}
               onError={setError}
             />
@@ -231,13 +244,14 @@ export function ChannelSetupFor({
   onChanged: () => void;
 }) {
   const [channels, setChannels] = useState<Channel[]>([]);
+  const [oneClick, setOneClick] = useState<string[]>([]);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [models, setModels] = useState<ModelBinding[]>([]);
   const [error, setError] = useState<string>();
 
   const reload = useCallback(() => {
-    void api.get<{ items: Channel[] }>(`${ws(workspaceId)}/channels`)
-      .then((r) => setChannels(r.items.filter((c) => c.agentId === agentId))).catch(() => undefined);
+    void api.get<ChannelList>(`${ws(workspaceId)}/channels`)
+      .then((r) => { setChannels(r.items.filter((c) => c.agentId === agentId)); setOneClick(r.oneClick ?? []); }).catch(() => undefined);
     onChanged();
   }, [workspaceId, agentId, onChanged]);
 
@@ -265,6 +279,7 @@ export function ChannelSetupFor({
         connection={channels.find((c) => c.channel === entry.id)}
         agents={agents}
         models={models}
+        oneClick={oneClick}
         onChanged={reload}
         onError={setError}
       />
@@ -275,13 +290,15 @@ export function ChannelSetupFor({
 
 
 function ChannelSetup({
-  workspaceId, entry, connection, agents, models, onChanged, onError,
+  workspaceId, entry, connection, agents, models, oneClick, onChanged, onError,
 }: {
   workspaceId: string;
   entry: CatalogEntry;
   connection: Channel | undefined;
   agents: Agent[];
   models: ModelBinding[];
+  /** Platforms this deployment connects from an app of its own. */
+  oneClick: readonly string[];
   onChanged: () => void;
   onError: (message: string | undefined) => void;
 }) {
@@ -313,7 +330,7 @@ function ChannelSetup({
     );
   }
 
-  return (
+  const form = (
     <ConnectForm
       workspaceId={workspaceId}
       entry={entry}
@@ -322,6 +339,13 @@ function ChannelSetup({
       onChanged={onChanged}
       onError={onError}
     />
+  );
+  if (!oneClick.includes(entry.id)) return form;
+  const agentId = agents[0]?.id ?? '';
+  return (
+    <OneClickConnect workspaceId={workspaceId} agentId={agentId} entry={entry} onError={onError}>
+      {form}
+    </OneClickConnect>
   );
 }
 
@@ -482,7 +506,15 @@ function ConnectedChannel({
         <div><dt>Answered by</dt><dd className="mono">{connection.agentId}</dd></div>
       </dl>
 
-      {ADDRESS_LABEL[entry.id] !== undefined && (
+      {connection.installed === true ? (
+        <div className="note">
+          <span className="tile" aria-hidden><Icon name="check" size={16} /></span>
+          <span>
+            {INSTALLED_NOTE[entry.id] ?? `Connected through HIVE's own ${entry.name} app.`}
+            {connection.teamName !== undefined && <> Workspace: <strong>{connection.teamName}</strong>.</>}
+          </span>
+        </div>
+      ) : ADDRESS_LABEL[entry.id] !== undefined && (
         <>
           <Copyable label={ADDRESS_LABEL[entry.id] as string} value={connection.webhookUrl} />
           {connection.verifyToken !== undefined && <Copyable label="Verify token" value={connection.verifyToken} />}
@@ -490,13 +522,13 @@ function ConnectedChannel({
         </>
       )}
 
-      {(AFTER_CONNECT[entry.id] ?? []).length > 0 && (
+      {((connection.installed === true ? AFTER_INSTALL : AFTER_CONNECT)[entry.id] ?? []).length > 0 && (
         <div className="note" style={{ alignItems: 'flex-start' }}>
           <span className="tile" aria-hidden><Icon name="shield" size={16} /></span>
           <span style={{ flex: 1 }}>
             <strong>If something looks off</strong>
             <ul className="steps-list" style={{ marginTop: 6 }}>
-              {(AFTER_CONNECT[entry.id] ?? []).map((line) => <li key={line}>{line}</li>)}
+              {((connection.installed === true ? AFTER_INSTALL : AFTER_CONNECT)[entry.id] ?? []).map((line) => <li key={line}>{line}</li>)}
             </ul>
           </span>
         </div>

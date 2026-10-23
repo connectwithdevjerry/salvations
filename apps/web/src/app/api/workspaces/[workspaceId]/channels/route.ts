@@ -16,8 +16,9 @@ import { actorIdOf } from '@/lib/principal';
 import { randomBytes } from 'node:crypto';
 import { connectCode } from '@/lib/connect-code';
 import { CONNECT_CODE_TTL_MS, webhookUrl } from '@/lib/channel-inbound';
-import { WEBHOOK_SPEC } from '@/lib/channel-webhook';
+import { WEBHOOK_SPEC, deliveryUrlOf } from '@/lib/channel-webhook';
 import { countGate } from '@/lib/limits';
+import { slackApp } from '@/lib/slack-app';
 
 export const runtime = 'nodejs';
 
@@ -45,7 +46,10 @@ export const GET = workspaceRoute('channels:read', async (ctx) => {
       handle: row.identity.handle,
       displayName: row.identity.displayName,
       agentId: row.agentId,
-      webhookUrl: webhookUrl(row.type, row._id),
+      webhookUrl: deliveryUrlOf(row),
+      // Connected through this deployment's own app: no address to paste,
+      // no handshake, and the platform workspace's name is worth showing.
+      ...(row.install !== null && row.install !== undefined ? { installed: true, teamName: row.install.teamName } : {}),
       ...(verifyToken !== undefined ? { verifyToken } : {}),
       // Where the platform actually delivers, when that is known. Differs
       // from the line above after the site moves, until the bot is re-pointed.
@@ -60,7 +64,11 @@ export const GET = workspaceRoute('channels:read', async (ctx) => {
     });
   }
 
-  return ok({ items });
+  // Which platforms this deployment can connect with one press, from an
+  // app of its own. The form offers the button only where this says so.
+  const oneClick = [...(slackApp() !== undefined ? ['slack'] : [])];
+
+  return ok({ items, oneClick });
 });
 
 export const POST = workspaceRoute('channels:write', async (ctx) => {

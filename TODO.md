@@ -8,7 +8,10 @@ page with "Approve all" and a twenty-minute auto-approve window, apps connected 
 five channels at parity (Telegram, WhatsApp, iMessage via the person's own Mac, Slack, Discord)
 with buttons, pictures, clips and voice notes where each platform allows, Slack, Discord and
 WhatsApp connected in one press from the deployment's own apps ("Add to Slack", "Add to
-Discord", Meta's Embedded Signup) with the do-it-yourself path kept behind a link, a studio for pictures
+Discord", Meta's Embedded Signup) with the do-it-yourself path kept behind a link, HIVE AI as the
+model that comes with the subscription (the deployment's own key, a monthly allowance per
+workspace, the person's own key still welcome), the deployment's keys settable from the admin
+dashboard by a platform admin without a redeploy, a studio for pictures
 and clips, every role able to take a bare link or name and do the whole job, an Academic outreach
 role that searches, and publishing to Instagram, Facebook, LinkedIn and Shopify once the person
 says yes; what remains in Phase 1 is the manual acceptance pass and the runbooks.

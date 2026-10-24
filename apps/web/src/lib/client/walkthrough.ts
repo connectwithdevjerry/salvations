@@ -157,7 +157,7 @@ export function stepsFor(context: TourContext): readonly TourStep[] {
       target: 'workspace',
       title: 'Your workspace',
       body: context.admin === true
-        ? 'Your workspace name, top right, opens the admin dashboard: spend against the daily cap, the week’s runs, who is in the workspace, and the plan’s limits as meters. A cap reached stops new runs; nothing already running is cut off. Your plan lives in Settings: the free trial’s days left, and where to subscribe.'
+        ? 'Your workspace name, top right, opens the admin dashboard: spend against the daily cap, the week’s runs, who is in the workspace, and the plan’s limits as meters. A cap reached stops new runs; nothing already running is cut off. Your plan lives in Settings: the free trial’s days left, and where to subscribe. Whoever runs the deployment itself sees one more section there: the keys behind HIVE AI and the Slack, Discord and Meta apps, changeable in place and in force within a minute.'
         : 'Your workspace name, top right, opens Settings: your account, your plan and the free trial’s days left, the look of the app, and signing out.',
     },
     {

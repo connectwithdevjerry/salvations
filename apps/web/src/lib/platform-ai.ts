@@ -18,12 +18,12 @@
  * use, so it cannot be listed, exported or revoked from inside a workspace,
  * and rotating it is one change on the deployment.
  */
+import { platformSettings } from './platform-settings';
 import { defaultBindings, modelsFor, type ModelRole } from '@salvations/catalog';
 import { isKnownProviderType } from '@salvations/provider-registry';
 import { ModelBindingRepository, type Database, type ProviderConfigDoc } from '@salvations/db';
 import type { CredentialRepository } from '@salvations/db';
 import type { ProviderCredentials } from '@salvations/core';
-import { env } from './env';
 
 export const PLATFORM_PROVIDER_NAME = 'HIVE AI';
 
@@ -46,28 +46,34 @@ export interface PlatformAi {
  * not know, or a model the catalogue does not list, would otherwise be a
  * HIVE AI that every assistant fails on.
  */
-export function platformAi(): PlatformAi | undefined {
-  const e = env();
-  if (e.PLATFORM_AI_API_KEY === undefined) return undefined;
-  const providerType = e.PLATFORM_AI_PROVIDER;
+export async function platformAi(): Promise<PlatformAi | undefined> {
+  const [apiKey, provider, chatModel, baseUrl, cap] = await platformSettings(
+    ['platform_ai_api_key', 'platform_ai_provider', 'platform_ai_chat_model', 'platform_ai_base_url', 'platform_ai_monthly_usd_cap'] as const,
+  );
+  if (apiKey === undefined) return undefined;
+  const providerType = provider ?? 'openai';
   if (!isKnownProviderType(providerType)) {
-    throw new Error(`PLATFORM_AI_PROVIDER is "${providerType}", which no adapter is registered for.`);
+    throw new Error(`The HIVE AI vendor is "${providerType}", which no adapter is registered for.`);
   }
   const models = modelsFor(providerType);
-  const chat = e.PLATFORM_AI_CHAT_MODEL !== undefined
-    ? models.find((m) => m.id === e.PLATFORM_AI_CHAT_MODEL)
+  const chat = chatModel !== undefined
+    ? models.find((m) => m.id === chatModel)
     : models.find((m) => m.roles.includes('chat'));
   if (chat === undefined) {
-    throw new Error(e.PLATFORM_AI_CHAT_MODEL !== undefined
-      ? `PLATFORM_AI_CHAT_MODEL "${e.PLATFORM_AI_CHAT_MODEL}" is not a ${providerType} model the catalogue lists.`
+    throw new Error(chatModel !== undefined
+      ? `The HIVE AI chat model "${chatModel}" is not a ${providerType} model the catalogue lists.`
       : `The catalogue lists no chat model for ${providerType}.`);
+  }
+  const monthlyUsdCap = Number(cap ?? '25');
+  if (!Number.isFinite(monthlyUsdCap) || monthlyUsdCap <= 0) {
+    throw new Error(`The HIVE AI monthly allowance "${cap ?? ''}" is not a positive number of dollars.`);
   }
   return {
     providerType,
-    apiKey: e.PLATFORM_AI_API_KEY,
-    ...(e.PLATFORM_AI_BASE_URL !== undefined ? { baseUrl: e.PLATFORM_AI_BASE_URL } : {}),
+    apiKey,
+    ...(baseUrl !== undefined ? { baseUrl } : {}),
     chatModelId: chat.id,
-    monthlyUsdCap: e.PLATFORM_AI_MONTHLY_USD_CAP,
+    monthlyUsdCap,
   };
 }
 
@@ -88,7 +94,7 @@ export async function providerCredentials(
     ...(provider.baseUrl !== null && provider.baseUrl !== undefined ? { baseUrl: provider.baseUrl } : {}),
   });
   if (isPlatformProvider(provider)) {
-    const platform = platformAi();
+    const platform = await platformAi();
     return platform === undefined ? undefined : withBase(platform.apiKey);
   }
   if (provider.credentialId === null || provider.credentialId === undefined) return undefined;
@@ -120,7 +126,7 @@ export function platformBindings(platform: PlatformAi): readonly { role: ModelRo
  * roles it has.
  */
 export async function ensurePlatformAi(database: Database, workspaceId: string): Promise<ProviderConfigDoc | undefined> {
-  const platform = platformAi();
+  const platform = await platformAi();
   if (platform === undefined) return undefined;
 
   const models = new ModelBindingRepository(database, workspaceId);

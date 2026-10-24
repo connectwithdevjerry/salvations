@@ -41,7 +41,7 @@ export async function GET(request: Request): Promise<Response> {
   const code = url.searchParams.get('code');
   const denied = url.searchParams.get('error');
 
-  const app = slackApp();
+  const app = await slackApp();
   if (app === undefined) return back(undefined, undefined, { error: 'slack_not_configured' });
 
   const pending = state === null ? undefined : readSlackInstallState(state, env().INTERNAL_HMAC_SECRET);

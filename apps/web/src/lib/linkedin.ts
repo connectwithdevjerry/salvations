@@ -14,6 +14,7 @@
  *
  * Posts API: https://learn.microsoft.com/linkedin/marketing/community-management/shares/posts-api
  */
+import { platformSettings } from './platform-settings';
 import { scopeKeyString, workspaceScope, userScope } from '@salvations/mcp';
 import type { LinkedInAuthor, LinkedInPending, LinkedInPost, LinkedInSource } from '@salvations/servers';
 import { MongoOAuthCredentialStore, ScopedDb, type Database, type McpServerBindingDoc, PlatformDb, type OAuthConnectionDoc } from '@salvations/db';
@@ -48,10 +49,10 @@ interface StoredTokens {
 
 export interface LinkedInOAuthClient { readonly clientId: string; readonly clientSecret: string }
 
-export function linkedInOAuthClient(): LinkedInOAuthClient | undefined {
-  const e = env();
-  if (e.LINKEDIN_CLIENT_ID === undefined || e.LINKEDIN_CLIENT_SECRET === undefined) return undefined;
-  return { clientId: e.LINKEDIN_CLIENT_ID, clientSecret: e.LINKEDIN_CLIENT_SECRET };
+export async function linkedInOAuthClient(): Promise<LinkedInOAuthClient | undefined> {
+  const [clientId, clientSecret] = await platformSettings(['linkedin_client_id', 'linkedin_client_secret'] as const);
+  if (clientId === undefined || clientSecret === undefined) return undefined;
+  return { clientId, clientSecret };
 }
 
 export const linkedInRedirectUri = (): string => `${issuer()}${OAUTH_CALLBACK_PATH}`;
@@ -271,7 +272,7 @@ export function createLinkedInSource(input: LinkedInSourceInput): LinkedInSource
     const tokens = await store.loadTokens(scopeKey, LINKEDIN_ISSUER) as StoredTokens | undefined;
     if (tokens === undefined) throw new Error('LinkedIn is not connected for this assistant. Connect it on the Integrations tab.');
     if (tokens.expires_at > Date.now()) return tokens.access_token;
-    const client = linkedInOAuthClient();
+    const client = await linkedInOAuthClient();
     if (tokens.refresh_token === undefined || client === undefined) throw new Error('The LinkedIn connection has expired. Reconnect it on the Integrations tab.');
     const fresh = await refreshLinkedInToken(client, tokens.refresh_token, fetchImpl);
     await store.saveTokens(scopeKey, LINKEDIN_ISSUER, fresh);
@@ -287,7 +288,7 @@ export async function revokeLinkedInTokens(database: Database, workspaceId: stri
   const store = linkedInStore(database, workspaceId);
   const tokens = await store.loadTokens(scopeKey, LINKEDIN_ISSUER) as StoredTokens | undefined;
   if (tokens === undefined) return false;
-  const client = linkedInOAuthClient();
+  const client = await linkedInOAuthClient();
   if (client === undefined) return false;
   const response = await fetchImpl(REVOKE_URL, {
     method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' },
@@ -304,7 +305,7 @@ export function linkedInNeedsSweep(tokens: StoredTokens, now = Date.now(), margi
 }
 
 export async function refreshExpiringLinkedInTokens(database: Database, fetchImpl: typeof fetch = fetch, now = Date.now()): Promise<{ considered: number; refreshed: number; failed: number }> {
-  const client = linkedInOAuthClient();
+  const client = await linkedInOAuthClient();
   if (client === undefined) return { considered: 0, refreshed: 0, failed: 0 };
   const platform = new PlatformDb(database, 'token-refresh');
   const servers = await platform.collection<{ _id: string; workspaceId: string; catalogId?: string }>('mcpServers')

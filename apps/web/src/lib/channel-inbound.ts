@@ -127,7 +127,7 @@ export async function handleDelivery(
  * app for everyone.
  */
 export async function handleSharedDelivery(type: string, raw: string, headers: Headers): Promise<DeliveryOutcome> {
-  const shared = sharedAppOf(type);
+  const shared = await sharedAppOf(type);
   const adapter = channelAdapter(type);
   if (shared === undefined || adapter === undefined) return plain(404, 'unknown channel');
 
@@ -169,17 +169,17 @@ interface SharedApp {
 }
 
 /** The deployment's own application for a platform, when it has one. */
-function sharedAppOf(type: string): SharedApp | undefined {
+async function sharedAppOf(type: string): Promise<SharedApp | undefined> {
   if (type === 'slack') {
-    const app = slackApp();
+    const app = await slackApp();
     return app === undefined ? undefined : { webhookUrl: slackAppWebhookUrl(), webhookSecret: app.signingSecret, teamOf: slackTeamOf };
   }
   if (type === 'discord') {
-    const app = discordApp();
+    const app = await discordApp();
     return app === undefined ? undefined : { webhookUrl: discordAppWebhookUrl(), webhookSecret: app.publicKey, teamOf: discordGuildOf, notHere: NOT_IN_SERVER };
   }
   if (type === 'whatsapp') {
-    const signup = whatsappSignup();
+    const signup = await whatsappSignup();
     return signup === undefined ? undefined : { webhookUrl: whatsappAppWebhookUrl(), webhookSecret: signup.appSecret, teamOf: whatsappPhoneOf };
   }
   return undefined;
@@ -190,9 +190,9 @@ function sharedAppOf(type: string): SharedApp | undefined {
  * the challenge is echoed when the verify token matches. Other platforms
  * do not probe the shared address with a GET; a 200 is enough for them.
  */
-export function handleSharedProbe(type: string, query: URLSearchParams): DeliveryOutcome {
+export async function handleSharedProbe(type: string, query: URLSearchParams): Promise<DeliveryOutcome> {
   if (type !== 'whatsapp') return plain(200, 'ok');
-  const signup = whatsappSignup();
+  const signup = await whatsappSignup();
   if (signup === undefined) return plain(404, 'unknown channel');
   const challenge = answerSharedProbe(signup, query);
   return challenge === undefined ? plain(403, 'forbidden') : plain(200, challenge);

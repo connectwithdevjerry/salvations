@@ -31,7 +31,7 @@ const bodySchema = z.object({
 });
 
 export const POST = workspaceRoute('channels:write', async (ctx) => {
-  const signup = whatsappSignup();
+  const signup = await whatsappSignup();
   if (signup === undefined) {
     return errorResponse(503, 'not_configured', 'This deployment has no WhatsApp sign-up of its own. Connect WhatsApp with your own Meta app below, or ask whoever runs this deployment to set META_WHATSAPP_CONFIG_ID.');
   }

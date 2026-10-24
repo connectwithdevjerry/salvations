@@ -16,6 +16,9 @@ async function fresh(extra: Record<string, string | undefined>) {
   // The env module caches; a fresh import reads what this test set.
   vi.resetModules();
   const envModule = await import('./env');
+  const settings = await import('./platform-settings');
+  // No database in a test: the dashboard holds nothing, the environment decides.
+  settings.configurePlatformSettings(async () => new Map());
   const platformModule = await import('./platform-ai');
   return { ...platformModule, env: envModule.env };
 }
@@ -27,10 +30,10 @@ describe('HIVE AI', () => {
 
   it('is absent without a key, and OpenAI with the vendor\'s default chat model when one is set', async () => {
     const none = await fresh({});
-    expect(none.platformAi()).toBeUndefined();
+    expect(await none.platformAi()).toBeUndefined();
 
     const some = await fresh({ PLATFORM_AI_API_KEY: 'sk-platform' });
-    const platform = some.platformAi();
+    const platform = await some.platformAi();
     expect(platform?.providerType).toBe('openai');
     expect(platform?.apiKey).toBe('sk-platform');
     expect(platform?.chatModelId).toBe(modelsFor('openai').find((m) => m.roles.includes('chat'))?.id);
@@ -43,17 +46,17 @@ describe('HIVE AI', () => {
       PLATFORM_AI_API_KEY: 'sk-ant-platform', PLATFORM_AI_PROVIDER: 'anthropic',
       PLATFORM_AI_CHAT_MODEL: anthropicChat, PLATFORM_AI_MONTHLY_USD_CAP: '40',
     });
-    expect(some.platformAi()).toMatchObject({ providerType: 'anthropic', chatModelId: anthropicChat, monthlyUsdCap: 40 });
+    expect(await some.platformAi()).toMatchObject({ providerType: 'anthropic', chatModelId: anthropicChat, monthlyUsdCap: 40 });
 
     const unknownModel = await fresh({ PLATFORM_AI_API_KEY: 'k', PLATFORM_AI_CHAT_MODEL: 'gpt-imaginary' });
-    expect(() => unknownModel.platformAi()).toThrow(/not a openai model/);
+    await expect(unknownModel.platformAi()).rejects.toThrow(/not a openai model/);
     const unknownVendor = await fresh({ PLATFORM_AI_API_KEY: 'k', PLATFORM_AI_PROVIDER: 'mistral' });
-    expect(() => unknownVendor.platformAi()).toThrow(/no adapter/);
+    await expect(unknownVendor.platformAi()).rejects.toThrow(/no adapter/);
   });
 
   it('binds the vendor\'s defaults under the HIVE AI name, with the chosen chat model and catalogue rates', async () => {
     const some = await fresh({ PLATFORM_AI_API_KEY: 'k', PLATFORM_AI_CHAT_MODEL: 'gpt-4.1' });
-    const bindings = some.platformBindings(some.platformAi()!);
+    const bindings = some.platformBindings((await some.platformAi())!);
     const chat = bindings.find((b) => b.role === 'chat');
     expect(chat?.modelId).toBe('gpt-4.1');
     expect(chat?.displayName).toMatch(/^HIVE AI · /);

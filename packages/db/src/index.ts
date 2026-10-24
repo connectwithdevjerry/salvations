@@ -25,6 +25,7 @@ export * from './repositories/conversations';
 export * from './repositories/message-mapper';
 export * from './repositories/runs';
 export * from './repositories/credentials';
+export * from './repositories/platform-settings';
 export * from './repositories/catalog';
 export * from './repositories/telemetry';
 export * from './repositories/channels';

@@ -20,7 +20,7 @@
  * then carries the guild the bot was added to, which is the proof, since
  * the `guild_id` in the redirect is only a hint.
  */
-import { env } from './env';
+import { platformSettings } from './platform-settings';
 import { issuer } from './session';
 import { readInstallState, signInstallState, type PendingInstall, type StateOptions } from './install-state';
 
@@ -51,14 +51,12 @@ export interface DiscordApp {
   readonly botToken: string;
 }
 
-export function discordApp(): DiscordApp | undefined {
-  const e = env();
-  if (e.DISCORD_APPLICATION_ID === undefined || e.DISCORD_CLIENT_SECRET === undefined
-    || e.DISCORD_PUBLIC_KEY === undefined || e.DISCORD_BOT_TOKEN === undefined) return undefined;
-  return {
-    applicationId: e.DISCORD_APPLICATION_ID, clientSecret: e.DISCORD_CLIENT_SECRET,
-    publicKey: e.DISCORD_PUBLIC_KEY, botToken: e.DISCORD_BOT_TOKEN,
-  };
+export async function discordApp(): Promise<DiscordApp | undefined> {
+  const [applicationId, clientSecret, publicKey, botToken] = await platformSettings(
+    ['discord_application_id', 'discord_client_secret', 'discord_public_key', 'discord_bot_token'] as const,
+  );
+  if (applicationId === undefined || clientSecret === undefined || publicKey === undefined || botToken === undefined) return undefined;
+  return { applicationId, clientSecret, publicKey, botToken };
 }
 
 export const discordRedirectUri = (): string => `${issuer()}${DISCORD_CALLBACK_PATH}`;

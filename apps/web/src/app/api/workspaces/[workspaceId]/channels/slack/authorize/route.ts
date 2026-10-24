@@ -21,7 +21,7 @@ export const runtime = 'nodejs';
 const bodySchema = z.object({ agentId: idSchema });
 
 export const POST = workspaceRoute('channels:write', async (ctx) => {
-  const app = slackApp();
+  const app = await slackApp();
   if (app === undefined) {
     return errorResponse(503, 'not_configured', 'This deployment has no Slack app of its own. Connect Slack with your own app below, or ask whoever runs this deployment to set SLACK_CLIENT_ID, SLACK_CLIENT_SECRET and SLACK_SIGNING_SECRET.');
   }

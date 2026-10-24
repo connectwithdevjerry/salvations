@@ -22,7 +22,7 @@
  * client id and secret as HTTP Basic authentication rather than as form
  * fields; auth.revoke answers with `revoked`.
  */
-import { env } from './env';
+import { platformSettings } from './platform-settings';
 import { issuer } from './session';
 import { readInstallState, signInstallState, type PendingInstall, type StateOptions } from './install-state';
 
@@ -51,11 +51,11 @@ export interface SlackApp {
   readonly signingSecret: string;
 }
 
-/** The deployment's Slack app, or undefined when none is configured. */
-export function slackApp(): SlackApp | undefined {
-  const e = env();
-  if (e.SLACK_CLIENT_ID === undefined || e.SLACK_CLIENT_SECRET === undefined || e.SLACK_SIGNING_SECRET === undefined) return undefined;
-  return { clientId: e.SLACK_CLIENT_ID, clientSecret: e.SLACK_CLIENT_SECRET, signingSecret: e.SLACK_SIGNING_SECRET };
+/** The deployment's Slack app, from the dashboard or the environment, or undefined when none is configured. */
+export async function slackApp(): Promise<SlackApp | undefined> {
+  const [clientId, clientSecret, signingSecret] = await platformSettings(['slack_client_id', 'slack_client_secret', 'slack_signing_secret'] as const);
+  if (clientId === undefined || clientSecret === undefined || signingSecret === undefined) return undefined;
+  return { clientId, clientSecret, signingSecret };
 }
 
 /** Where Slack sends the person back. Registered on the app under OAuth & Permissions. */

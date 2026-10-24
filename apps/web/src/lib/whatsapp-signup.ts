@@ -24,9 +24,9 @@
  * POST /<PHONE_NUMBER_ID>/register with a six-digit pin. The page's domain
  * must be among the app's Allowed Domains and Valid OAuth Redirect URIs.
  */
+import { platformSettings } from './platform-settings';
 import { timingSafeEqual, randomInt } from 'node:crypto';
 import { GRAPH_VERSION, whatsappVerifyToken } from '@salvations/channels';
-import { env } from './env';
 import { issuer } from './session';
 
 export const WHATSAPP_APP_PATH = '/api/channels/whatsapp/app';
@@ -41,14 +41,14 @@ export interface WhatsAppSignup {
 }
 
 /** The deployment's Embedded Signup, or undefined when the Meta app has no configuration for it. */
-export function whatsappSignup(): WhatsAppSignup | undefined {
-  const e = env();
-  if (e.META_APP_ID === undefined || e.META_APP_SECRET === undefined || e.META_WHATSAPP_CONFIG_ID === undefined) return undefined;
+export async function whatsappSignup(): Promise<WhatsAppSignup | undefined> {
+  const [appId, appSecret, configId, verifyToken] = await platformSettings(
+    ['meta_app_id', 'meta_app_secret', 'meta_whatsapp_config_id', 'meta_whatsapp_verify_token'] as const,
+  );
+  if (appId === undefined || appSecret === undefined || configId === undefined) return undefined;
   return {
-    appId: e.META_APP_ID,
-    appSecret: e.META_APP_SECRET,
-    configId: e.META_WHATSAPP_CONFIG_ID,
-    verifyToken: e.META_WHATSAPP_VERIFY_TOKEN ?? whatsappVerifyToken({ webhookUrl: '', webhookSecret: e.META_APP_SECRET }),
+    appId, appSecret, configId,
+    verifyToken: verifyToken ?? whatsappVerifyToken({ webhookUrl: '', webhookSecret: appSecret }),
   };
 }
 

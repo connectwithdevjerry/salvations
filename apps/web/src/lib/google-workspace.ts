@@ -10,6 +10,7 @@
  * Tokens live in the same encrypted store as the remote MCP servers' tokens,
  * under the binding's scope key, so revoking a connection is one row.
  */
+import { platformSettings } from './platform-settings';
 import { pkceChallengeOf } from '@salvations/crypto';
 import { scopeKeyString, workspaceScope, userScope } from '@salvations/mcp';
 import {
@@ -44,13 +45,13 @@ interface StoredTokens {
 
 export interface GoogleOAuthClient { readonly clientId: string; readonly clientSecret: string }
 
-export function googleOAuthClient(): GoogleOAuthClient | undefined {
+export async function googleOAuthClient(): Promise<GoogleOAuthClient | undefined> {
+  // A client of its own when one is set, from the dashboard or the
+  // environment, so Workspace's long review does not hold up plain sign-in;
+  // otherwise the sign-in client serves both.
+  const [clientId, clientSecret] = await platformSettings(['google_workspace_client_id', 'google_workspace_client_secret'] as const);
+  if (clientId !== undefined && clientSecret !== undefined) return { clientId, clientSecret };
   const e = env();
-  // A client of its own when one is set, so Workspace's long review does not
-  // hold up plain sign-in; otherwise the sign-in client serves both.
-  if (e.GOOGLE_WORKSPACE_CLIENT_ID !== undefined && e.GOOGLE_WORKSPACE_CLIENT_SECRET !== undefined) {
-    return { clientId: e.GOOGLE_WORKSPACE_CLIENT_ID, clientSecret: e.GOOGLE_WORKSPACE_CLIENT_SECRET };
-  }
   if (e.GOOGLE_CLIENT_ID === undefined || e.GOOGLE_CLIENT_SECRET === undefined) return undefined;
   return { clientId: e.GOOGLE_CLIENT_ID, clientSecret: e.GOOGLE_CLIENT_SECRET };
 }
@@ -171,7 +172,7 @@ export function createGoogleSource(input: GoogleSourceInput): GoogleWorkspaceSou
     if (tokens === undefined) throw new Error('Google Workspace is not connected for this assistant. Connect it on the Integrations tab.');
     if (tokens.expires_at - REFRESH_MARGIN_MS > Date.now()) return tokens.access_token;
     if (tokens.refresh_token === undefined) throw new Error('The Google connection has expired and cannot be refreshed. Reconnect it on the Integrations tab.');
-    const client = googleOAuthClient();
+    const client = await googleOAuthClient();
     if (client === undefined) throw new Error('This deployment has no Google client configured.');
     const fresh = await refreshGoogleToken(client, tokens.refresh_token, fetchImpl);
     await store.saveTokens(scopeKey, GOOGLE_ISSUER, fresh);
@@ -435,7 +436,7 @@ export async function refreshExpiringGoogleTokens(
   fetchImpl: typeof fetch = fetch,
   now = Date.now(),
 ): Promise<TokenSweep> {
-  const client = googleOAuthClient();
+  const client = await googleOAuthClient();
   if (client === undefined) return { considered: 0, refreshed: 0, failed: 0 };
 
   const platform = new PlatformDb(database, 'token-refresh');

@@ -95,6 +95,15 @@ const schema = z.object({
   DISCORD_BOT_TOKEN: z.string().min(1).optional(),
 
   /**
+   * Who may change the deployment's own settings from the admin dashboard:
+   * the keys to its Slack, Discord and Meta apps, HIVE AI's key. Email
+   * addresses, comma-separated. Here and not in the database because
+   * somebody has to be able to open the dashboard before anything is in it.
+   */
+  PLATFORM_ADMIN_EMAILS: z.string().optional().transform((raw) =>
+    new Set((raw ?? '').split(',').map((e) => e.trim().toLowerCase()).filter((e) => e !== ''))),
+
+  /**
    * HIVE AI: a model that comes with the subscription, on a key the
    * deployment holds. Optional. The vendor is configuration (any the
    * registry knows; openai by default), the chat model a catalogue id for

@@ -45,7 +45,7 @@ export const POST = workspaceRoute<{ bindingId: string }>('mcp:install', async (
   if (server?.transport === 'in_process' && server.catalogId === 'google_workspace') {
     // Google's consent, with our own client. What to remember until the
     // person is back is filed under the same scope the tokens will use.
-    const client = googleOAuthClient();
+    const client = await googleOAuthClient();
     if (client === undefined) {
       return errorResponse(503, 'not_configured', 'This deployment has no Google client configured. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET.');
     }
@@ -60,7 +60,7 @@ export const POST = workspaceRoute<{ bindingId: string }>('mcp:install', async (
 
   if (server?.transport === 'in_process' && server.catalogId === 'meta_publishing') {
     // Meta's consent, with this deployment's Meta app.
-    const client = metaOAuthClient();
+    const client = await metaOAuthClient();
     if (client === undefined) {
       return errorResponse(503, 'not_configured', 'This deployment has no Meta app configured. Set META_APP_ID and META_APP_SECRET.');
     }
@@ -74,7 +74,7 @@ export const POST = workspaceRoute<{ bindingId: string }>('mcp:install', async (
   }
 
   if (server?.transport === 'in_process' && server.catalogId === 'linkedin') {
-    const client = linkedInOAuthClient();
+    const client = await linkedInOAuthClient();
     if (client === undefined) {
       return errorResponse(503, 'not_configured', 'This deployment has no LinkedIn app configured. Set LINKEDIN_CLIENT_ID and LINKEDIN_CLIENT_SECRET.');
     }

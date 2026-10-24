@@ -17,7 +17,7 @@ export const runtime = 'nodejs';
 const bodySchema = z.object({ agentId: idSchema });
 
 export const POST = workspaceRoute('channels:write', async (ctx) => {
-  const app = discordApp();
+  const app = await discordApp();
   if (app === undefined) {
     return errorResponse(503, 'not_configured', 'This deployment has no Discord application of its own. Connect Discord with your own application below, or ask whoever runs this deployment to set DISCORD_APPLICATION_ID, DISCORD_CLIENT_SECRET, DISCORD_PUBLIC_KEY and DISCORD_BOT_TOKEN.');
   }

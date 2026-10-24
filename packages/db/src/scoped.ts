@@ -218,6 +218,8 @@ export type PlatformReason =
    * that keeps it so has to look across all of ours.
    */
   | 'app-install'
+  /** Reading or writing the deployment's own settings, which belong to no workspace. */
+  | 'platform-settings'
   /**
    * Resolving a chat connection from an inbound delivery.
    *

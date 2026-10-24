@@ -41,7 +41,7 @@ export async function GET(request: Request): Promise<Response> {
   const code = url.searchParams.get('code');
   const denied = url.searchParams.get('error');
 
-  const app = discordApp();
+  const app = await discordApp();
   if (app === undefined) return back(undefined, undefined, { error: 'discord_not_configured' });
 
   const pending = state === null ? undefined : readDiscordInstallState(state, env().INTERNAL_HMAC_SECRET);

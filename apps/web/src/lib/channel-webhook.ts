@@ -127,7 +127,7 @@ export async function refreshStaleWebhooks(database: Database): Promise<WebhookR
   // When the deployment rotates that token, every copy is brought up to
   // date here rather than every server being asked to press the button
   // again.
-  const app = discordApp();
+  const app = await discordApp();
   const installedDiscord = app === undefined ? [] : rows.filter((row) => row.type === 'discord' && row.install !== null && row.install !== undefined);
   for (const row of installedDiscord) {
     if (app === undefined) break;

@@ -16,7 +16,7 @@ export async function POST(request: Request): Promise<Response> {
   return new Response(outcome.body, { status: outcome.status, headers: { 'content-type': outcome.contentType } });
 }
 
-export function GET(request: Request): Response {
-  const outcome = handleSharedProbe('whatsapp', new URL(request.url).searchParams);
+export async function GET(request: Request): Promise<Response> {
+  const outcome = await handleSharedProbe('whatsapp', new URL(request.url).searchParams);
   return new Response(outcome.body, { status: outcome.status, headers: { 'content-type': outcome.contentType } });
 }

@@ -588,6 +588,14 @@ Both were assessed and neither fits a request-shaped deployment, so neither is h
       key the person brought is theirs to spend. It cannot be removed; the Models page shows it
       as Included, the wizard offers "Continue with HIVE AI", and the landing page and plan say
       AI is included.
+- [x] Deployment settings on the admin dashboard (`platform-settings.ts`, `PlatformSettingsRepository`
+      in a global `platformSettings` collection): the keys the deployment holds (HIVE AI, the Slack,
+      Discord and Meta apps, WhatsApp sign-up, LinkedIn, Google Workspace) can be set and cleared by
+      a platform admin (`PLATFORM_ADMIN_EMAILS`) without a redeploy. Secrets are envelope-encrypted
+      under the KEK like every stored credential and never shown back; a dashboard value wins over
+      the environment variable and is in force within a minute (one cache per process). Every
+      getter (`slackApp`, `discordApp`, `whatsappSignup`, `platformAi`, `metaOAuthClient`,
+      `linkedInOAuthClient`, `googleOAuthClient`) reads through it and is async.
 - [ ] One press for Telegram only as a shared HIVE bot everyone messages, since Telegram has no
       OAuth for bots; iMessage cannot be, Apple has no API
 - [ ] Channel capability matrix as a test: which adapter has which optional method

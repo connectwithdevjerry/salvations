@@ -5,6 +5,7 @@
  * this is a question, not a failed authorisation, and treating the ordinary
  * signed-out case as an error makes every client special-case it.
  */
+import { isPlatformAdmin } from '@/lib/platform-settings';
 import { UserRepository } from '@salvations/db';
 import { db } from '@/lib/db';
 import { errorResponse, ok } from '@/lib/http';
@@ -30,6 +31,8 @@ export async function GET(request: Request): Promise<Response> {
         imageUrl: user.imageUrl ?? undefined,
         emailVerified: user.emailVerifiedAt != null,
         walkthroughSeen: user.walkthroughSeenAt != null,
+        // May change the deployment's own keys from the admin dashboard.
+        platformAdmin: await isPlatformAdmin(handle.db, user._id),
       },
     });
   } catch (error) {

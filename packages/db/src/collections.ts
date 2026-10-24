@@ -16,6 +16,8 @@
 export const GLOBAL_COLLECTIONS = [
   /** People. Email, password hash, profile. */
   'users',
+  /** The deployment's own keys and settings, set from the admin dashboard. Belong to no workspace. */
+  'platformSettings',
   /** Live sessions. Deleting a row revokes a session. */
   'authSessions',
   /** Links to an external identity provider — a Google account. */

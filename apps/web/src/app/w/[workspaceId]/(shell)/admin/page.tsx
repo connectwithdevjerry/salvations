@@ -8,6 +8,8 @@ import { SkeletonPage } from '@/components/skeleton';
 import { Copyable } from '@/components/setup-steps';
 import { useDialog } from '@/components/dialog';
 import { ago } from '@/components/agent-sidebar';
+import { DeploymentSettings } from '@/components/deployment-settings';
+import { auth } from '@/lib/client/auth';
 
 /**
  * The owner's dashboard.
@@ -67,6 +69,12 @@ const usd = (n: number) => `$${n.toFixed(n >= 100 ? 0 : 2)}`;
 export default function AdminPage({ params }: { params: Promise<{ workspaceId: string }> }) {
   const { workspaceId } = use(params);
   const [overview, setOverview] = useState<Overview>();
+  // Whether this person may change the deployment's own keys. The rail says
+  // nothing about it; the server refuses everyone else anyway.
+  const [platformAdmin, setPlatformAdmin] = useState(false);
+  useEffect(() => {
+    void auth.session().then((r) => setPlatformAdmin(r.user?.platformAdmin === true)).catch(() => undefined);
+  }, []);
   const [error, setError] = useState<string>();
 
   const reload = useCallback(() => {
@@ -176,6 +184,8 @@ export default function AdminPage({ params }: { params: Promise<{ workspaceId: s
       {overview.workspace.settings !== undefined && (
         <Limits workspaceId={workspaceId} initial={overview.workspace.settings} name={overview.workspace.name} onSaved={reload} />
       )}
+
+      {platformAdmin && <DeploymentSettings />}
 
       <section className="card">
         <p className="eyebrow" style={{ marginTop: 0 }}>Recent admin activity</p>

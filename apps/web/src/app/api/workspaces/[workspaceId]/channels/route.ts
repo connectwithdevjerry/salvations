@@ -68,10 +68,10 @@ export const GET = workspaceRoute('channels:read', async (ctx) => {
 
   // Which platforms this deployment can connect with one press, from an
   // app of its own. The form offers the button only where this says so.
-  const signup = whatsappSignup();
+  const [slack, discord, signup] = await Promise.all([slackApp(), discordApp(), whatsappSignup()]);
   const oneClick = [
-    ...(slackApp() !== undefined ? ['slack'] : []),
-    ...(discordApp() !== undefined ? ['discord'] : []),
+    ...(slack !== undefined ? ['slack'] : []),
+    ...(discord !== undefined ? ['discord'] : []),
     ...(signup !== undefined ? ['whatsapp'] : []),
   ];
 

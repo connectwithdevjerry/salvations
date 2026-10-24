@@ -17,6 +17,8 @@ export interface SignedInUser {
   readonly emailVerified: boolean;
   /** Whether the product walkthrough has been finished or skipped. */
   readonly walkthroughSeen: boolean;
+  /** May change the deployment's own keys from the admin dashboard. */
+  readonly platformAdmin?: boolean;
 }
 
 export const auth = {

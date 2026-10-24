@@ -73,7 +73,7 @@ export async function spendGate(
   // The included allowance: what one workspace may spend of the
   // deployment's own key in a month. Checked only when this run would
   // spend it; a key the person brought is theirs to spend.
-  const platform = platformAi();
+  const platform = await platformAi();
   if (platform !== undefined && await spendsIncludedAi(database, workspaceId, options.modelBindingId)) {
     const used = await repos.usage.spendInMonthByBindings(monthOf(), await platformBindingIds(database, workspaceId));
     if (used >= platform.monthlyUsdCap) return { allowed: false, reason: allowanceReason(platform.monthlyUsdCap) };

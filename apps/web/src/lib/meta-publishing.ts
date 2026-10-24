@@ -14,12 +14,12 @@
  * row. Page tokens are derived from the user token on each call rather
  * than stored: one extra round trip, and nothing extra to revoke.
  */
+import { platformSettings } from './platform-settings';
 import { scopeKeyString, workspaceScope, userScope } from '@salvations/mcp';
 import type { MetaPublishingSource, PendingPost, PublishedPost, SocialAccount } from '@salvations/servers';
 import { MongoOAuthCredentialStore, ScopedDb, type Database, type McpServerBindingDoc, PlatformDb, type OAuthConnectionDoc } from '@salvations/db';
 import { randomBytes } from 'node:crypto';
 import { catalogEntry } from '@salvations/catalog';
-import { env } from './env';
 import { issuer } from './session';
 import { keyProvider } from './keys';
 import { OAUTH_CALLBACK_PATH } from './oauth-config';
@@ -42,10 +42,10 @@ interface StoredTokens {
 
 export interface MetaOAuthClient { readonly appId: string; readonly appSecret: string }
 
-export function metaOAuthClient(): MetaOAuthClient | undefined {
-  const e = env();
-  if (e.META_APP_ID === undefined || e.META_APP_SECRET === undefined) return undefined;
-  return { appId: e.META_APP_ID, appSecret: e.META_APP_SECRET };
+export async function metaOAuthClient(): Promise<MetaOAuthClient | undefined> {
+  const [appId, appSecret] = await platformSettings(['meta_app_id', 'meta_app_secret'] as const);
+  if (appId === undefined || appSecret === undefined) return undefined;
+  return { appId, appSecret };
 }
 
 export const metaRedirectUri = (): string => `${issuer()}${OAUTH_CALLBACK_PATH}`;
@@ -318,7 +318,7 @@ export async function refreshExpiringMetaTokens(
   fetchImpl: typeof fetch = fetch,
   now = Date.now(),
 ): Promise<MetaTokenSweep> {
-  const client = metaOAuthClient();
+  const client = await metaOAuthClient();
   if (client === undefined) return { considered: 0, refreshed: 0, failed: 0 };
 
   const platform = new PlatformDb(database, 'token-refresh');

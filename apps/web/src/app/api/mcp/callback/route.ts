@@ -100,7 +100,7 @@ export async function GET(request: Request): Promise<Response> {
     : userScope(pending.workspaceId, binding._id, pending.userId);
 
   if (server?.transport === 'in_process' && server.catalogId === 'google_workspace') {
-    const client = googleOAuthClient();
+    const client = await googleOAuthClient();
     return finishNative(database, pending, binding, scope, { code, state }, {
       store: googleStore(database, pending.workspaceId),
       issuer: GOOGLE_ISSUER,
@@ -110,7 +110,7 @@ export async function GET(request: Request): Promise<Response> {
   }
 
   if (server?.transport === 'in_process' && server.catalogId === 'meta_publishing') {
-    const client = metaOAuthClient();
+    const client = await metaOAuthClient();
     return finishNative(database, pending, binding, scope, { code, state }, {
       store: metaStore(database, pending.workspaceId),
       issuer: META_ISSUER,
@@ -120,7 +120,7 @@ export async function GET(request: Request): Promise<Response> {
   }
 
   if (server?.transport === 'in_process' && server.catalogId === 'linkedin') {
-    const client = linkedInOAuthClient();
+    const client = await linkedInOAuthClient();
     return finishNative(database, pending, binding, scope, { code, state }, {
       store: linkedInStore(database, pending.workspaceId),
       issuer: LINKEDIN_ISSUER,

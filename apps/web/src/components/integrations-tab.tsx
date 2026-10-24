@@ -7,8 +7,9 @@ import { api, ws } from '@/lib/client/api';
 import { CapabilityReview } from '@/components/capability-review';
 import { Icon, Option } from '@/components/ui';
 import { SetupSteps, Copyable } from '@/components/setup-steps';
-import { ADDRESS_LABEL, ADDRESS_NOTE, AFTER_CONNECT, AFTER_INSTALL, EXTRA, INSTALLED_NOTE, SECONDARY, tokenLabelOf } from '@/lib/client/channel-fields';
+import { ADDRESS_LABEL, ADDRESS_NOTE, AFTER_CONNECT, AFTER_INSTALL, EXTRA, INSTALLED_NOTE, ONE_CLICK_UNSET, SECONDARY, tokenLabelOf } from '@/lib/client/channel-fields';
 import { OneClickConnect } from '@/components/one-click-connect';
+import { WhatsAppInstall, type WhatsAppSignupConfig } from '@/components/whatsapp-signup';
 import { AppDialog, AppPickerDialog, ConnectedApps, RequestCard, type AppStatus } from '@/components/app-grid';
 import { CALLBACK_ERRORS, IntegrationSetup, authorise, type Binding } from '@/components/integration-setup';
 
@@ -31,7 +32,7 @@ interface Channel {
   installed?: boolean; teamName?: string;
 }
 /** The channels list, with which platforms this deployment connects in one press. */
-interface ChannelList { items: Channel[]; oneClick?: string[] }
+interface ChannelList { items: Channel[]; oneClick?: string[]; signup?: { whatsapp?: WhatsAppSignupConfig } }
 interface Agent { id: string; name: string }
 interface ModelBinding { id: string; name: string; modelId: string }
 
@@ -47,6 +48,7 @@ export function IntegrationsTab({ workspaceId, agentId }: { workspaceId: string;
   const router = useRouter();
   const [channels, setChannels] = useState<Channel[]>([]);
   const [oneClick, setOneClick] = useState<string[]>([]);
+  const [signup, setSignup] = useState<ChannelList['signup']>();
   const [notice, setNotice] = useState<string>();
   const [bindings, setBindings] = useState<Binding[]>([]);
   const [agents, setAgents] = useState<Agent[]>([]);
@@ -57,7 +59,7 @@ export function IntegrationsTab({ workspaceId, agentId }: { workspaceId: string;
 
   const reload = useCallback(() => {
     void api.get<ChannelList>(`${ws(workspaceId)}/channels`)
-      .then((r) => { setChannels(r.items.filter((c) => c.agentId === agentId)); setOneClick(r.oneClick ?? []); }).catch(() => undefined);
+      .then((r) => { setChannels(r.items.filter((c) => c.agentId === agentId)); setOneClick(r.oneClick ?? []); setSignup(r.signup); }).catch(() => undefined);
     void api.get<{ items: Binding[] }>(`${ws(workspaceId)}/mcp/bindings?agent=${encodeURIComponent(agentId)}`)
       .then((r) => setBindings(r.items)).catch(() => undefined);
   }, [workspaceId, agentId]);
@@ -188,6 +190,7 @@ export function IntegrationsTab({ workspaceId, agentId }: { workspaceId: string;
               agents={agents}
               models={models}
               oneClick={oneClick}
+              signup={signup}
               onChanged={reload}
               onError={setError}
             />
@@ -245,13 +248,14 @@ export function ChannelSetupFor({
 }) {
   const [channels, setChannels] = useState<Channel[]>([]);
   const [oneClick, setOneClick] = useState<string[]>([]);
+  const [signup, setSignup] = useState<ChannelList['signup']>();
   const [agents, setAgents] = useState<Agent[]>([]);
   const [models, setModels] = useState<ModelBinding[]>([]);
   const [error, setError] = useState<string>();
 
   const reload = useCallback(() => {
     void api.get<ChannelList>(`${ws(workspaceId)}/channels`)
-      .then((r) => { setChannels(r.items.filter((c) => c.agentId === agentId)); setOneClick(r.oneClick ?? []); }).catch(() => undefined);
+      .then((r) => { setChannels(r.items.filter((c) => c.agentId === agentId)); setOneClick(r.oneClick ?? []); setSignup(r.signup); }).catch(() => undefined);
     onChanged();
   }, [workspaceId, agentId, onChanged]);
 
@@ -280,6 +284,7 @@ export function ChannelSetupFor({
         agents={agents}
         models={models}
         oneClick={oneClick}
+        signup={signup}
         onChanged={reload}
         onError={setError}
       />
@@ -290,7 +295,7 @@ export function ChannelSetupFor({
 
 
 function ChannelSetup({
-  workspaceId, entry, connection, agents, models, oneClick, onChanged, onError,
+  workspaceId, entry, connection, agents, models, oneClick, signup, onChanged, onError,
 }: {
   workspaceId: string;
   entry: CatalogEntry;
@@ -299,6 +304,8 @@ function ChannelSetup({
   models: ModelBinding[];
   /** Platforms this deployment connects from an app of its own. */
   oneClick: readonly string[];
+  /** What WhatsApp's press needs to open Meta's window. */
+  signup: ChannelList['signup'];
   onChanged: () => void;
   onError: (message: string | undefined) => void;
 }) {
@@ -340,8 +347,29 @@ function ChannelSetup({
       onError={onError}
     />
   );
-  if (!oneClick.includes(entry.id)) return form;
+  if (!oneClick.includes(entry.id)) {
+    // One press is possible here once the deployment has an app of its own;
+    // said above the long way so the steps read as the interim they are.
+    const unset = ONE_CLICK_UNSET[entry.id];
+    if (unset === undefined) return form;
+    return (
+      <>
+        <div className="note" style={{ marginBottom: 14 }}>
+          <span className="tile" aria-hidden><Icon name="spark" size={16} /></span>
+          <span>{unset}</span>
+        </div>
+        {form}
+      </>
+    );
+  }
   const agentId = agents[0]?.id ?? '';
+  if (entry.id === 'whatsapp' && signup?.whatsapp !== undefined) {
+    return (
+      <WhatsAppInstall workspaceId={workspaceId} agentId={agentId} entry={entry} config={signup.whatsapp} onChanged={onChanged} onError={onError}>
+        {form}
+      </WhatsAppInstall>
+    );
+  }
   return (
     <OneClickConnect workspaceId={workspaceId} agentId={agentId} entry={entry} onError={onError}>
       {form}

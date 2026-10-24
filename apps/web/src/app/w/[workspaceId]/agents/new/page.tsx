@@ -8,8 +8,9 @@ import { DEFAULT_AGENT_NAME, INTEGRATIONS, ROLES, type AssistantRole, type Catal
 import { api, ws } from '@/lib/client/api';
 import { BrandMark, Icon, StepDots, Tile } from '@/components/ui';
 import { SetupSteps, Copyable } from '@/components/setup-steps';
-import { ADDRESS_LABEL, ADDRESS_NOTE, AFTER_CONNECT, EXTRA, SECONDARY, tokenLabelOf } from '@/lib/client/channel-fields';
+import { ADDRESS_LABEL, ADDRESS_NOTE, AFTER_CONNECT, EXTRA, ONE_CLICK_UNSET, SECONDARY, tokenLabelOf } from '@/lib/client/channel-fields';
 import { OneClickConnect } from '@/components/one-click-connect';
+import { WhatsAppInstall, type WhatsAppSignupConfig } from '@/components/whatsapp-signup';
 import { Qr } from '@/components/qr';
 import { GroupPicker } from '@/components/group-picker';
 import { VendorCards, keyStatesOf, vendorCopy } from '@/components/vendor-mark';
@@ -315,6 +316,7 @@ function ChannelStep({
   const [open, setOpen] = useState<string>('telegram');
   const [channels, setChannels] = useState<Channel[]>([]);
   const [oneClick, setOneClick] = useState<string[]>([]);
+  const [signup, setSignup] = useState<{ whatsapp?: WhatsAppSignupConfig }>();
   const [hovered, setHovered] = useState<TalkWay>();
   const way = hovered ?? WAYS.find((w) => w.id === open) ?? WAYS[0]!;
   const entry = way.entry;
@@ -323,8 +325,8 @@ function ChannelStep({
   const reload = useCallback(() => {
     // Only THIS agent's connections: another agent's bot is not a way to
     // talk to this one.
-    void api.get<{ items: Channel[]; oneClick?: string[] }>(`${ws(workspaceId)}/channels`)
-      .then((r) => { setChannels(r.items.filter((c) => c.agentId === agentId)); setOneClick(r.oneClick ?? []); })
+    void api.get<{ items: Channel[]; oneClick?: string[]; signup?: { whatsapp?: WhatsAppSignupConfig } }>(`${ws(workspaceId)}/channels`)
+      .then((r) => { setChannels(r.items.filter((c) => c.agentId === agentId)); setOneClick(r.oneClick ?? []); setSignup(r.signup); })
       .catch(() => undefined);
   }, [workspaceId, agentId]);
 
@@ -355,7 +357,7 @@ function ChannelStep({
             <span className="tile" aria-hidden><Icon name="chat" size={16} /></span>
             <span>
               {connected.installed === true ? (
-                <><strong>{agentName} is in {connected.teamName ?? 'your workspace'} now.</strong> Open {connected.channel === 'slack' ? 'Slack' : connected.channel} and say hello.</>
+                <><strong>{agentName} is on {connected.teamName ?? 'your workspace'} now.</strong> Open {connected.channel === 'slack' ? 'Slack' : connected.channel === 'discord' ? 'Discord' : connected.channel === 'whatsapp' ? 'WhatsApp' : connected.channel} and say hello.</>
               ) : (
                 <><strong>{agentName} just texted you.</strong> Check {connected.channel === 'telegram' ? 'Telegram' : connected.channel}: that chat is yours now, and only you can use it.</>
               )}
@@ -404,6 +406,16 @@ function ChannelStep({
                       onDone={reload}
                       onError={onError}
                     />
+                  ) : entry.id === 'whatsapp' && oneClick.includes('whatsapp') && signup?.whatsapp !== undefined ? (
+                    <WhatsAppInstall workspaceId={workspaceId} agentId={agentId} entry={entry} config={signup.whatsapp} onChanged={reload} onError={(m) => { if (m !== undefined) onError(m); }}>
+                      <ConnectForm
+                        workspaceId={workspaceId}
+                        entry={entry}
+                        agentId={agentId}
+                        onDone={reload}
+                        onError={onError}
+                      />
+                    </WhatsAppInstall>
                   ) : oneClick.includes(entry.id) ? (
                     <OneClickConnect workspaceId={workspaceId} agentId={agentId} entry={entry} onError={(m) => { if (m !== undefined) onError(m); }}>
                       <ConnectForm
@@ -415,13 +427,21 @@ function ChannelStep({
                       />
                     </OneClickConnect>
                   ) : (
-                    <ConnectForm
-                      workspaceId={workspaceId}
-                      entry={entry}
-                      agentId={agentId}
-                      onDone={reload}
-                      onError={onError}
-                    />
+                    <>
+                      {ONE_CLICK_UNSET[entry.id] !== undefined && (
+                        <div className="note" style={{ marginBottom: 14 }}>
+                          <span className="tile" aria-hidden><Icon name="spark" size={16} /></span>
+                          <span>{ONE_CLICK_UNSET[entry.id]}</span>
+                        </div>
+                      )}
+                      <ConnectForm
+                        workspaceId={workspaceId}
+                        entry={entry}
+                        agentId={agentId}
+                        onDone={reload}
+                        onError={onError}
+                      />
+                    </>
                   )}
                 </div>
               )}

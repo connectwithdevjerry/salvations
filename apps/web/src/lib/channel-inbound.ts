@@ -23,10 +23,14 @@ import { linkFromChat } from './chat-link';
 import { decideFromChat } from './channel-approvals';
 import { spendGate } from './limits';
 import type { ChannelDoc } from '@salvations/db';
-import { channelAdapter, slackTeamOf, type ChannelAdapter, type InboundMessage, type InboundResult, type VerifyContext } from '@salvations/channels';
+import {
+  channelAdapter, discordGuildOf, slackTeamOf, NOT_IN_SERVER,
+  type Ack, type ChannelAdapter, type InboundMessage, type InboundResult, type VerifyContext,
+} from '@salvations/channels';
 import { NO_EAR, transcribeAudio } from './transcribe';
 import { deliveredToOldAddress, registerWebhook, webhookUrl, WEBHOOK_SPEC } from './channel-webhook';
 import { slackApp, slackAppWebhookUrl } from './slack-app';
+import { discordApp, discordAppWebhookUrl } from './discord-app';
 import {
   DEFAULT_BUDGET, asId, type RunId, type UserId, type WorkspaceId,
 } from '@salvations/core';
@@ -122,17 +126,21 @@ export async function handleDelivery(
  * app for everyone.
  */
 export async function handleSharedDelivery(type: string, raw: string, headers: Headers): Promise<DeliveryOutcome> {
-  const app = type === 'slack' ? slackApp() : undefined;
+  const shared = sharedAppOf(type);
   const adapter = channelAdapter(type);
-  if (app === undefined || adapter === undefined) return plain(404, 'unknown channel');
+  if (shared === undefined || adapter === undefined) return plain(404, 'unknown channel');
 
-  const judged = adapter.receive(raw, headers, { webhookUrl: slackAppWebhookUrl(), webhookSecret: app.signingSecret });
+  const judged = adapter.receive(raw, headers, { webhookUrl: shared.webhookUrl, webhookSecret: shared.webhookSecret });
   if (judged.kind === 'rejected') return plain(401, 'unauthorized');
   if (judged.kind === 'challenge') return { status: 200, body: judged.body, contentType: judged.contentType };
   if (judged.kind === 'ignored') return plain(200, 'ok');
 
-  const teamRef = slackTeamOf(raw);
-  if (teamRef === undefined) return plain(200, 'ok');
+  const teamRef = shared.teamOf(raw);
+  if (teamRef === undefined) {
+    // Somewhere the shared application cannot place: a DM with a Discord
+    // bot. Said in the response where the platform shows one.
+    return shared.notHere === undefined ? plain(200, 'ok') : { status: 200, body: shared.notHere.body, contentType: shared.notHere.contentType };
+  }
 
   const handle = await db();
   // Unscoped by declaration: the delivery names Slack's workspace, and which
@@ -147,6 +155,29 @@ export async function handleSharedDelivery(type: string, raw: string, headers: H
   }
 
   return act(handle.db, row, adapter, judged);
+}
+
+interface SharedApp {
+  readonly webhookUrl: string;
+  /** What the adapter verifies deliveries with: Slack's signing secret, Discord's public key. */
+  readonly webhookSecret: string;
+  /** The platform's id for the workspace or server a delivery came from. */
+  readonly teamOf: (raw: string) => string | undefined;
+  /** The answer when a delivery names no workspace at all, where the platform shows one. */
+  readonly notHere?: Ack;
+}
+
+/** The deployment's own application for a platform, when it has one. */
+function sharedAppOf(type: string): SharedApp | undefined {
+  if (type === 'slack') {
+    const app = slackApp();
+    return app === undefined ? undefined : { webhookUrl: slackAppWebhookUrl(), webhookSecret: app.signingSecret, teamOf: slackTeamOf };
+  }
+  if (type === 'discord') {
+    const app = discordApp();
+    return app === undefined ? undefined : { webhookUrl: discordAppWebhookUrl(), webhookSecret: app.publicKey, teamOf: discordGuildOf, notHere: NOT_IN_SERVER };
+  }
+  return undefined;
 }
 
 /**

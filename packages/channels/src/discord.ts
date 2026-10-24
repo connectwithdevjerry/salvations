@@ -57,6 +57,36 @@ const COMMAND_OPTION = 'message';
 /** What the response to a command says, before the answer arrives. */
 export const COMMAND_ACK = 'On it.';
 
+/** Discord's flag for a response only the person who asked can see. */
+const EPHEMERAL = 64;
+
+/**
+ * Which server an interaction came from, for an application that serves
+ * many of them from one endpoint. Undefined for a ping, for a DM with the
+ * bot (Discord names no server there), and for anything unparseable.
+ */
+export function discordGuildOf(raw: string): string | undefined {
+  try {
+    const body = JSON.parse(raw) as { guild_id?: unknown };
+    return typeof body.guild_id === 'string' ? body.guild_id : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * The answer for a command used somewhere the shared application cannot
+ * place: a DM with the bot. Said in the response, since Discord shows a
+ * silent response as "the application did not respond".
+ */
+export const NOT_IN_SERVER: Ack = {
+  body: JSON.stringify({
+    type: 4,
+    data: { content: 'Use /hive in a server where the assistant was added. Direct messages are not connected.', flags: EPHEMERAL },
+  }),
+  contentType: 'application/json',
+};
+
 /**
  * Wraps a raw 32-byte Ed25519 public key as DER so `createPublicKey` accepts it.
  *

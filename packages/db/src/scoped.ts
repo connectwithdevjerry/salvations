@@ -213,11 +213,11 @@ export type PlatformReason =
    */
   | 'user-workspaces'
   /**
-   * "Is this Slack workspace already connected somewhere else?" A platform
-   * workspace maps to at most one of ours, and the check that keeps it so
-   * has to look across all of ours.
+   * "Is this Slack workspace or Discord server already connected somewhere
+   * else?" A platform workspace maps to at most one of ours, and the check
+   * that keeps it so has to look across all of ours.
    */
-  | 'slack-install'
+  | 'app-install'
   /**
    * Resolving a chat connection from an inbound delivery.
    *

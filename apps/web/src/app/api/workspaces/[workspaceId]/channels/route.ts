@@ -19,6 +19,7 @@ import { CONNECT_CODE_TTL_MS, webhookUrl } from '@/lib/channel-inbound';
 import { WEBHOOK_SPEC, deliveryUrlOf } from '@/lib/channel-webhook';
 import { countGate } from '@/lib/limits';
 import { slackApp } from '@/lib/slack-app';
+import { discordApp } from '@/lib/discord-app';
 
 export const runtime = 'nodejs';
 
@@ -66,7 +67,7 @@ export const GET = workspaceRoute('channels:read', async (ctx) => {
 
   // Which platforms this deployment can connect with one press, from an
   // app of its own. The form offers the button only where this says so.
-  const oneClick = [...(slackApp() !== undefined ? ['slack'] : [])];
+  const oneClick = [...(slackApp() !== undefined ? ['slack'] : []), ...(discordApp() !== undefined ? ['discord'] : [])];
 
   return ok({ items, oneClick });
 });

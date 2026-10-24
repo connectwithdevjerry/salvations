@@ -65,7 +65,7 @@ const DISCORD: CatalogEntry = {
   kind: 'channel',
   category: 'Chat',
   name: 'Discord',
-  summary: 'Ask your agent from any Discord channel, or its DMs, with the /hive command. It answers with buttons, pictures and clips.',
+  summary: 'Add it to your server with one press, then ask it from any channel with the /hive command. It answers with buttons, pictures and clips.',
   setup: 'bot_token',
   accent: '#5865F2',
   docs: 'https://discord.com/developers/docs/interactions/overview',

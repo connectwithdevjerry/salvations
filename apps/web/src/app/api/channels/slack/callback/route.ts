@@ -75,7 +75,7 @@ export async function GET(request: Request): Promise<Response> {
   // One Slack workspace, one HIVE workspace. Two connections for the same
   // Slack workspace would both answer every message there, and the second
   // would be spending somebody else's budget on it.
-  const platform = new PlatformDb(database, 'slack-install');
+  const platform = new PlatformDb(database, 'app-install');
   const elsewhere = await platform.collection<ChannelDoc>('channels').findOne(
     { type: 'slack', 'install.teamRef': installed.teamRef, workspaceId: { $ne: pending.workspaceId } } as never,
     { comment: platform.comment },

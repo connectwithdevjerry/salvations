@@ -8,7 +8,7 @@
  */
 export * from './port';
 export { telegramAdapter, chunk, SECRET_HEADER } from './telegram';
-export { discordAdapter, split, COMMAND_NAME, COMMAND_ACK } from './discord';
+export { discordAdapter, discordGuildOf, split, COMMAND_NAME, COMMAND_ACK, NOT_IN_SERVER } from './discord';
 export { slackAdapter, slackTeamOf, revokeSlackToken, MAX_SKEW_SECONDS, SCOPES as SLACK_SCOPES } from './slack';
 export { whatsappAdapter, whatsappVerifyToken, GRAPH_VERSION } from './whatsapp';
 export { imessageAdapter, NEW_MESSAGE_EVENT } from './imessage';

@@ -168,7 +168,7 @@ const WHATSAPP: CatalogEntry = {
   kind: 'channel',
   category: 'Chat',
   name: 'WhatsApp',
-  summary: 'Message your agent on WhatsApp from your own Meta app and business number. Buttons, pictures, clips and voice notes, straight from Meta\'s API.',
+  summary: 'Connect your WhatsApp Business number in one press, or bring your own Meta app. Buttons, pictures, clips and voice notes, straight from Meta\'s API.',
   setup: 'bot_token',
   accent: '#25D366',
   docs: 'https://developers.facebook.com/docs/whatsapp/cloud-api/get-started',

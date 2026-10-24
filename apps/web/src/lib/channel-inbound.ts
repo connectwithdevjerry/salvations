@@ -24,13 +24,14 @@ import { decideFromChat } from './channel-approvals';
 import { spendGate } from './limits';
 import type { ChannelDoc } from '@salvations/db';
 import {
-  channelAdapter, discordGuildOf, slackTeamOf, NOT_IN_SERVER,
+  channelAdapter, discordGuildOf, slackTeamOf, whatsappPhoneOf, NOT_IN_SERVER,
   type Ack, type ChannelAdapter, type InboundMessage, type InboundResult, type VerifyContext,
 } from '@salvations/channels';
 import { NO_EAR, transcribeAudio } from './transcribe';
 import { deliveredToOldAddress, registerWebhook, webhookUrl, WEBHOOK_SPEC } from './channel-webhook';
 import { slackApp, slackAppWebhookUrl } from './slack-app';
 import { discordApp, discordAppWebhookUrl } from './discord-app';
+import { answerSharedProbe, whatsappAppWebhookUrl, whatsappSignup } from './whatsapp-signup';
 import {
   DEFAULT_BUDGET, asId, type RunId, type UserId, type WorkspaceId,
 } from '@salvations/core';
@@ -177,7 +178,24 @@ function sharedAppOf(type: string): SharedApp | undefined {
     const app = discordApp();
     return app === undefined ? undefined : { webhookUrl: discordAppWebhookUrl(), webhookSecret: app.publicKey, teamOf: discordGuildOf, notHere: NOT_IN_SERVER };
   }
+  if (type === 'whatsapp') {
+    const signup = whatsappSignup();
+    return signup === undefined ? undefined : { webhookUrl: whatsappAppWebhookUrl(), webhookSecret: signup.appSecret, teamOf: whatsappPhoneOf };
+  }
   return undefined;
+}
+
+/**
+ * Meta's GET probe on the shared WhatsApp address, before it will save it:
+ * the challenge is echoed when the verify token matches. Other platforms
+ * do not probe the shared address with a GET; a 200 is enough for them.
+ */
+export function handleSharedProbe(type: string, query: URLSearchParams): DeliveryOutcome {
+  if (type !== 'whatsapp') return plain(200, 'ok');
+  const signup = whatsappSignup();
+  if (signup === undefined) return plain(404, 'unknown channel');
+  const challenge = answerSharedProbe(signup, query);
+  return challenge === undefined ? plain(403, 'forbidden') : plain(200, challenge);
 }
 
 /**

@@ -315,3 +315,23 @@ export const whatsappAdapter: ChannelAdapter = {
 
 /** For tests and the setup screen: what the person pastes into Meta's dashboard. */
 export const whatsappVerifyToken = verifyTokenOf;
+
+/**
+ * Which number a delivery is for, when one app serves many of them from
+ * one address: Meta names it in the change's metadata. Undefined for a
+ * probe, a status with no metadata, or anything unparseable.
+ */
+export function whatsappPhoneOf(raw: string): string | undefined {
+  try {
+    const body = JSON.parse(raw) as { entry?: { changes?: { value?: { metadata?: { phone_number_id?: unknown } } }[] }[] };
+    for (const entry of body.entry ?? []) {
+      for (const change of entry.changes ?? []) {
+        const id = change.value?.metadata?.phone_number_id;
+        if (typeof id === 'string') return id;
+      }
+    }
+    return undefined;
+  } catch {
+    return undefined;
+  }
+}

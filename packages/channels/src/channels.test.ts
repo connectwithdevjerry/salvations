@@ -4,7 +4,7 @@ import { channelAdapter, CHANNEL_IDS, ChannelError } from './index';
 import { telegramAdapter, chunk, SECRET_HEADER, MAX_AUDIO_BYTES } from './telegram';
 import { discordAdapter, discordGuildOf, NOT_IN_SERVER } from './discord';
 import { slackAdapter, slackTeamOf, MAX_SKEW_SECONDS } from './slack';
-import { whatsappAdapter, whatsappVerifyToken } from './whatsapp';
+import { whatsappAdapter, whatsappVerifyToken, whatsappPhoneOf } from './whatsapp';
 import { imessageAdapter } from './imessage';
 
 const CONTEXT = { webhookUrl: 'https://example.test/hook', webhookSecret: 'sekrit-token-value' };
@@ -994,5 +994,14 @@ describe('discord: which server an interaction came from', () => {
     expect(body.type).toBe(4);
     expect(body.data.flags).toBe(64);
     expect(body.data.content).toMatch(/server/);
+  });
+});
+
+describe('whatsapp: which number a delivery is for', () => {
+  it('reads the phone number id from the change metadata and nothing from anything else', () => {
+    const delivery = { object: 'whatsapp_business_account', entry: [{ id: 'WABA', changes: [{ field: 'messages', value: { metadata: { phone_number_id: 'PHONE_1' }, messages: [] } }] }] };
+    expect(whatsappPhoneOf(JSON.stringify(delivery))).toBe('PHONE_1');
+    expect(whatsappPhoneOf(JSON.stringify({ object: 'whatsapp_business_account', entry: [{ changes: [{ value: {} }] }] }))).toBeUndefined();
+    expect(whatsappPhoneOf('nope')).toBeUndefined();
   });
 });

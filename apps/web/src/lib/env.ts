@@ -45,6 +45,16 @@ const schema = z.object({
    */
   META_APP_ID: z.string().min(1).optional(),
   META_APP_SECRET: z.string().min(1).optional(),
+  /**
+   * WhatsApp in one press, through Meta's Embedded Signup on the same Meta
+   * app. Optional, and needs META_APP_ID and META_APP_SECRET. The
+   * configuration id is from Facebook Login for Business → Configurations;
+   * the verify token is whatever was typed into the app's WhatsApp webhook
+   * settings beside the shared callback URL, or left unset to use one
+   * derived from the app secret. See .env.example.
+   */
+  META_WHATSAPP_CONFIG_ID: z.string().min(1).optional(),
+  META_WHATSAPP_VERIFY_TOKEN: z.string().min(8).optional(),
 
   /**
    * The LinkedIn app behind the LinkedIn integration. Optional. From the
@@ -172,6 +182,12 @@ const schema = z.object({
   {
     message: 'Set both META_APP_ID and META_APP_SECRET, or neither.',
     path: ['META_APP_ID'],
+  },
+).refine(
+  (value) => value.META_WHATSAPP_CONFIG_ID === undefined || value.META_APP_ID !== undefined,
+  {
+    message: 'META_WHATSAPP_CONFIG_ID needs META_APP_ID and META_APP_SECRET: the configuration belongs to that app.',
+    path: ['META_WHATSAPP_CONFIG_ID'],
   },
 ).refine(
   (value) => (value.LINKEDIN_CLIENT_ID === undefined) === (value.LINKEDIN_CLIENT_SECRET === undefined),

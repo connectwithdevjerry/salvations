@@ -394,6 +394,8 @@ export interface ChannelDoc extends TenantDoc {
     installerRef: string;
     /** The platform's id for our app there. */
     appRef: string;
+    /** A second id the platform needs beside the first: WhatsApp's Messaging account id. */
+    accountRef?: string;
   } | null;
   /**
    * The address last registered with the platform. Compared with the address

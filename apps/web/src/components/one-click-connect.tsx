@@ -16,12 +16,18 @@ import { ONE_CLICK } from '@/lib/client/channel-fields';
  * app and pasted token, stays behind a link for whoever wants it.
  */
 export function OneClickConnect({
-  workspaceId, agentId, entry, onError, children,
+  workspaceId, agentId, entry, onError, start, children,
 }: {
   workspaceId: string;
   agentId: string;
   entry: CatalogEntry;
   onError: (message: string | undefined) => void;
+  /**
+   * What the press does, when it is not a redirect to a consent screen:
+   * WhatsApp opens Meta's window from the browser instead. Resolves once
+   * the connection exists.
+   */
+  start?: () => Promise<void>;
   /** The do-it-yourself form, shown only when asked for. */
   children: ReactNode;
 }) {
@@ -46,6 +52,11 @@ export function OneClickConnect({
               setBusy(true);
               onError(undefined);
               try {
+                if (start !== undefined) {
+                  await start();
+                  setBusy(false);
+                  return;
+                }
                 const result = await api.post<{ authorizationUrl?: string }>(
                   `${ws(workspaceId)}/channels/${entry.id}/authorize`, { agentId },
                 );

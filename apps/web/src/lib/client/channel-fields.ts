@@ -98,12 +98,19 @@ export const ONE_CLICK: Readonly<Record<string, { title: string; lede: string; b
     button: 'Add to Discord',
     manual: 'Prefer your own Discord application? Do it the long way',
   },
+  whatsapp: {
+    title: 'Connect your WhatsApp number in one press',
+    lede: 'Meta opens a window where you pick or create your WhatsApp Business account and number, and you are back here connected. Anyone who messages that number then reaches the assistant.',
+    button: 'Connect WhatsApp',
+    manual: 'Prefer your own Meta app? Do it the long way',
+  },
 };
 
 /** What to say beside a connection made through this deployment\'s own app. */
 export const INSTALLED_NOTE: Readonly<Record<string, string>> = {
   slack: 'Connected through HIVE\'s own Slack app. Nothing to paste into Slack: messages already reach it.',
   discord: 'Connected through HIVE\'s own Discord application. Nothing to paste into Discord: /hive already reaches it.',
+  whatsapp: 'Connected through HIVE\'s own Meta app. Nothing to paste into Meta: messages to that number already reach it.',
 };
 
 /** The snags that remain once the app did the setup. */
@@ -116,5 +123,10 @@ export const AFTER_INSTALL: Readonly<Record<string, readonly string[]>> = {
     'The /hive command can take a minute to show up in the server. If it is still missing, reopen Discord so it refreshes the command list.',
     'Direct messages to the bot are not connected with the shared application: use /hive in a channel of the server you added it to.',
     'Disconnecting here stops the assistant answering. To remove the bot from the server as well, kick it under Server Settings → Integrations.',
+  ],
+  whatsapp: [
+    'Before the number can send, Meta needs a payment method on the WhatsApp Business account: Meta Business Suite → Billing. Receiving works without it.',
+    'The assistant can message someone only within 24 hours of their last message. Outside that window a reply needs an approved template.',
+    'A number already in use on the WhatsApp app has to be moved to the Cloud API first, which Meta\'s window walks through.',
   ],
 };

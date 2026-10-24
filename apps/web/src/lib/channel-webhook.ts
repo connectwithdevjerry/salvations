@@ -15,6 +15,7 @@ import { env } from './env';
 import { repositories } from './repositories';
 import { slackAppWebhookUrl } from './slack-app';
 import { discordApp, discordAppWebhookUrl } from './discord-app';
+import { whatsappAppWebhookUrl } from './whatsapp-signup';
 
 /**
  * Where a platform delivers for one connection.
@@ -36,6 +37,7 @@ export function deliveryUrlOf(row: Pick<ChannelDoc, 'type' | '_id' | 'install'>)
   if (row.install !== null && row.install !== undefined) {
     if (row.type === 'slack') return slackAppWebhookUrl();
     if (row.type === 'discord') return discordAppWebhookUrl();
+    if (row.type === 'whatsapp') return whatsappAppWebhookUrl();
   }
   return webhookUrl(row.type, row._id);
 }

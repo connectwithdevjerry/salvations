@@ -12,6 +12,7 @@
  * `embedding` role still gets lexical and recency ranking, which is most of the
  * value; it does not get paraphrase matching, and nothing pretends otherwise.
  */
+import { providerCredentials } from './platform-ai';
 import { MemoryRepository, ModelBindingRepository, CredentialRepository } from '@salvations/db';
 import type { Database, MemoryEntryDoc } from '@salvations/db';
 import { cosine, embeddingKey, rank, DEFAULT_IMPORTANCE } from '@salvations/memory';
@@ -57,13 +58,9 @@ export async function embedderFor(
   if (!registry.has(providerRow.providerType as never)) return undefined;
 
   const credentials = new CredentialRepository(database, workspaceId, keyProvider());
-  const secret = providerRow.credentialId == null
-    ? null
-    : await credentials.resolve(providerRow.credentialId);
-
   const provider = registry.create(
     providerRow.providerType as never,
-    secret === null ? {} : { apiKey: secret.expose() },
+    await providerCredentials(credentials, providerRow) ?? {},
   );
   // Optional on the port. A workspace that bound a model with no embedding
   // support degrades to lexical rather than failing every recall.

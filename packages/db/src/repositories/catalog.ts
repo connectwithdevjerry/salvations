@@ -25,6 +25,12 @@ export interface ProviderConfigDoc extends TenantDoc {
    * "connected".
    */
   lastCheck?: ProviderCheck | null;
+  /**
+   * The deployment's own provider, HIVE AI, rather than a key the workspace
+   * brought. It holds no credential: the key is the deployment's, read from
+   * its environment at use, and never stored under a workspace.
+   */
+  platform?: boolean;
 }
 
 export interface ProviderCheck {

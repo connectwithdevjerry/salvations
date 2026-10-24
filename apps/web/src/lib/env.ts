@@ -95,6 +95,20 @@ const schema = z.object({
   DISCORD_BOT_TOKEN: z.string().min(1).optional(),
 
   /**
+   * HIVE AI: a model that comes with the subscription, on a key the
+   * deployment holds. Optional. The vendor is configuration (any the
+   * registry knows; openai by default), the chat model a catalogue id for
+   * that vendor (the vendor's default when unset), and the cap what one
+   * workspace may spend of this key in a month, in dollars. The key is
+   * never written to a workspace.
+   */
+  PLATFORM_AI_API_KEY: z.string().min(1).optional(),
+  PLATFORM_AI_PROVIDER: z.string().min(1).default('openai'),
+  PLATFORM_AI_CHAT_MODEL: z.string().min(1).optional(),
+  PLATFORM_AI_BASE_URL: z.string().url().optional(),
+  PLATFORM_AI_MONTHLY_USD_CAP: z.coerce.number().positive().default(25),
+
+  /**
    * OAuth clients registered by hand with vendors whose MCP servers accept
    * neither a client metadata document nor dynamic registration (Asana,
    * HubSpot). JSON, keyed by the vendor's domain:

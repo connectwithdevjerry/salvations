@@ -138,7 +138,7 @@ export function stepsFor(context: TourContext): readonly TourStep[] {
       id: 'models',
       target: 'nav-models',
       title: 'Models',
-      body: 'Connect your own OpenAI or Claude API key. Keys are encrypted and stored in your own database. Voice notes, and the studio’s pictures and clips, need an OpenAI key.',
+      body: 'HIVE AI is included with your subscription, with a monthly allowance, so assistants think from the first minute. Connect your own OpenAI or Claude key for more; keys are encrypted and stored in your own database. Voice notes, and the studio’s pictures and clips, need OpenAI behind them.',
     },
     {
       id: 'approvals',

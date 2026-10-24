@@ -5,6 +5,7 @@
  * same provider port as everything else, and kept in the workspace's own
  * database. Nothing here names a vendor: the port does, and the key decides.
  */
+import { providerCredentials } from './platform-ai';
 import { providers, keyProvider } from './singletons';
 import {
   CredentialRepository, MediaRepository, ModelBindingRepository, findMediaByLink, mediaBytesOf,
@@ -36,11 +37,11 @@ export async function drawingProvider(database: Database, workspaceId: string): 
   const credentials = new CredentialRepository(database, workspaceId, keyProvider());
   const registry = providers();
   for (const row of await catalog.listProviders()) {
-    if (!row.enabled || row.credentialId === null || row.credentialId === undefined) continue;
+    if (!row.enabled) continue;
     if (!registry.has(row.providerType as never)) continue;
-    const secret = await credentials.resolve(row.credentialId);
-    if (secret === null) continue;
-    const provider = registry.create(row.providerType as never, { apiKey: secret.expose() });
+    const given = await providerCredentials(credentials, row);
+    if (given === undefined) continue;
+    const provider = registry.create(row.providerType as never, given);
     if (provider.generateImage !== undefined) return provider;
   }
   return undefined;

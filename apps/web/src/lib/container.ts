@@ -47,6 +47,7 @@ import { keyProvider, mcpManager, metrics, providers, tracer } from './singleton
 
 
 import { bindingSource, ownedBy } from './binding-source';
+import { providerCredentials } from './platform-ai';
 export { bindingSource };
 
 // ─── The runtime, per run ───────────────────────────────────────────────────
@@ -185,11 +186,11 @@ export async function openSession(
     async credentialsFor(binding): Promise<ProviderCredentials> {
       const doc = await modelBindings.findById(binding.id);
       const provider = doc === null ? null : await modelBindings.providerFor(doc);
-      if (provider?.credentialId == null) return {};
+      if (provider === null) return {};
       // Decrypted at use and held only for this call: a provider key that
       // outlives the request it was needed for is a key with no expiry.
-      const secret = await credentials.resolve(provider.credentialId);
-      return secret === null ? {} : { apiKey: secret.expose() };
+      // HIVE AI's is the deployment's own, read from its environment.
+      return await providerCredentials(credentials, provider) ?? {};
     },
 
     async describeModel(provider, modelId): Promise<ModelCapabilities> {

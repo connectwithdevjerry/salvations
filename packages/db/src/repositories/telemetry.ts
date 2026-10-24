@@ -120,6 +120,13 @@ export class UsageRepository {
     return rows.reduce((total, row) => total + (row.costUsd ?? 0), 0);
   }
 
+  /** Spend this month through particular bindings: what the deployment's own key has carried. */
+  async spendInMonthByBindings(month: string, bindingIds: readonly string[]): Promise<number> {
+    if (bindingIds.length === 0) return 0;
+    const rows = await this.#collection.find({ day: { $regex: `^${month}-` }, modelBindingId: { $in: [...bindingIds] } } as never);
+    return rows.reduce((total, row) => total + (row.costUsd ?? 0), 0);
+  }
+
   listDays(limit = 30): Promise<UsageDailyDoc[]> {
     return this.#collection.find({} as never, { sort: { day: -1 }, limit });
   }

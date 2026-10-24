@@ -5,6 +5,7 @@
  * concrete provider. Swapping a workspace from one vendor to another is
  * therefore a change here, not an edit to every agent.
  */
+import { ensurePlatformAi } from '@/lib/platform-ai';
 import { createModelBindingSchema } from '@salvations/contracts';
 import { jsonBody, ok, errorResponse } from '@/lib/http';
 import { workspaceRoute } from '@/lib/route';
@@ -12,6 +13,7 @@ import { workspaceRoute } from '@/lib/route';
 export const runtime = 'nodejs';
 
 export const GET = workspaceRoute('providers:read', async (ctx) => {
+  await ensurePlatformAi(ctx.database, ctx.workspaceId);
   const bindings = await ctx.repos.models.list();
   const providers = await ctx.repos.models.listProviders();
   const byId = new Map(providers.map((p) => [p._id, p]));

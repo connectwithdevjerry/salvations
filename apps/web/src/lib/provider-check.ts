@@ -4,6 +4,7 @@
  * The verdict is recorded on the provider row, so "connected" on a page means
  * "the vendor said yes, at this time", never merely "a row exists".
  */
+import { isPlatformProvider, providerCredentials } from './platform-ai';
 import type { ModelBindingRepository, ProviderCheck, ProviderConfigDoc } from '@salvations/db';
 import type { CredentialRepository } from '@salvations/db';
 import { providers } from './singletons';
@@ -23,17 +24,14 @@ async function verdict(
   credentials: CredentialRepository,
 ): Promise<ProviderCheck> {
   const at = new Date();
-  if (provider.credentialId === null || provider.credentialId === undefined) {
+  if (!isPlatformProvider(provider) && (provider.credentialId === null || provider.credentialId === undefined)) {
     return { at, ok: false, message: 'No key is stored for this provider.' };
   }
-  const secret = await credentials.resolve(provider.credentialId);
-  if (secret === null) {
-    return { at, ok: false, message: 'The stored key has been revoked.' };
+  const given = await providerCredentials(credentials, provider);
+  if (given === undefined) {
+    return { at, ok: false, message: isPlatformProvider(provider) ? 'This deployment no longer has a key for HIVE AI.' : 'The stored key has been revoked.' };
   }
-  const adapter = providers().create(provider.providerType as never, {
-    apiKey: secret.expose(),
-    ...(provider.baseUrl !== null && provider.baseUrl !== undefined ? { baseUrl: provider.baseUrl } : {}),
-  });
+  const adapter = providers().create(provider.providerType as never, given);
   const result = adapter.verify === undefined ? { ok: true as const } : await adapter.verify();
   return result.ok
     ? { at, ok: true, message: null }

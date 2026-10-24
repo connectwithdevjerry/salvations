@@ -73,7 +73,7 @@ export default async function Home() {
             <Link href="/signup"><button className="primary lg" type="button">Create your assistant <Icon name="arrow" size={16} /></button></Link>
             <a href="#how" className="land-ghost">See how it works</a>
           </div>
-          <p className="land-trust">Your own Claude or OpenAI key. Your data in your own database. Nothing in between.</p>
+          <p className="land-trust">AI included with your subscription, or your own Claude or OpenAI key. Your data in your own database. Nothing in between.</p>
           <dl className="land-stats">
             <div><dt>{6}</dt><dd>built-in tools on every assistant</dd></div>
             <div><dt>{channels.length + integrations.length}</dt><dd>channels and integrations</dd></div>
@@ -185,7 +185,7 @@ export default async function Home() {
           <ul className="land-ticks">
             <li><Icon name="mic" size={16} /><span><strong>Hands free.</strong> Ask for the morning summary while you make the coffee.</span></li>
             <li><Icon name="chat" size={16} /><span><strong>Written down.</strong> Every word, both ways, in the transcript beside the console.</span></li>
-            <li><Icon name="key" size={16} /><span><strong>Your key.</strong> Voice runs on your own OpenAI key. Text works with either provider.</span></li>
+            <li><Icon name="key" size={16} /><span><strong>Included, or your key.</strong> HIVE AI comes with the subscription, with a monthly allowance. Bring your own Claude or OpenAI key for more, billed to you directly.</span></li>
             <li><Icon name="arrow" size={16} /><span><strong>Try it here.</strong> The console beside this hears you in your browser and answers from this page. A demo, nothing sent anywhere.</span></li>
           </ul>
         </div>

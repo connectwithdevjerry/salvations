@@ -4,6 +4,7 @@
  * The only workspace route NOT scoped to a workspace: it is how a signed-in
  * person with no workspace gets their first one.
  */
+import { ensurePlatformAi } from '@/lib/platform-ai';
 import { createWorkspaceSchema } from '@salvations/contracts';
 import { UserRepository, WorkspaceRepository } from '@salvations/db';
 import { db } from '@/lib/db';
@@ -46,6 +47,10 @@ export const POST = userRoute(async (request, userId) => {
     slug: `${slug}-${Math.random().toString(36).slice(2, 8)}`,
     createdBy: userId,
   });
+
+  // Able to think from the first minute, where the deployment has a key of
+  // its own. A person bringing their own key replaces it role by role.
+  await ensurePlatformAi(handle.db, workspace._id);
 
   return ok({ id: workspace._id, name: workspace.name, slug: workspace.slug, role: 'owner' }, 201);
 });

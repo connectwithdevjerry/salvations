@@ -576,6 +576,18 @@ Both were assessed and neither fits a request-shaped deployment, so neither is h
       the app secret, routed by the phone number id in each delivery; Meta's GET probe is
       answered with the chosen verify token. Until Meta's App Review, only the app's admins and
       testers can connect.
+- [x] HIVE AI, the model that comes with the subscription (`platform-ai.ts`): a deployment key
+      (`PLATFORM_AI_API_KEY`, vendor `PLATFORM_AI_PROVIDER` defaulting to openai, chat model and
+      monthly cap configurable) gives every workspace a provider called HIVE AI, created at
+      workspace creation and on the first read of models for older workspaces, bound to the
+      vendor's default roles under the "HIVE AI · model" name, only for roles nothing else holds.
+      The provider row carries no credential: every place a provider key is read
+      (`providerCredentials`: runs, hearing, embeddings, the studio, the key check) takes the
+      deployment's key from the environment for it. `spendGate` learns which binding will answer
+      and refuses with the allowance message once the month's HIVE AI spend reaches the cap; a
+      key the person brought is theirs to spend. It cannot be removed; the Models page shows it
+      as Included, the wizard offers "Continue with HIVE AI", and the landing page and plan say
+      AI is included.
 - [ ] One press for Telegram only as a shared HIVE bot everyone messages, since Telegram has no
       OAuth for bots; iMessage cannot be, Apple has no API
 - [ ] Channel capability matrix as a test: which adapter has which optional method

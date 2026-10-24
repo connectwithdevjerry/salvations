@@ -875,7 +875,7 @@ function Handshake({
 interface ProvidersResponse {
   knownTypes: string[];
   models: CatalogModel[];
-  items: { id: string; providerType: string; name: string; lastCheck?: { ok: boolean } }[];
+  items: { id: string; providerType: string; name: string; lastCheck?: { ok: boolean }; platform?: boolean }[];
 }
 
 /** Copy for the two vendors offered. The LIST comes from the server. */
@@ -947,20 +947,33 @@ function ModelStep({
 
   const copy = vendor !== undefined ? vendorCopy(vendor) : undefined;
   const options = vendor !== undefined ? chatModelsFor(vendor) : [];
-  const already = existing.find((p) => p.providerType === vendor);
+  const own = existing.filter((p) => p.platform !== true);
+  const already = own.find((p) => p.providerType === vendor);
+  const included = existing.some((p) => p.platform === true);
 
   return (
     <>
       <Head
         icon="spark"
         title={`How should ${agentName} think?`}
-        lede="Connect your own Claude or OpenAI key. They bill you directly; we never see the invoice. The key is checked with them, encrypted before it is stored, and never shown again."
+        lede={included
+          ? `HIVE AI is included with your subscription, so ${agentName} can think right away. Connect your own Claude or OpenAI key instead if you would rather they bill you directly.`
+          : 'Connect your own Claude or OpenAI key. They bill you directly; we never see the invoice. The key is checked with them, encrypted before it is stored, and never shown again.'}
       />
+
+      {included && (
+        <div className="wizard-foot" style={{ marginBottom: 16 }}>
+          <span className="faint">HIVE AI is ready, with a monthly allowance included.</span>
+          <button className="primary" type="button" onClick={onDone}>
+            Continue with HIVE AI <Icon name="arrow" size={15} />
+          </button>
+        </div>
+      )}
 
       <VendorCards
         types={types}
         {...(vendor !== undefined ? { selected: vendor } : {})}
-        keys={keyStatesOf(existing)}
+        keys={keyStatesOf(own)}
         onSelect={(type) => { setVendor(type); setModelId(''); onError(''); }}
       />
 
@@ -1006,10 +1019,10 @@ function ModelStep({
         </form>
       )}
 
-      {existing.some((p) => p.lastCheck?.ok === true) && (
+      {own.some((p) => p.lastCheck?.ok === true) && (
         <div className="wizard-foot">
           <span className="faint">
-            {existing.filter((p) => p.lastCheck?.ok === true).map((p) => p.name).join(' and ')} already works.
+            {own.filter((p) => p.lastCheck?.ok === true).map((p) => p.name).join(' and ')} already works.
           </span>
           <button type="button" onClick={onDone}>
             Use what is there <Icon name="arrow" size={15} />

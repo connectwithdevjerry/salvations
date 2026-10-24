@@ -2,8 +2,9 @@
  * Provider registry.
  *
  * The one place that knows which vendors exist. Two, by decision: the person
- * connects their own Claude or OpenAI key. HIVE holds no key of its own and
- * bills nobody for inference.
+ * connects their own Claude or OpenAI key, or uses HIVE AI, a key the
+ * deployment holds on one of the same two vendors, within a monthly
+ * allowance the plan includes.
  *
  * packages/core deliberately does not know them: ProviderType is an opaque
  * string there, so adding a vendor never edits the domain, and the

@@ -14,6 +14,7 @@
  * makes the mistake visible at the moment it happens rather than three replies
  * later when the answer makes no sense.
  */
+import { providerCredentials } from './platform-ai';
 import { ModelBindingRepository, CredentialRepository } from '@salvations/db';
 import type { Database } from '@salvations/db';
 import type { InboundAudio } from '@salvations/channels';
@@ -47,9 +48,6 @@ export async function transcribeAudio(
   if (providerRow === null) return { kind: 'unconfigured' };
 
   const credentials = new CredentialRepository(database, workspaceId, keyProvider());
-  const secret = providerRow.credentialId == null
-    ? null
-    : await credentials.resolve(providerRow.credentialId);
 
   const registry = providers();
   if (!registry.has(providerRow.providerType as never)) {
@@ -58,7 +56,7 @@ export async function transcribeAudio(
 
   const provider = registry.create(
     providerRow.providerType as never,
-    secret === null ? {} : { apiKey: secret.expose() },
+    await providerCredentials(credentials, providerRow) ?? {},
   );
 
   // Optional on the port, because not every vendor can hear. Checked rather

@@ -5,6 +5,7 @@
  * comes back is a hint — enough to tell two keys apart in a list, and not
  * enough to be one.
  */
+import { ensurePlatformAi } from '@/lib/platform-ai';
 import { createProviderConfigSchema } from '@salvations/contracts';
 import { KNOWN_PROVIDER_TYPES, isKnownProviderType } from '@salvations/provider-registry';
 import { CATALOG_MODELS, defaultBindings, modelsFor } from '@salvations/catalog';
@@ -16,6 +17,9 @@ import { providers } from '@/lib/singletons';
 export const runtime = 'nodejs';
 
 export const GET = workspaceRoute('providers:read', async (ctx) => {
+  // A workspace made before the deployment had a key of its own gets HIVE
+  // AI the first time its models are looked at.
+  await ensurePlatformAi(ctx.database, ctx.workspaceId);
   const items = await ctx.repos.models.listProviders();
   // The hint lives with the CREDENTIAL, not on the provider row: it describes
   // the secret, and keeping it beside the secret is what stops a second copy
@@ -38,9 +42,11 @@ export const GET = workspaceRoute('providers:read', async (ctx) => {
       providerType: p.providerType,
       name: p.name,
       baseUrl: p.baseUrl ?? undefined,
-      keyHint: (p.credentialId !== null && p.credentialId !== undefined
-        ? hintById.get(p.credentialId)
-        : undefined) ?? '••••',
+      keyHint: p.platform === true
+        ? 'Included'
+        : (p.credentialId !== null && p.credentialId !== undefined ? hintById.get(p.credentialId) : undefined) ?? '••••',
+      // The deployment's own, with the subscription: no key to show or remove.
+      ...(p.platform === true ? { platform: true } : {}),
       enabled: p.enabled,
       createdAt: p.createdAt.toISOString(),
       // The vendor's verdict, or nothing for a key stored before keys were

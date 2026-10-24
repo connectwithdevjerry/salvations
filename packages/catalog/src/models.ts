@@ -66,8 +66,8 @@ export interface CatalogModel {
 }
 
 /**
- * Two vendors, by decision. The person connects their own Claude or OpenAI key;
- * HIVE holds no key and bills nobody for inference.
+ * Two vendors, by decision. The person connects their own Claude or OpenAI key,
+ * or uses HIVE AI, the deployment's own key on one of the same two.
  */
 
 /** Checked against the vendor's own pricing page on this date. */

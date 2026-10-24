@@ -428,7 +428,7 @@ async function startRun(
   }
 
   // A cap reached is said in the chat, in the same words the web app uses.
-  const gate = await spendGate(database, row.workspaceId);
+  const gate = await spendGate(database, row.workspaceId, { modelBindingId: binding._id });
   if (!gate.allowed) {
     await reply(row, message.chatRef, `I can't take this on right now. ${gate.reason ?? ''}`.trim(), repos);
     return undefined;

@@ -21,6 +21,7 @@ import { WorkspaceRepository, type Database } from '@salvations/db';
 import { inactiveReason, withinLimit, type Entitlements, type LimitName } from '@salvations/billing';
 import { entitlements } from './billing';
 import { repositories } from './repositories';
+import { allowanceReason, platformAi, platformBindingIds } from './platform-ai';
 
 export interface Gate {
   readonly allowed: boolean;
@@ -44,7 +45,14 @@ export const monthOf = (when = new Date()): string => when.toISOString().slice(0
  * workspace's own, so it applies on every deployment; the monthly cap is the
  * plan's and applies only where a plan exists.
  */
-export async function spendGate(database: Database, workspaceId: string): Promise<Gate> {
+export async function spendGate(
+  database: Database,
+  workspaceId: string,
+  options: {
+    /** The binding about to answer, when known; what decides whether the included allowance applies. */
+    readonly modelBindingId?: string | undefined;
+  } = {},
+): Promise<Gate> {
   const repos = repositories(database, workspaceId);
   const workspace = await new WorkspaceRepository(database).findById(workspaceId);
   const dailyCap = workspace?.settings.dailyCostCapUsd ?? 0;
@@ -59,8 +67,18 @@ export async function spendGate(database: Database, workspaceId: string): Promis
   }
 
   const plan = await entitlements(database, workspaceId);
+  if (plan.unconfigured && !await spendsIncludedAi(database, workspaceId, options.modelBindingId)) return OPEN;
+  if (!plan.unconfigured && !plan.active) return { allowed: false, reason: inactiveReason(plan), paymentRequired: true };
+
+  // The included allowance: what one workspace may spend of the
+  // deployment's own key in a month. Checked only when this run would
+  // spend it; a key the person brought is theirs to spend.
+  const platform = platformAi();
+  if (platform !== undefined && await spendsIncludedAi(database, workspaceId, options.modelBindingId)) {
+    const used = await repos.usage.spendInMonthByBindings(monthOf(), await platformBindingIds(database, workspaceId));
+    if (used >= platform.monthlyUsdCap) return { allowed: false, reason: allowanceReason(platform.monthlyUsdCap) };
+  }
   if (plan.unconfigured) return OPEN;
-  if (!plan.active) return { allowed: false, reason: inactiveReason(plan), paymentRequired: true };
   const monthlyCap = plan.limits?.monthlyUsdCap;
   if (monthlyCap !== undefined) {
     const month = await repos.usage.spendInMonth(monthOf());
@@ -72,6 +90,18 @@ export async function spendGate(database: Database, workspaceId: string): Promis
     }
   }
   return OPEN;
+}
+
+/**
+ * Whether a run would spend the deployment's key: the named binding is
+ * HIVE AI's, or, when none was named, the chat role resolves to it.
+ */
+async function spendsIncludedAi(database: Database, workspaceId: string, modelBindingId: string | undefined): Promise<boolean> {
+  const ids = await platformBindingIds(database, workspaceId);
+  if (ids.length === 0) return false;
+  if (modelBindingId !== undefined) return ids.includes(modelBindingId);
+  const chat = await repositories(database, workspaceId).models.forRole('chat');
+  return chat !== null && ids.includes(chat._id);
 }
 
 /** The same check, thrown: for code paths whose caller maps errors to responses. */

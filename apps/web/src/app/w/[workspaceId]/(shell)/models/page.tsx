@@ -10,6 +10,8 @@ import { Icon } from '@/components/ui';
 interface Provider {
   id: string; providerType: string; name: string; keyHint: string;
   lastCheck?: { at: string; ok: boolean; message?: string };
+  /** The deployment's own, with the subscription. */
+  platform?: boolean;
 }
 interface Binding {
   id: string; name: string; providerType: string; modelId: string; role: string;
@@ -74,10 +76,20 @@ export default function ModelsPage({ params }: { params: Promise<{ workspaceId: 
 
       {error !== undefined && error !== '' && <p className="error">{error}</p>}
 
+      {providers.some((p) => p.platform === true) && (
+        <div className="note" style={{ marginBottom: 16 }}>
+          <span className="tile" aria-hidden><Icon name="spark" size={16} /></span>
+          <span>
+            <strong>HIVE AI is included.</strong> Your assistants think with it unless you connect a key of your own below.
+            It comes with a monthly allowance; your own key has no such limit.
+          </span>
+        </div>
+      )}
+
       <ProviderForm
         workspaceId={workspaceId}
         knownTypes={knownTypes}
-        keys={keyStatesOf(providers)}
+        keys={keyStatesOf(providers.filter((p) => p.platform !== true))}
         onDone={reload}
         onError={setError}
       />
@@ -192,6 +204,26 @@ function ProviderRow({
       onError(caught instanceof Error ? caught.message : 'Could not remove that provider.');
       setBusy(undefined);
     }
+  }
+
+  if (provider.platform === true) {
+    return (
+      <tr>
+        <td>
+          {provider.name} <span className="badge ok" style={{ marginLeft: 6 }}>Included</span>
+          <span className={vendorCopy(provider.providerType).voice ? 'vendor-note' : 'vendor-note off'}>
+            <Icon name="mic" size={12} /> {voiceNote(provider.providerType)}
+          </span>
+        </td>
+        <td className="muted">With your subscription</td>
+        <td><span className="badge ok">Ready</span></td>
+        <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+          <button type="button" className="ghost" disabled={busy !== undefined} onClick={() => void recheck()}>
+            {busy === 'check' ? 'Checking…' : 'Check'}
+          </button>
+        </td>
+      </tr>
+    );
   }
 
   return (

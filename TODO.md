@@ -6,7 +6,9 @@ Companion to [ARCHITECTURE.md](./ARCHITECTURE.md) and the documents in [docs/](.
 gate (10-day trial or subscription before the first assistant), the rules editor on the Approvals
 page with "Approve all" and a twenty-minute auto-approve window, apps connected more than once,
 five channels at parity (Telegram, WhatsApp, iMessage via the person's own Mac, Slack, Discord)
-with buttons, pictures, clips and voice notes where each platform allows, a studio for pictures
+with buttons, pictures, clips and voice notes where each platform allows, Slack and Discord
+connected in one press from the deployment's own apps ("Add to Slack", "Add to Discord") with
+the do-it-yourself path kept behind a link, a studio for pictures
 and clips, every role able to take a bare link or name and do the whole job, an Academic outreach
 role that searches, and publishing to Instagram, Facebook, LinkedIn and Shopify once the person
 says yes; what remains in Phase 1 is the manual acceptance pass and the runbooks.
@@ -563,6 +565,10 @@ Both were assessed and neither fits a request-shaped deployment, so neither is h
       `DELETE`. What is waiting is approved as it opens; a deny still wins; the banner on the
       Approvals page says when it closes and offers Stop. The editor carries `expiresAt` through
       so a save cannot turn the window into a permanent allow-all.
+- [ ] One press for the rest, where the platform allows it: WhatsApp through Meta's Embedded
+      Signup (needs Meta's approval of the deployment's app as a Tech Provider first); Telegram
+      only as a shared HIVE bot everyone messages, since Telegram has no OAuth for bots; iMessage
+      cannot be, Apple has no API
 - [ ] Channel capability matrix as a test: which adapter has which optional method
 - [ ] Discord over the Gateway once there is a worker that can hold a socket, so it is a
       conversation rather than a slash command

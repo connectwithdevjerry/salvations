@@ -536,6 +536,16 @@ Both were assessed and neither fits a request-shaped deployment, so neither is h
       by the team id inside the delivery (`handleSharedDelivery`). One Slack workspace maps to one
       HIVE workspace. Disconnecting revokes the token at Slack. The do-it-yourself path with the
       person's own app stays behind "Prefer your own Slack app?".
+- [x] "Add to Discord": one Discord application owned by the deployment
+      (`DISCORD_APPLICATION_ID`/`CLIENT_SECRET`/`PUBLIC_KEY`/`BOT_TOKEN`), added to any server from a
+      button (`discord-app.ts`; the signed state is shared with Slack in `install-state.ts`).
+      `identify` is asked for beside `bot` and `applications.commands` so Discord comes back with a
+      code, and the token answer names the guild, which is the proof. The bot token is the
+      application's, so each connection holds a copy and the sweep brings copies up to date when
+      the deployment rotates it. One shared interactions endpoint (`/api/channels/discord/app`),
+      verified with the application's public key, routed by `guild_id`; a DM names no server, so it
+      is answered in the response with "use /hive in a server". `/hive` is created on the
+      application at the first install.
 - [x] Once a channel is connected, an "If something looks off" panel (`AFTER_CONNECT` in
       `channel-fields.ts`) lists the platform's usual snags with the fix: Slack's messages-tab
       setting, inviting the app to a channel, reinstalling after a scope change, the request

@@ -22,10 +22,11 @@
  * client id and secret as HTTP Basic authentication rather than as form
  * fields; auth.revoke answers with `revoked`.
  */
-import { JwtError, signHs256, verifyHs256 } from '@salvations/auth';
-import { randomBytes } from 'node:crypto';
 import { env } from './env';
 import { issuer } from './session';
+import { readInstallState, signInstallState, type PendingInstall, type StateOptions } from './install-state';
+
+export type { PendingInstall } from './install-state';
 
 export const SLACK_APP_PATH = '/api/channels/slack/app';
 export const SLACK_CALLBACK_PATH = '/api/channels/slack/callback';
@@ -42,8 +43,6 @@ export const SLACK_INSTALL_SCOPES: readonly string[] = [
   'chat:write', 'im:history', 'app_mentions:read', 'files:read', 'files:write',
 ];
 
-/** How long the person has to finish on Slack's screen. */
-const STATE_TTL_SECONDS = 10 * 60;
 const STATE_AUDIENCE = 'slack-install';
 
 export interface SlackApp {
@@ -65,13 +64,6 @@ export const slackRedirectUri = (): string => `${issuer()}${SLACK_CALLBACK_PATH}
 /** Where Slack delivers for every installed workspace. Set once on the app. */
 export const slackAppWebhookUrl = (): string => `${issuer()}${SLACK_APP_PATH}`;
 
-export interface PendingInstall {
-  readonly workspaceId: string;
-  readonly agentId: string;
-  /** Who pressed the button here. Only they may finish. */
-  readonly userId: string;
-}
-
 /**
  * Begins an install: the URL to send the person to, carrying a state that
  * names what they are connecting and who they are.
@@ -80,16 +72,9 @@ export function beginSlackInstall(
   app: SlackApp,
   pending: PendingInstall,
   secret: string,
-  options: { redirectUri?: string; issuer?: string; now?: () => number } = {},
+  options: StateOptions & { redirectUri?: string } = {},
 ): { authorizationUrl: string; state: string } {
-  const state = signHs256(secret, {
-    issuer: options.issuer ?? issuer(),
-    audience: STATE_AUDIENCE,
-    subject: pending.userId,
-    expiresInSeconds: STATE_TTL_SECONDS,
-    ...(options.now !== undefined ? { now: options.now } : {}),
-    claims: { ws: pending.workspaceId, agent: pending.agentId, nonce: randomBytes(12).toString('base64url') },
-  });
+  const state = signInstallState(secret, STATE_AUDIENCE, pending, options);
   const url = new URL(AUTHORIZE_URL);
   url.searchParams.set('client_id', app.clientId);
   url.searchParams.set('scope', SLACK_INSTALL_SCOPES.join(','));
@@ -99,24 +84,8 @@ export function beginSlackInstall(
 }
 
 /** The pending install a state names, or undefined for a state that is forged, expired or not ours. */
-export function readSlackInstallState(
-  state: string,
-  secret: string,
-  options: { issuer?: string; now?: () => number } = {},
-): PendingInstall | undefined {
-  try {
-    const claims = verifyHs256(state, secret, {
-      issuer: options.issuer ?? issuer(),
-      audience: STATE_AUDIENCE,
-      ...(options.now !== undefined ? { now: options.now } : {}),
-    });
-    if (typeof claims['ws'] !== 'string' || typeof claims['agent'] !== 'string') return undefined;
-    return { workspaceId: claims['ws'], agentId: claims['agent'], userId: claims.sub };
-  } catch (caught) {
-    if (caught instanceof JwtError) return undefined;
-    throw caught;
-  }
-}
+export const readSlackInstallState = (state: string, secret: string, options: StateOptions = {}): PendingInstall | undefined =>
+  readInstallState(state, secret, STATE_AUDIENCE, options);
 
 export interface SlackInstallation {
   /** The bot token, "xoxb-…". */

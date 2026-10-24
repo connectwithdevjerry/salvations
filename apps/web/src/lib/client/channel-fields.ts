@@ -92,11 +92,18 @@ export const ONE_CLICK: Readonly<Record<string, { title: string; lede: string; b
     button: 'Add to Slack',
     manual: 'Prefer your own Slack app? Do it the long way',
   },
+  discord: {
+    title: 'Add it to your Discord server in one press',
+    lede: 'Discord asks which server and whether to allow it, and you are back here connected. Anyone in that server can then use /hive, and each person gets their own thread.',
+    button: 'Add to Discord',
+    manual: 'Prefer your own Discord application? Do it the long way',
+  },
 };
 
 /** What to say beside a connection made through this deployment\'s own app. */
 export const INSTALLED_NOTE: Readonly<Record<string, string>> = {
   slack: 'Connected through HIVE\'s own Slack app. Nothing to paste into Slack: messages already reach it.',
+  discord: 'Connected through HIVE\'s own Discord application. Nothing to paste into Discord: /hive already reaches it.',
 };
 
 /** The snags that remain once the app did the setup. */
@@ -104,5 +111,10 @@ export const AFTER_INSTALL: Readonly<Record<string, readonly string[]>> = {
   slack: [
     'The app does not answer in a channel until it is invited: type /invite @ followed by its name in that channel, then mention it.',
     'Disconnecting here revokes its token, so Slack stops reaching it at once. To remove the app from Slack entirely as well, do that under Slack\'s app settings.',
+  ],
+  discord: [
+    'The /hive command can take a minute to show up in the server. If it is still missing, reopen Discord so it refreshes the command list.',
+    'Direct messages to the bot are not connected with the shared application: use /hive in a channel of the server you added it to.',
+    'Disconnecting here stops the assistant answering. To remove the bot from the server as well, kick it under Server Settings → Integrations.',
   ],
 };

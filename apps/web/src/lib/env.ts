@@ -71,6 +71,20 @@ const schema = z.object({
   SLACK_SIGNING_SECRET: z.string().min(1).optional(),
 
   /**
+   * The Discord application behind "Add to Discord". Optional; all four or
+   * none. One application, owned by this deployment, that any server adds
+   * from a button. From discord.com/developers/applications: the
+   * application id and public key on General Information, the client
+   * secret under OAuth2, the bot token under Bot. Without these, Discord is
+   * still offered, with the person making their own application. See
+   * .env.example for what the application itself needs set.
+   */
+  DISCORD_APPLICATION_ID: z.string().min(1).optional(),
+  DISCORD_CLIENT_SECRET: z.string().min(1).optional(),
+  DISCORD_PUBLIC_KEY: z.string().min(1).optional(),
+  DISCORD_BOT_TOKEN: z.string().min(1).optional(),
+
+  /**
    * OAuth clients registered by hand with vendors whose MCP servers accept
    * neither a client metadata document nor dynamic registration (Asana,
    * HubSpot). JSON, keyed by the vendor's domain:
@@ -174,6 +188,16 @@ const schema = z.object({
   {
     message: 'Set SLACK_CLIENT_ID, SLACK_CLIENT_SECRET and SLACK_SIGNING_SECRET together, or none of them.',
     path: ['SLACK_CLIENT_ID'],
+  },
+).refine(
+  (value) => {
+    const set = [value.DISCORD_APPLICATION_ID, value.DISCORD_CLIENT_SECRET, value.DISCORD_PUBLIC_KEY, value.DISCORD_BOT_TOKEN]
+      .filter((v) => v !== undefined).length;
+    return set === 0 || set === 4;
+  },
+  {
+    message: 'Set DISCORD_APPLICATION_ID, DISCORD_CLIENT_SECRET, DISCORD_PUBLIC_KEY and DISCORD_BOT_TOKEN together, or none of them.',
+    path: ['DISCORD_APPLICATION_ID'],
   },
 ).refine(
   (value) => (value.SMTP_URL === undefined) === (value.MAIL_FROM === undefined),

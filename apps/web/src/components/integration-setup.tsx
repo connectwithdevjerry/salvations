@@ -45,6 +45,16 @@ export const CALLBACK_ERRORS: Readonly<Record<string, string>> = {
   slack_limit: 'Your plan has no room for another channel.',
   slack_elsewhere: 'That Slack workspace is already connected to another HIVE workspace. Disconnect it there first.',
   slack_failed: 'Slack did not complete the install.',
+  discord_not_configured: 'This deployment has no Discord application of its own yet. Connect Discord the long way, with your own application.',
+  discord_state: 'That consent took too long, or started somewhere else. Press Add to Discord again.',
+  discord_denied: 'You cancelled on Discord\'s screen. Nothing was connected.',
+  discord_incomplete: 'Discord sent an incomplete response. Press Add to Discord again.',
+  discord_signed_out: 'You were signed out before Discord sent you back. Sign in and press Add to Discord again.',
+  discord_wrong_person: 'That consent belongs to a different account than the one signed in here.',
+  discord_agent_gone: 'That assistant no longer exists.',
+  discord_limit: 'Your plan has no room for another channel.',
+  discord_elsewhere: 'That Discord server is already connected to another HIVE workspace. Disconnect it there first.',
+  discord_failed: 'Discord did not complete the install.',
 };
 
 /**

@@ -14,6 +14,7 @@ import { ChannelRepository, PlatformDb, type ChannelDoc, type Database } from '@
 import { env } from './env';
 import { repositories } from './repositories';
 import { slackAppWebhookUrl } from './slack-app';
+import { discordApp, discordAppWebhookUrl } from './discord-app';
 
 /**
  * Where a platform delivers for one connection.
@@ -32,7 +33,10 @@ export const webhookUrl = (type: string, channelDocId: string): string =>
  * because the platform holds one request URL per app.
  */
 export function deliveryUrlOf(row: Pick<ChannelDoc, 'type' | '_id' | 'install'>): string {
-  if (row.install !== null && row.install !== undefined && row.type === 'slack') return slackAppWebhookUrl();
+  if (row.install !== null && row.install !== undefined) {
+    if (row.type === 'slack') return slackAppWebhookUrl();
+    if (row.type === 'discord') return discordAppWebhookUrl();
+  }
   return webhookUrl(row.type, row._id);
 }
 
@@ -115,5 +119,31 @@ export async function refreshStaleWebhooks(database: Database): Promise<WebhookR
       console.log(JSON.stringify({ at: 'webhook-refresh', channel: row._id, error: caught instanceof Error ? caught.message : String(caught) }));
     }
   }
-  return { considered: stale.length, updated, failed };
+
+  // A server added through the deployment's own Discord application uses
+  // the deployment's bot token, a copy of which each connection holds.
+  // When the deployment rotates that token, every copy is brought up to
+  // date here rather than every server being asked to press the button
+  // again.
+  const app = discordApp();
+  const installedDiscord = app === undefined ? [] : rows.filter((row) => row.type === 'discord' && row.install !== null && row.install !== undefined);
+  for (const row of installedDiscord) {
+    if (app === undefined) break;
+    try {
+      const repos = repositories(database, row.workspaceId);
+      const held = await repos.credentials.resolve(row.tokenCredentialId);
+      if (held !== null && held.expose() === app.botToken) continue;
+      const fresh = await repos.credentials.store({
+        name: 'Discord bot token', kind: 'api_key', plaintext: app.botToken, createdBy: row.createdBy,
+        hint: `${row.identity.handle} · ${row.install?.teamName ?? ''}`.trim(),
+      });
+      await new ChannelRepository(database, row.workspaceId).replaceToken(row._id, fresh._id);
+      await repos.credentials.revoke(row.tokenCredentialId).catch(() => undefined);
+      updated += 1;
+    } catch (caught) {
+      failed += 1;
+      console.log(JSON.stringify({ at: 'webhook-refresh', channel: row._id, token: 'refresh_failed', error: caught instanceof Error ? caught.message : String(caught) }));
+    }
+  }
+  return { considered: stale.length + installedDiscord.length, updated, failed };
 }

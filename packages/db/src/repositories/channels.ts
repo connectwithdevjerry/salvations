@@ -161,6 +161,18 @@ export class ChannelRepository {
     );
   }
 
+  /**
+   * Points a connection at a new token credential. For a connection made
+   * through the deployment's own application, whose token is the
+   * deployment's and gets rotated by the deployment, not by the person.
+   */
+  async replaceToken(channelId: string, tokenCredentialId: string): Promise<void> {
+    await this.#channels.updateOne(
+      { _id: channelId } as never,
+      { $set: { tokenCredentialId, updatedAt: new Date() } } as never,
+    );
+  }
+
   /** The address the platform was just told to deliver to. */
   async recordWebhook(channelId: string, url: string, spec?: number): Promise<void> {
     await this.#channels.updateOne(

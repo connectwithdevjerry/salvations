@@ -2,7 +2,7 @@ import { createHmac, generateKeyPairSync, sign as signEd25519 } from 'node:crypt
 import { describe, expect, it } from 'vitest';
 import { channelAdapter, CHANNEL_IDS, ChannelError } from './index';
 import { telegramAdapter, chunk, SECRET_HEADER, MAX_AUDIO_BYTES } from './telegram';
-import { discordAdapter } from './discord';
+import { discordAdapter, discordGuildOf, NOT_IN_SERVER } from './discord';
 import { slackAdapter, slackTeamOf, MAX_SKEW_SECONDS } from './slack';
 import { whatsappAdapter, whatsappVerifyToken } from './whatsapp';
 import { imessageAdapter } from './imessage';
@@ -978,5 +978,21 @@ describe('slack: which workspace a delivery came from', () => {
     expect(slackTeamOf(JSON.stringify({ type: 'url_verification', challenge: 'c' }))).toBeUndefined();
     expect(slackTeamOf('not json')).toBeUndefined();
     expect(slackTeamOf('payload=%7B')).toBeUndefined();
+  });
+});
+
+describe('discord: which server an interaction came from', () => {
+  it('reads the guild from a server interaction and nothing from a DM or a ping', () => {
+    expect(discordGuildOf(JSON.stringify({ type: 2, guild_id: 'G_1', channel_id: 'C_1' }))).toBe('G_1');
+    expect(discordGuildOf(JSON.stringify({ type: 2, channel_id: 'C_dm', authorizing_integration_owners: { '0': '0' } }))).toBeUndefined();
+    expect(discordGuildOf(JSON.stringify({ type: 1 }))).toBeUndefined();
+    expect(discordGuildOf('nope')).toBeUndefined();
+  });
+
+  it('answers a DM in the response itself, visibly to the person only', () => {
+    const body = JSON.parse(NOT_IN_SERVER.body) as { type: number; data: { flags: number; content: string } };
+    expect(body.type).toBe(4);
+    expect(body.data.flags).toBe(64);
+    expect(body.data.content).toMatch(/server/);
   });
 });

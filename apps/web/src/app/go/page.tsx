@@ -16,11 +16,21 @@ import { Loader } from '@/components/loader';
  * being asked. Somebody with no assistant yet is taken straight to building a
  * team: that is the first task, and a page of empty panels would only be a
  * longer route to the same button. Anyone with assistants lands on them.
+ *
+ * `?to=` names a page inside the workspace instead, so a link can be given
+ * out before the workspace id is known: /go?to=admin opens the admin
+ * dashboard of whichever workspace the person belongs to.
  */
+
+/** Pages a link may ask for by name. Anything else lands on the default. */
+const DESTINATIONS: ReadonlySet<string> = new Set(['admin', 'settings', 'models', 'approvals', 'agents', 'billing']);
+
 export default function Dispatch() {
   const router = useRouter();
 
   useEffect(() => {
+    const asked = new URLSearchParams(window.location.search).get('to') ?? '';
+    const destination = DESTINATIONS.has(asked) ? asked : undefined;
     api.get<{ items: { id: string }[] }>('/api/workspaces')
       .then(async (result) => {
         const existing = result.items[0];
@@ -29,6 +39,10 @@ export default function Dispatch() {
         return created.id;
       })
       .then(async (workspaceId) => {
+        if (destination !== undefined) {
+          router.replace(`/w/${workspaceId}/${destination}`);
+          return;
+        }
         const agents = await api.get<{ items: unknown[] }>(`/api/workspaces/${workspaceId}/agents`)
           .then((r) => r.items.length)
           .catch(() => 0);

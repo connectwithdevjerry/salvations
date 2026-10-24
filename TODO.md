@@ -598,7 +598,8 @@ Both were assessed and neither fits a request-shaped deployment, so neither is h
       under the KEK like every stored credential and never shown back; a dashboard value wins over
       the environment variable and is in force within a minute (one cache per process). Every
       getter (`slackApp`, `discordApp`, `whatsappSignup`, `platformAi`, `metaOAuthClient`,
-      `linkedInOAuthClient`, `googleOAuthClient`) reads through it and is async.
+      `linkedInOAuthClient`, `googleOAuthClient`) reads through it and is async. The page is `/admin`,
+      with the same section repeated at the bottom of a workspace's admin dashboard.
 - [ ] One press for Telegram only as a shared HIVE bot everyone messages, since Telegram has no
       OAuth for bots; iMessage cannot be, Apple has no API
 - [ ] Channel capability matrix as a test: which adapter has which optional method

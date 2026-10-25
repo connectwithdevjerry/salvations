@@ -33,13 +33,40 @@ export interface PlatformSettingSpec {
   readonly placeholder?: string;
 }
 
-export const SETTING_GROUPS: Readonly<Record<SettingGroup, { title: string; lede: string }>> = {
-  ai: { title: 'HIVE AI', lede: 'The model that comes with the subscription. The deployment pays the vendor; each workspace gets a monthly allowance.' },
-  slack: { title: 'Slack app', lede: 'The app behind "Add to Slack". From api.slack.com/apps, Basic Information.' },
-  discord: { title: 'Discord application', lede: 'The application behind "Add to Discord". From the Discord developer portal.' },
-  meta: { title: 'Meta app', lede: 'Instagram and Facebook publishing, and WhatsApp in one press. From developers.facebook.com.' },
-  linkedin: { title: 'LinkedIn app', lede: 'LinkedIn publishing. From the LinkedIn developer portal, under Auth.' },
-  google: { title: 'Google Workspace client', lede: 'Gmail, Calendar and Drive. A Cloud project of its own, so Workspace review does not hold up sign-in.' },
+/** An address the vendor's dashboard must be given, with where it goes. Paths on this deployment. */
+export interface VendorAddress { readonly label: string; readonly path: string; readonly where: string }
+
+export const SETTING_GROUPS: Readonly<Record<SettingGroup, { title: string; lede: string; addresses: readonly VendorAddress[] }>> = {
+  ai: { title: 'HIVE AI', lede: 'The model that comes with the subscription. The deployment pays the vendor; each workspace gets a monthly allowance.', addresses: [] },
+  slack: {
+    title: 'Slack app', lede: 'The app behind "Add to Slack". From api.slack.com/apps, Basic Information.',
+    addresses: [
+      { label: 'Redirect URL', path: '/api/channels/slack/callback', where: 'OAuth & Permissions → Redirect URLs, then Save URLs' },
+      { label: 'Request URL', path: '/api/channels/slack/app', where: 'Event Subscriptions, and again under Interactivity & Shortcuts' },
+    ],
+  },
+  discord: {
+    title: 'Discord application', lede: 'The application behind "Add to Discord". From the Discord developer portal.',
+    addresses: [
+      { label: 'Redirect', path: '/api/channels/discord/callback', where: 'OAuth2 → Redirects' },
+      { label: 'Interactions Endpoint URL', path: '/api/channels/discord/app', where: 'General Information, once these keys are saved' },
+    ],
+  },
+  meta: {
+    title: 'Meta app', lede: 'Instagram and Facebook publishing, and WhatsApp in one press. From developers.facebook.com.',
+    addresses: [
+      { label: 'Valid OAuth Redirect URI', path: '/api/mcp/callback', where: 'Facebook Login for Business → Settings' },
+      { label: 'WhatsApp callback URL', path: '/api/channels/whatsapp/app', where: 'WhatsApp → Configuration, with the verify token below' },
+    ],
+  },
+  linkedin: {
+    title: 'LinkedIn app', lede: 'LinkedIn publishing. From the LinkedIn developer portal, under Auth.',
+    addresses: [{ label: 'Redirect URL', path: '/api/mcp/callback', where: 'Auth → OAuth 2.0 settings' }],
+  },
+  google: {
+    title: 'Google Workspace client', lede: 'Gmail, Calendar and Drive. A Cloud project of its own, so Workspace review does not hold up sign-in.',
+    addresses: [{ label: 'Authorised redirect URI', path: '/api/mcp/callback', where: 'The OAuth client in Google Cloud' }],
+  },
 };
 
 export const PLATFORM_SETTINGS: readonly PlatformSettingSpec[] = [

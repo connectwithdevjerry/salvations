@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/lib/client/api';
 import { Icon } from '@/components/ui';
+import { Copyable } from '@/components/setup-steps';
 
 /**
  * The deployment's own keys, for a platform admin.
@@ -20,7 +21,7 @@ interface Setting {
   key: string; label: string; help: string; secret: boolean; group: string; placeholder?: string;
   source: Source; hint?: string; updatedAt?: string;
 }
-interface Group { id: string; title: string; lede: string }
+interface Group { id: string; title: string; lede: string; addresses: { label: string; path: string; where: string }[] }
 
 const SOURCE: Record<Source, { label: string; tone: string }> = {
   dashboard: { label: 'Set here', tone: 'ok' },
@@ -33,6 +34,10 @@ export function DeploymentSettings() {
   const [settings, setSettings] = useState<Setting[]>([]);
   const [error, setError] = useState<string>();
   const [notice, setNotice] = useState<string>();
+  // The vendor needs this deployment's addresses typed into its dashboard;
+  // shown here, from where the page is served, so they are never guessed.
+  const [origin, setOrigin] = useState('');
+  useEffect(() => { setOrigin(window.location.origin); }, []);
 
   const reload = useCallback(() => {
     void api.get<{ groups: Group[]; items: Setting[] }>('/api/admin/settings')
@@ -66,6 +71,16 @@ export function DeploymentSettings() {
         <div key={group.id} style={{ marginTop: 18 }}>
           <strong>{group.title}</strong>
           <p className="muted" style={{ margin: '2px 0 10px' }}>{group.lede}</p>
+          {group.addresses.length > 0 && (
+            <div className="stack" style={{ gap: 6, marginBottom: 12 }}>
+              {group.addresses.map((address) => (
+                <div key={address.path + address.label}>
+                  <Copyable label={address.label} value={`${origin}${address.path}`} />
+                  <p className="muted" style={{ margin: '3px 0 0', fontSize: 12 }}>Where: {address.where}.</p>
+                </div>
+              ))}
+            </div>
+          )}
           <div className="stack" style={{ gap: 10 }}>
             {settings.filter((s) => s.group === group.id).map((setting) => (
               <SettingRow

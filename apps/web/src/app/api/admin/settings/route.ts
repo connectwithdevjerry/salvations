@@ -13,6 +13,7 @@ import { errorResponse, jsonBody, ok } from '@/lib/http';
 import { userRoute } from '@/lib/route';
 import { db } from '@/lib/db';
 import { keyProvider } from '@/lib/keys';
+import { DISCORD_ONE_PRESS } from '@/lib/discord-app';
 import {
   PLATFORM_SETTINGS, SETTING_GROUPS, describePlatformSettings, invalidatePlatformSettings, isPlatformAdmin, settingSpec,
 } from '@/lib/platform-settings';
@@ -27,10 +28,13 @@ const putSchema = z.object({
 const forbidden = () => errorResponse(403, 'forbidden', 'Only a platform admin may change the deployment\'s settings.');
 
 async function describe(database: Awaited<ReturnType<typeof db>>['db']): Promise<Response> {
-  const items = await describePlatformSettings(database);
+  // Discord's one press is switched off; its keys are not asked for.
+  const shown = (group: string) => group !== 'discord' || DISCORD_ONE_PRESS;
+  const items = (await describePlatformSettings(database)).filter((s) => shown(s.group));
   const groups = (Object.keys(SETTING_GROUPS) as (keyof typeof SETTING_GROUPS)[])
+    .filter(shown)
     .map((id) => ({ id, ...SETTING_GROUPS[id] }));
-  return ok({ groups, items, keys: PLATFORM_SETTINGS.map((s) => s.key) });
+  return ok({ groups, items, keys: PLATFORM_SETTINGS.filter((s) => shown(s.group)).map((s) => s.key) });
 }
 
 export const GET = userRoute(async (_request, userId) => {

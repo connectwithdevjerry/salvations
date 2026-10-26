@@ -145,7 +145,7 @@ export const AFTER_INSTALL: Readonly<Record<string, readonly string[]>> = {
 /** Said above the long form when this platform could be one press but the deployment has no app of its own yet. */
 export const ONE_CLICK_UNSET: Readonly<Record<string, string>> = {
   slack: 'Slack can be one press, "Add to Slack", once whoever runs this deployment adds its Slack app keys on the admin dashboard. Until then, the steps below.',
-  discord: 'Discord can be one press, "Add to Discord", once whoever runs this deployment adds its Discord application keys on the admin dashboard. Until then, the steps below.',
+  // Discord is connected the manual way by decision; no hint promises a press.
   whatsapp: 'WhatsApp can be one press once whoever runs this deployment adds its Meta app and WhatsApp sign-up configuration on the admin dashboard. Until then, the steps below.',
   telegram: 'Telegram can be one press, with a bot HIVE provides, once whoever runs this deployment adds its bot token on the admin dashboard. Until then, the steps below make a bot of your own.',
 };

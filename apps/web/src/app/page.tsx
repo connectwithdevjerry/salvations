@@ -130,7 +130,7 @@ export default async function Home() {
               <div className="mock-row"><span className="mock-tag" style={{ background: '#8B5CF6' }} />Newsletters ×14<span className="mock-pill ok">archive</span></div>
             </div>
           </Feature>
-          <Feature title="Every channel reaches you" body="Telegram, WhatsApp, iMessage, Slack and Discord, one assistant. Telegram, Slack, Discord and WhatsApp are one press: add it, say yes, done. Approve with a tap, get the picture and the clip in the chat, and a voice note comes back as text first, so you can see what it heard.">
+          <Feature title="Every channel reaches you" body="Telegram, WhatsApp, iMessage, Slack and Discord, one assistant. Telegram, Slack and WhatsApp are one press: add it, say yes, done. Approve with a tap, get the picture and the clip in the chat, and a voice note comes back as text first, so you can see what it heard.">
             <div className="mock-chat">
               <span className="mock-bubble you">any deliveries stuck?</span>
               <span className="mock-bubble">Two. Tunde&apos;s is with the courier, Ada&apos;s needs a phone number. Want me to ask her?</span>

@@ -6,9 +6,9 @@ Companion to [ARCHITECTURE.md](./ARCHITECTURE.md) and the documents in [docs/](.
 gate (10-day trial or subscription before the first assistant), the rules editor on the Approvals
 page with "Approve all" and a twenty-minute auto-approve window, apps connected more than once,
 five channels at parity (Telegram, WhatsApp, iMessage via the person's own Mac, Slack, Discord)
-with buttons, pictures, clips and voice notes where each platform allows, Telegram, Slack, Discord
-and WhatsApp connected in one press from the deployment's own bot and apps ("Connect
-Telegram", "Add to Slack", "Add to Discord", Meta's Embedded Signup) with the do-it-yourself path kept behind a link, HIVE AI as the
+with buttons, pictures, clips and voice notes where each platform allows, Telegram, Slack and
+WhatsApp connected in one press from the deployment's own bot and apps ("Connect Telegram",
+"Add to Slack", Meta's Embedded Signup; Discord stays manual by decision) with the do-it-yourself path kept behind a link, HIVE AI as the
 model that comes with the subscription (the deployment's own key, a monthly allowance per
 workspace, the person's own key still welcome), the deployment's keys settable from the admin
 dashboard by a platform admin without a redeploy, a studio for pictures
@@ -541,6 +541,9 @@ Both were assessed and neither fits a request-shaped deployment, so neither is h
       by the team id inside the delivery (`handleSharedDelivery`). One Slack workspace maps to one
       HIVE workspace. Disconnecting revokes the token at Slack. The do-it-yourself path with the
       person's own app stays behind "Prefer your own Slack app?".
+- [x] "Add to Discord" is switched OFF by decision (`DISCORD_ONE_PRESS = false` in
+      `discord-app.ts`): Discord is connected the manual way, with each workspace's own
+      application. The code below stays whole; the one constant turns it back on.
 - [x] "Add to Discord": one Discord application owned by the deployment
       (`DISCORD_APPLICATION_ID`/`CLIENT_SECRET`/`PUBLIC_KEY`/`BOT_TOKEN`), added to any server from a
       button (`discord-app.ts`; the signed state is shared with Slack in `install-state.ts`).

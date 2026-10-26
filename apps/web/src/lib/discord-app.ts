@@ -51,7 +51,20 @@ export interface DiscordApp {
   readonly botToken: string;
 }
 
+/**
+ * Whether "Add to Discord" is offered at all.
+ *
+ * Switched off by the operator: Discord is connected the manual way, with
+ * each workspace's own application, and nothing below runs. The code is
+ * kept whole so turning it back on is this one line. While it is off the
+ * channels list never names Discord as one press, the install routes
+ * answer "not configured", the shared interactions endpoint answers 404,
+ * and the admin page shows no Discord group.
+ */
+export const DISCORD_ONE_PRESS = false;
+
 export async function discordApp(): Promise<DiscordApp | undefined> {
+  if (!DISCORD_ONE_PRESS) return undefined;
   const [applicationId, clientSecret, publicKey, botToken] = await platformSettings(
     ['discord_application_id', 'discord_client_secret', 'discord_public_key', 'discord_bot_token'] as const,
   );

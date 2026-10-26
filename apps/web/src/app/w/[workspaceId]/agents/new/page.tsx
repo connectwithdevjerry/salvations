@@ -397,6 +397,21 @@ function ChannelStep({
                       onChanged={reload}
                       onError={onError}
                     />
+                  ) : entry.id === 'telegram' && oneClick.includes('telegram') ? (
+                    <OneClickConnect
+                      workspaceId={workspaceId} agentId={agentId} entry={entry}
+                      onError={(m) => { if (m !== undefined) onError(m); }}
+                      start={async () => { await api.post(`${ws(workspaceId)}/channels/telegram/install`, { agentId }); reload(); }}
+                    >
+                      <TelegramSetup
+                        workspaceId={workspaceId}
+                        entry={entry}
+                        agentId={agentId}
+                        agentName={agentName}
+                        onDone={reload}
+                        onError={onError}
+                      />
+                    </OneClickConnect>
                   ) : entry.id === 'telegram' ? (
                     <TelegramSetup
                       workspaceId={workspaceId}

@@ -31,7 +31,10 @@ export const DELETE = workspaceRoute<{ channelDocId: string }>(
       const token = await ctx.repos.credentials.resolve(row.tokenCredentialId);
       // Best-effort. A token that has already been revoked at the platform
       // cannot be used to unregister, and that must not block disconnecting.
-      if (token !== null) await adapter.unregister(token.expose()).catch(() => undefined);
+      // A chat on the shared Telegram bot must not unhook the bot: its one
+      // webhook serves every other chat too. Forgetting the row is enough.
+      const sharedBot = row.type === 'telegram' && row.install !== null && row.install !== undefined;
+      if (token !== null && !sharedBot) await adapter.unregister(token.expose()).catch(() => undefined);
       // A token Slack issued to this deployment's own app is revoked at
       // Slack as well, so disconnecting here is disconnecting there: the
       // workspace has to press the button again to come back.

@@ -24,7 +24,7 @@ import { decideFromChat } from './channel-approvals';
 import { spendGate } from './limits';
 import type { ChannelDoc } from '@salvations/db';
 import {
-  channelAdapter, discordGuildOf, slackTeamOf, whatsappPhoneOf, NOT_IN_SERVER,
+  channelAdapter, discordGuildOf, slackTeamOf, telegramChatOf, whatsappPhoneOf, NOT_IN_SERVER,
   type Ack, type ChannelAdapter, type InboundMessage, type InboundResult, type VerifyContext,
 } from '@salvations/channels';
 import { NO_EAR, transcribeAudio } from './transcribe';
@@ -32,6 +32,7 @@ import { deliveredToOldAddress, registerWebhook, webhookUrl, WEBHOOK_SPEC } from
 import { slackApp, slackAppWebhookUrl } from './slack-app';
 import { discordApp, discordAppWebhookUrl } from './discord-app';
 import { answerSharedProbe, whatsappAppWebhookUrl, whatsappSignup } from './whatsapp-signup';
+import { telegramAppWebhookUrl, telegramBot } from './telegram-bot';
 import {
   DEFAULT_BUDGET, asId, type RunId, type UserId, type WorkspaceId,
 } from '@salvations/core';
@@ -151,11 +152,59 @@ export async function handleSharedDelivery(type: string, raw: string, headers: H
     .collection<ChannelDoc>('channels')
     .findOne({ type, 'install.teamRef': teamRef, status: { $ne: 'disabled' } } as never, { comment: platform.comment });
   if (row === null) {
+    // A chat nobody has connected. For the shared Telegram bot this is how
+    // every connection begins: the first message carries the code the
+    // person was shown, and binding happens here.
+    if (shared.claimBy !== undefined && judged.kind === 'message') {
+      return await shared.claimBy(handle.db, teamRef, judged.message, adapter);
+    }
     console.log(JSON.stringify({ at: 'channel-inbound', shared: type, team: teamRef, outcome: 'no_connection' }));
     return plain(200, 'ok');
   }
 
   return act(handle.db, row, adapter, judged);
+}
+
+/**
+ * The first hello to the shared Telegram bot from a chat nobody has
+ * connected: the code in it names a connection waiting for its chat, in
+ * whichever workspace, and the chat is bound to that one. Anything else is
+ * answered with how to connect, so a stranger talking to the bot is told
+ * what it is rather than ignored.
+ */
+async function claimTelegramChat(
+  database: Awaited<ReturnType<typeof db>>['db'],
+  chatRef: string,
+  message: InboundMessage,
+  adapter: ChannelAdapter,
+): Promise<DeliveryOutcome> {
+  const bot = await telegramBot();
+  if (bot === undefined) return plain(200, 'ok');
+  const say = async (text: string) => { await adapter.send(bot.token, chatRef, text).catch(() => undefined); };
+
+  const offered = offeredCode(message.text);
+  const platform = new PlatformDb(database, 'channel-delivery');
+  const waiting = /^[A-Z0-9]{6,12}$/.test(offered)
+    ? await platform.collection<ChannelDoc>('channels').findOne({
+      type: 'telegram', 'connect.code': offered, 'connect.expiresAt': { $gt: new Date() }, install: { $ne: null },
+    } as never, { comment: platform.comment })
+    : null;
+  if (waiting === null) {
+    await say('Hello. I am an assistant on HIVE. To connect this chat, press Connect Telegram in HIVE and send me the code it shows.');
+    return plain(200, 'ok');
+  }
+
+  const channels = new ChannelRepository(database, waiting.workspaceId);
+  const claimed = await channels.claim(waiting._id, offered, chatRef);
+  if (claimed === null) {
+    await say('That code is not right, or it has expired. Open HIVE for a new one.');
+    return plain(200, 'ok');
+  }
+  await channels.bindInstall(waiting._id, chatRef, message.senderLabel);
+  await channels.recordWebhook(waiting._id, telegramAppWebhookUrl(), WEBHOOK_SPEC);
+  await say('Connected. This chat is yours now. Say anything and your assistant will answer.');
+  console.log(JSON.stringify({ at: 'channel-inbound', shared: 'telegram', channel: waiting._id, outcome: 'claimed' }));
+  return plain(200, 'ok');
 }
 
 interface SharedApp {
@@ -166,6 +215,8 @@ interface SharedApp {
   readonly teamOf: (raw: string) => string | undefined;
   /** The answer when a delivery names no workspace at all, where the platform shows one. */
   readonly notHere?: Ack;
+  /** For a bot whose connections begin with a message: what to do with a chat nobody has connected. */
+  readonly claimBy?: (database: Awaited<ReturnType<typeof db>>['db'], teamRef: string, message: InboundMessage, adapter: ChannelAdapter) => Promise<DeliveryOutcome>;
 }
 
 /** The deployment's own application for a platform, when it has one. */
@@ -181,6 +232,10 @@ async function sharedAppOf(type: string): Promise<SharedApp | undefined> {
   if (type === 'whatsapp') {
     const signup = await whatsappSignup();
     return signup === undefined ? undefined : { webhookUrl: whatsappAppWebhookUrl(), webhookSecret: signup.appSecret, teamOf: whatsappPhoneOf };
+  }
+  if (type === 'telegram') {
+    const bot = await telegramBot();
+    return bot === undefined ? undefined : { webhookUrl: telegramAppWebhookUrl(), webhookSecret: bot.webhookSecret, teamOf: telegramChatOf, claimBy: claimTelegramChat };
   }
   return undefined;
 }

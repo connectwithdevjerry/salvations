@@ -21,6 +21,7 @@ import { countGate } from '@/lib/limits';
 import { slackApp } from '@/lib/slack-app';
 import { discordApp } from '@/lib/discord-app';
 import { whatsappSignup, whatsappSignupPublic } from '@/lib/whatsapp-signup';
+import { telegramBot } from '@/lib/telegram-bot';
 
 export const runtime = 'nodejs';
 
@@ -68,8 +69,9 @@ export const GET = workspaceRoute('channels:read', async (ctx) => {
 
   // Which platforms this deployment can connect with one press, from an
   // app of its own. The form offers the button only where this says so.
-  const [slack, discord, signup] = await Promise.all([slackApp(), discordApp(), whatsappSignup()]);
+  const [slack, discord, signup, telegram] = await Promise.all([slackApp(), discordApp(), whatsappSignup(), telegramBot()]);
   const oneClick = [
+    ...(telegram !== undefined ? ['telegram'] : []),
     ...(slack !== undefined ? ['slack'] : []),
     ...(discord !== undefined ? ['discord'] : []),
     ...(signup !== undefined ? ['whatsapp'] : []),

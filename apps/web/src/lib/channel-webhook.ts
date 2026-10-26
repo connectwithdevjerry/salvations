@@ -16,6 +16,7 @@ import { repositories } from './repositories';
 import { slackAppWebhookUrl } from './slack-app';
 import { discordApp, discordAppWebhookUrl } from './discord-app';
 import { whatsappAppWebhookUrl } from './whatsapp-signup';
+import { telegramAppWebhookUrl, telegramBot } from './telegram-bot';
 
 /**
  * Where a platform delivers for one connection.
@@ -38,6 +39,7 @@ export function deliveryUrlOf(row: Pick<ChannelDoc, 'type' | '_id' | 'install'>)
     if (row.type === 'slack') return slackAppWebhookUrl();
     if (row.type === 'discord') return discordAppWebhookUrl();
     if (row.type === 'whatsapp') return whatsappAppWebhookUrl();
+    if (row.type === 'telegram') return telegramAppWebhookUrl();
   }
   return webhookUrl(row.type, row._id);
 }
@@ -122,21 +124,27 @@ export async function refreshStaleWebhooks(database: Database): Promise<WebhookR
     }
   }
 
-  // A server added through the deployment's own Discord application uses
-  // the deployment's bot token, a copy of which each connection holds.
-  // When the deployment rotates that token, every copy is brought up to
-  // date here rather than every server being asked to press the button
-  // again.
-  const app = await discordApp();
-  const installedDiscord = app === undefined ? [] : rows.filter((row) => row.type === 'discord' && row.install !== null && row.install !== undefined);
-  for (const row of installedDiscord) {
-    if (app === undefined) break;
+  // A server added through the deployment's own Discord application, and a
+  // chat connected through its shared Telegram bot, use the deployment's
+  // bot token, a copy of which each connection holds. When the deployment
+  // rotates that token, every copy is brought up to date here rather than
+  // everyone being asked to press the button again.
+  const discord = await discordApp();
+  const telegram = await telegramBot();
+  const shared: Record<string, { token: string; name: string } | undefined> = {
+    discord: discord === undefined ? undefined : { token: discord.botToken, name: 'Discord bot token' },
+    telegram: telegram === undefined ? undefined : { token: telegram.token, name: 'Telegram bot token' },
+  };
+  const installedShared = rows.filter((row) => shared[row.type] !== undefined && row.install !== null && row.install !== undefined);
+  for (const row of installedShared) {
+    const bot = shared[row.type];
+    if (bot === undefined) continue;
     try {
       const repos = repositories(database, row.workspaceId);
       const held = await repos.credentials.resolve(row.tokenCredentialId);
-      if (held !== null && held.expose() === app.botToken) continue;
+      if (held !== null && held.expose() === bot.token) continue;
       const fresh = await repos.credentials.store({
-        name: 'Discord bot token', kind: 'api_key', plaintext: app.botToken, createdBy: row.createdBy,
+        name: bot.name, kind: 'api_key', plaintext: bot.token, createdBy: row.createdBy,
         hint: `${row.identity.handle} · ${row.install?.teamName ?? ''}`.trim(),
       });
       await new ChannelRepository(database, row.workspaceId).replaceToken(row._id, fresh._id);
@@ -147,5 +155,5 @@ export async function refreshStaleWebhooks(database: Database): Promise<WebhookR
       console.log(JSON.stringify({ at: 'webhook-refresh', channel: row._id, token: 'refresh_failed', error: caught instanceof Error ? caught.message : String(caught) }));
     }
   }
-  return { considered: stale.length + installedDiscord.length, updated, failed };
+  return { considered: stale.length + installedShared.length, updated, failed };
 }

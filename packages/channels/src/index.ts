@@ -7,7 +7,7 @@
  * turning into three branches in every caller.
  */
 export * from './port';
-export { telegramAdapter, chunk, SECRET_HEADER } from './telegram';
+export { telegramAdapter, telegramChatOf, chunk, SECRET_HEADER } from './telegram';
 export { discordAdapter, discordGuildOf, split, COMMAND_NAME, COMMAND_ACK, NOT_IN_SERVER } from './discord';
 export { slackAdapter, slackTeamOf, revokeSlackToken, MAX_SKEW_SECONDS, SCOPES as SLACK_SCOPES } from './slack';
 export { whatsappAdapter, whatsappVerifyToken, whatsappPhoneOf, GRAPH_VERSION } from './whatsapp';

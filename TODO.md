@@ -6,9 +6,9 @@ Companion to [ARCHITECTURE.md](./ARCHITECTURE.md) and the documents in [docs/](.
 gate (10-day trial or subscription before the first assistant), the rules editor on the Approvals
 page with "Approve all" and a twenty-minute auto-approve window, apps connected more than once,
 five channels at parity (Telegram, WhatsApp, iMessage via the person's own Mac, Slack, Discord)
-with buttons, pictures, clips and voice notes where each platform allows, Slack, Discord and
-WhatsApp connected in one press from the deployment's own apps ("Add to Slack", "Add to
-Discord", Meta's Embedded Signup) with the do-it-yourself path kept behind a link, HIVE AI as the
+with buttons, pictures, clips and voice notes where each platform allows, Telegram, Slack, Discord
+and WhatsApp connected in one press from the deployment's own bot and apps ("Connect
+Telegram", "Add to Slack", "Add to Discord", Meta's Embedded Signup) with the do-it-yourself path kept behind a link, HIVE AI as the
 model that comes with the subscription (the deployment's own key, a monthly allowance per
 workspace, the person's own key still welcome), the deployment's keys settable from the admin
 dashboard by a platform admin without a redeploy, a studio for pictures
@@ -600,8 +600,14 @@ Both were assessed and neither fits a request-shaped deployment, so neither is h
       getter (`slackApp`, `discordApp`, `whatsappSignup`, `platformAi`, `metaOAuthClient`,
       `linkedInOAuthClient`, `googleOAuthClient`) reads through it and is async. The page is `/admin`,
       with the same section repeated at the bottom of a workspace's admin dashboard.
-- [ ] One press for Telegram only as a shared HIVE bot everyone messages, since Telegram has no
-      OAuth for bots; iMessage cannot be, Apple has no API
+- [x] Telegram in one press through a shared bot (`telegram-bot.ts`, `TELEGRAM_BOT_TOKEN` or the
+      dashboard): the press makes a connection waiting for its chat, with a code and a t.me link
+      that carries it; the bot's one webhook (`/api/channels/telegram/app`, secret derived from the
+      token, pointed at the deployment on the first press) is routed by chat id, and a chat nobody
+      has connected is claimed by the code in its first message across all workspaces
+      (`claimTelegramChat`), then bound (`bindInstall`). Disconnecting forgets the row and never
+      unhooks the shared bot. The sweep refreshes token copies on rotation as for Discord. The
+      person's own bot stays the long way. iMessage cannot be one press: Apple has no API.
 - [ ] Channel capability matrix as a test: which adapter has which optional method
 - [ ] Discord over the Gateway once there is a worker that can hold a socket, so it is a
       conversation rather than a slash command

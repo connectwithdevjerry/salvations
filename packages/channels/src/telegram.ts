@@ -23,6 +23,21 @@ export const MAX_MESSAGE_LENGTH = 4096;
 /** The header Telegram echoes our per-connection secret in. */
 export const SECRET_HEADER = 'x-telegram-bot-api-secret-token';
 
+/**
+ * Which chat an update came from, for a bot that serves many connections
+ * from one webhook: the message's chat, or the chat of the message a
+ * button was pressed on. Undefined for anything else.
+ */
+export function telegramChatOf(raw: string): string | undefined {
+  try {
+    const update = JSON.parse(raw) as { message?: { chat?: { id?: unknown } }; callback_query?: { message?: { chat?: { id?: unknown } } } };
+    const id = update.message?.chat?.id ?? update.callback_query?.message?.chat?.id;
+    return typeof id === 'number' || typeof id === 'string' ? String(id) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 interface TelegramResponse<T> { ok: boolean; result?: T; description?: string }
 
 interface TelegramUser { id: number; is_bot: boolean; first_name?: string; username?: string }

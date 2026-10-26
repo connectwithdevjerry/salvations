@@ -104,6 +104,12 @@ export const ONE_CLICK: Readonly<Record<string, { title: string; lede: string; b
     button: 'Connect WhatsApp',
     manual: 'Prefer your own Meta app? Do it the long way',
   },
+  telegram: {
+    title: 'Connect Telegram in one press',
+    lede: 'Press, then say hello to HIVE\'s bot from your phone: a link opens the chat with your code already typed. That first message is what makes the chat yours.',
+    button: 'Connect Telegram',
+    manual: 'Prefer a bot of your own, under your own name? Do it the long way',
+  },
 };
 
 /** What to say beside a connection made through this deployment\'s own app. */
@@ -111,6 +117,7 @@ export const INSTALLED_NOTE: Readonly<Record<string, string>> = {
   slack: 'Connected through HIVE\'s own Slack app. Nothing to paste into Slack: messages already reach it.',
   discord: 'Connected through HIVE\'s own Discord application. Nothing to paste into Discord: /hive already reaches it.',
   whatsapp: 'Connected through HIVE\'s own Meta app. Nothing to paste into Meta: messages to that number already reach it.',
+  telegram: 'Connected through HIVE\'s own Telegram bot. This chat is bound to it; nothing to paste into Telegram.',
 };
 
 /** The snags that remain once the app did the setup. */
@@ -129,6 +136,10 @@ export const AFTER_INSTALL: Readonly<Record<string, readonly string[]>> = {
     'The assistant can message someone only within 24 hours of their last message. Outside that window a reply needs an approved template.',
     'A number already in use on the WhatsApp app has to be moved to the Cloud API first, which Meta\'s window walks through.',
   ],
+  telegram: [
+    'The bot is shared by every workspace on this deployment, so it carries HIVE\'s name rather than yours. A bot under your own name is the long way.',
+    'Only this chat is connected. To connect another phone or person, disconnect here and press Connect Telegram again from their account.',
+  ],
 };
 
 /** Said above the long form when this platform could be one press but the deployment has no app of its own yet. */
@@ -136,4 +147,5 @@ export const ONE_CLICK_UNSET: Readonly<Record<string, string>> = {
   slack: 'Slack can be one press, "Add to Slack", once whoever runs this deployment adds its Slack app keys on the admin dashboard. Until then, the steps below.',
   discord: 'Discord can be one press, "Add to Discord", once whoever runs this deployment adds its Discord application keys on the admin dashboard. Until then, the steps below.',
   whatsapp: 'WhatsApp can be one press once whoever runs this deployment adds its Meta app and WhatsApp sign-up configuration on the admin dashboard. Until then, the steps below.',
+  telegram: 'Telegram can be one press, with a bot HIVE provides, once whoever runs this deployment adds its bot token on the admin dashboard. Until then, the steps below make a bot of your own.',
 };

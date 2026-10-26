@@ -85,9 +85,11 @@ export class ChannelRepository {
     // An install has already been consented to on the platform's own screen
     // by somebody who administers that workspace, so it is live at once. A
     // pasted token proves nothing about who pasted it, so it waits for the
-    // handshake.
-    const installed = input.install !== undefined && input.install !== null;
-    if (!installed && (input.connectCode === undefined || input.connectCodeTtlMs === undefined)) {
+    // handshake. An install that comes WITH a code (the shared Telegram bot,
+    // whose chat is not known until somebody says hello) waits as well.
+    const hasCode = input.connectCode !== undefined && input.connectCodeTtlMs !== undefined;
+    const installed = input.install !== undefined && input.install !== null && !hasCode;
+    if (!installed && !hasCode) {
       throw new Error('A connection that is not an install needs a connect code.');
     }
 
@@ -158,6 +160,18 @@ export class ChannelRepository {
         },
       } as never,
       { returnDocument: 'after' },
+    );
+  }
+
+  /**
+   * Names the platform workspace or chat an install turned out to be for,
+   * once it is known: the shared Telegram bot learns the chat from the
+   * first message, after the row exists.
+   */
+  async bindInstall(channelId: string, teamRef: string, teamName: string): Promise<void> {
+    await this.#channels.updateOne(
+      { _id: channelId } as never,
+      { $set: { 'install.teamRef': teamRef, 'install.teamName': teamName, updatedAt: new Date() } } as never,
     );
   }
 

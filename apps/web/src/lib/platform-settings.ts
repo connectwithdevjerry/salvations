@@ -20,7 +20,7 @@ import { db } from './db';
 import { env } from './env';
 import { keyProvider } from './keys';
 
-export type SettingGroup = 'ai' | 'slack' | 'discord' | 'meta' | 'linkedin' | 'google';
+export type SettingGroup = 'ai' | 'telegram' | 'slack' | 'discord' | 'meta' | 'linkedin' | 'google';
 
 export interface PlatformSettingSpec {
   readonly key: string;
@@ -38,6 +38,10 @@ export interface VendorAddress { readonly label: string; readonly path: string; 
 
 export const SETTING_GROUPS: Readonly<Record<SettingGroup, { title: string; lede: string; addresses: readonly VendorAddress[] }>> = {
   ai: { title: 'HIVE AI', lede: 'The model that comes with the subscription. The deployment pays the vendor; each workspace gets a monthly allowance.', addresses: [] },
+  telegram: {
+    title: 'Telegram bot', lede: 'The bot behind "Connect Telegram": one bot, made once with BotFather, that every workspace talks to. HIVE points its webhook at itself the first time anyone presses the button; nothing to paste into Telegram.',
+    addresses: [],
+  },
   slack: {
     title: 'Slack app', lede: 'The app behind "Add to Slack". From api.slack.com/apps, Basic Information.',
     addresses: [
@@ -75,6 +79,8 @@ export const PLATFORM_SETTINGS: readonly PlatformSettingSpec[] = [
   { key: 'platform_ai_chat_model', env: 'PLATFORM_AI_CHAT_MODEL', label: 'Chat model', help: 'A catalogue model id for that vendor. Empty means the vendor\'s default.', secret: false, group: 'ai', placeholder: 'gpt-4.1' },
   { key: 'platform_ai_monthly_usd_cap', env: 'PLATFORM_AI_MONTHLY_USD_CAP', label: 'Monthly allowance per workspace', help: 'In dollars. Once a workspace has spent this much of HIVE AI in a month it is asked to bring its own key or wait.', secret: false, group: 'ai', placeholder: '25' },
   { key: 'platform_ai_base_url', env: 'PLATFORM_AI_BASE_URL', label: 'Base URL', help: 'Only for a proxy or a compatible endpoint. Empty means the vendor\'s own.', secret: false, group: 'ai', placeholder: 'https://' },
+
+  { key: 'telegram_bot_token', env: 'TELEGRAM_BOT_TOKEN', label: 'Bot token', help: 'The line BotFather sends after "Use this token to access the HTTP API". Rotating it here updates every connected chat within a day.', secret: true, group: 'telegram', placeholder: '123456789:AA…' },
 
   { key: 'slack_client_id', env: 'SLACK_CLIENT_ID', label: 'Client ID', help: 'Basic Information → App Credentials.', secret: false, group: 'slack' },
   { key: 'slack_client_secret', env: 'SLACK_CLIENT_SECRET', label: 'Client secret', help: 'Basic Information → App Credentials.', secret: true, group: 'slack' },

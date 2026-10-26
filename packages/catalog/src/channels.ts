@@ -25,7 +25,7 @@ const TELEGRAM: CatalogEntry = {
   kind: 'channel',
   category: 'Chat',
   name: 'Telegram',
-  summary: 'DM your agent on Telegram through a bot you create with BotFather.',
+  summary: 'DM your agent on Telegram in one press through HIVE\'s bot, or through a bot of your own made with BotFather.',
   setup: 'bot_token',
   accent: '#2AABEE',
   docs: 'https://core.telegram.org/bots#how-do-i-create-a-bot',

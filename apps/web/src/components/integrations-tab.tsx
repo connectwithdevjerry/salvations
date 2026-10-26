@@ -363,6 +363,19 @@ function ChannelSetup({
     );
   }
   const agentId = agents[0]?.id ?? '';
+  if (entry.id === 'telegram') {
+    // No consent screen: the press makes the connection, and the chat is
+    // bound by the first hello, which the pending view walks through.
+    const start = async () => {
+      await api.post(`${ws(workspaceId)}/channels/telegram/install`, { agentId });
+      onChanged();
+    };
+    return (
+      <OneClickConnect workspaceId={workspaceId} agentId={agentId} entry={entry} onError={onError} start={start}>
+        {form}
+      </OneClickConnect>
+    );
+  }
   if (entry.id === 'whatsapp' && signup?.whatsapp !== undefined) {
     return (
       <WhatsAppInstall workspaceId={workspaceId} agentId={agentId} entry={entry} config={signup.whatsapp} onChanged={onChanged} onError={onError}>
@@ -522,6 +535,16 @@ function ConnectedChannel({
             </span>
           </div>
           <code className="code-large">{connection.connectCode}</code>
+          {entry.id === 'telegram' && (
+            <p style={{ margin: '12px 0 0' }}>
+              <a
+                href={`https://t.me/${connection.handle.replace(/^@/, '')}?start=${encodeURIComponent(connection.connectCode)}`}
+                target="_blank" rel="noreferrer noopener"
+              >
+                <button className="primary" type="button">Open {connection.handle} with the code <Icon name="arrow" size={14} /></button>
+              </a>
+            </p>
+          )}
           <p className="muted waiting" style={{ margin: '12px 0 0' }}>
             <span className="spinner" aria-hidden />
             Waiting for your message… the code lasts half an hour.
@@ -534,7 +557,7 @@ function ConnectedChannel({
         <div><dt>Answered by</dt><dd className="mono">{connection.agentId}</dd></div>
       </dl>
 
-      {connection.installed === true ? (
+      {connection.installed === true && connection.connectCode === undefined ? (
         <div className="note">
           <span className="tile" aria-hidden><Icon name="check" size={16} /></span>
           <span>
@@ -542,7 +565,7 @@ function ConnectedChannel({
             {connection.teamName !== undefined && <> Workspace: <strong>{connection.teamName}</strong>.</>}
           </span>
         </div>
-      ) : ADDRESS_LABEL[entry.id] !== undefined && (
+      ) : connection.installed !== true && ADDRESS_LABEL[entry.id] !== undefined && (
         <>
           <Copyable label={ADDRESS_LABEL[entry.id] as string} value={connection.webhookUrl} />
           {connection.verifyToken !== undefined && <Copyable label="Verify token" value={connection.verifyToken} />}

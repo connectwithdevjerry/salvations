@@ -1,7 +1,7 @@
 import { createHmac, generateKeyPairSync, sign as signEd25519 } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { channelAdapter, CHANNEL_IDS, ChannelError } from './index';
-import { telegramAdapter, chunk, SECRET_HEADER, MAX_AUDIO_BYTES } from './telegram';
+import { telegramAdapter, telegramChatOf, chunk, SECRET_HEADER, MAX_AUDIO_BYTES } from './telegram';
 import { discordAdapter, discordGuildOf, NOT_IN_SERVER } from './discord';
 import { slackAdapter, slackTeamOf, MAX_SKEW_SECONDS } from './slack';
 import { whatsappAdapter, whatsappVerifyToken, whatsappPhoneOf } from './whatsapp';
@@ -1003,5 +1003,14 @@ describe('whatsapp: which number a delivery is for', () => {
     expect(whatsappPhoneOf(JSON.stringify(delivery))).toBe('PHONE_1');
     expect(whatsappPhoneOf(JSON.stringify({ object: 'whatsapp_business_account', entry: [{ changes: [{ value: {} }] }] }))).toBeUndefined();
     expect(whatsappPhoneOf('nope')).toBeUndefined();
+  });
+});
+
+describe('telegram: which chat an update came from', () => {
+  it('reads the chat from a message and from a button press, and nothing from anything else', () => {
+    expect(telegramChatOf(JSON.stringify({ message: { chat: { id: 12345 }, text: 'hi' } }))).toBe('12345');
+    expect(telegramChatOf(JSON.stringify({ callback_query: { id: 'q', message: { chat: { id: -99 } } } }))).toBe('-99');
+    expect(telegramChatOf(JSON.stringify({ edited_message: { chat: { id: 1 } } }))).toBeUndefined();
+    expect(telegramChatOf('nope')).toBeUndefined();
   });
 });

@@ -68,6 +68,13 @@ const schema = z.object({
   LINKEDIN_SCOPES: z.string().min(1).optional(),
 
   /**
+   * The shared Telegram bot behind "Connect Telegram". Optional. One bot,
+   * made once with BotFather, that every workspace talks to; the person's
+   * own bot stays the long way. Also settable from the admin dashboard.
+   */
+  TELEGRAM_BOT_TOKEN: z.string().min(1).optional(),
+
+  /**
    * The Slack app behind "Add to Slack". Optional; all three or none.
    *
    * One app, owned by this deployment, that any Slack workspace installs

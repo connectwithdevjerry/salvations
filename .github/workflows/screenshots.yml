@@ -1,0 +1,100 @@
+name: Screenshots
+
+# Photographs the product for the guides: boots the app against an empty
+# database, walks it with a browser (tools/screenshots/tour.mjs) and commits
+# the pictures to docs/screenshots. Runs when asked, or when the tour changes.
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'tools/screenshots/**'
+      - '.github/workflows/screenshots.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: screenshots
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '22'
+  # Throwaway values for a database that lives for the length of this job.
+  # The app keys below are placeholders: they make the one-press cards and
+  # the sign-in buttons show, and nothing is ever sent to those vendors.
+  MONGODB_URI: mongodb://localhost:27017/salvations_shots?replicaSet=rs0&directConnection=true
+  MONGODB_DB_NAME: salvations_shots
+  AUTH_JWT_SECRET: screenshots-only-jwt-secret-not-for-production-0001
+  INTERNAL_HMAC_SECRET: screenshots-only-hmac-secret-not-for-production-01
+  PUBLIC_BASE_URL: http://127.0.0.1:3101
+  PLATFORM_ADMIN_EMAILS: ada@hive-demo.test
+  PLATFORM_AI_API_KEY: sk-screenshots-placeholder
+  TELEGRAM_BOT_TOKEN: 123456789:screenshots-placeholder
+  SLACK_CLIENT_ID: 1.screenshots
+  SLACK_CLIENT_SECRET: screenshots-placeholder
+  SLACK_SIGNING_SECRET: screenshots-placeholder
+  META_APP_ID: '1'
+  META_APP_SECRET: screenshots-placeholder
+  META_WHATSAPP_CONFIG_ID: '1'
+  GOOGLE_CLIENT_ID: screenshots.apps.googleusercontent.com
+  GOOGLE_CLIENT_SECRET: screenshots-placeholder
+  GOOGLE_WORKSPACE_CLIENT_ID: screenshots.apps.googleusercontent.com
+  GOOGLE_WORKSPACE_CLIENT_SECRET: screenshots-placeholder
+  LINKEDIN_CLIENT_ID: screenshots-placeholder
+  LINKEDIN_CLIENT_SECRET: screenshots-placeholder
+
+jobs:
+  tour:
+    name: Walk the product and commit the pictures
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with: { node-version: '${{ env.NODE_VERSION }}', cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+
+      - name: A key for this job only
+        run: echo "CREDENTIAL_KEK=$(openssl rand -base64 32)" >> "$GITHUB_ENV"
+
+      - name: Start MongoDB replica set
+        run: pnpm db:up
+
+      - name: Build the web app
+        run: pnpm --filter @salvations/web build
+
+      - name: Browser
+        run: |
+          mkdir -p /tmp/tour && cd /tmp/tour
+          npm init -y > /dev/null
+          npm install playwright@1.56.1 > /dev/null
+          npx playwright install --with-deps chromium
+
+      - name: Start the app
+        run: |
+          (cd apps/web && nohup pnpm start -p 3101 > /tmp/app.log 2>&1 &)
+          for i in $(seq 1 60); do
+            curl -sf http://127.0.0.1:3101/ > /dev/null && break
+            sleep 2
+          done
+          curl -sf http://127.0.0.1:3101/api/health/ready || (tail -n 50 /tmp/app.log; exit 1)
+
+      - name: Walk the product
+        run: node tools/screenshots/tour.mjs
+        env:
+          TOOLS_DIR: /tmp/tour
+          BASE_URL: http://127.0.0.1:3101
+
+      - name: App log
+        if: always()
+        run: tail -n 80 /tmp/app.log || true
+
+      - name: Commit the pictures
+        run: |
+          git config user.name "Jeremiah Adedeji"
+          git config user.email "connectwithdevjerry@gmail.com"
+          git add docs/screenshots
+          if git diff --cached --quiet; then echo "No change"; exit 0; fi
+          git commit -m "Refresh the product screenshots"
+          git push

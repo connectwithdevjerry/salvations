@@ -87,7 +87,7 @@ export default function AgentsIndex({ params }: { params: Promise<{ workspaceId:
       <EmptyState
         art="select"
         title="Select an assistant"
-        body={`You have ${count} ${count === 1 ? 'assistant' : 'assistants'}. Choose one on the left to chat, speak, or see what it knows — or make another.`}
+        body={`You have ${count} ${count === 1 ? 'assistant' : 'assistants'}. Choose one on the left to chat, speak, or see what it knows, or make another.`}
         action={(
           <Link href={`/w/${workspaceId}/agents/new`}>
             <button type="button"><Icon name="plus" size={15} /> New assistant</button>

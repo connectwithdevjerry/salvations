@@ -99,8 +99,14 @@ await step('trial', async () => {
 await step('team', async () => {
   await go(`/w/${ws}/agents/team`);
   await shot('04-team-picker');
-  for (const role of ['General manager', 'Marketing', 'Sales', 'Customer support', 'Finance', 'Operations']) {
-    await page.locator('button.role-card', { hasText: role }).first().click();
+  // Cards toggle, and some start ticked: set each one rather than press it.
+  const wanted = new Set(['General manager', 'Marketing', 'Sales', 'Customer support', 'Finance', 'Operations']);
+  const cards = page.locator('button.role-card');
+  for (let i = 0; i < await cards.count(); i += 1) {
+    const card = cards.nth(i);
+    const name = (await card.locator('.role-name').textContent() ?? '').trim();
+    const on = (await card.getAttribute('aria-pressed')) === 'true';
+    if (wanted.has(name) !== on) await card.click();
   }
   await shot('05-team-picked');
   await page.click('.wizard-foot button.primary');

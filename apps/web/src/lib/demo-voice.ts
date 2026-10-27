@@ -31,6 +31,21 @@ export const DEMO_MAX_AUDIO_BYTES = 1024 * 1024;
 export const DEMO_TURNS_PER_VISITOR_PER_HOUR = 8;
 export const DEMO_TURNS_PER_DAY = 400;
 
+/**
+ * The live call: OpenAI's Realtime model, speech to speech, the way ChatGPT's
+ * voice works. Costlier than hearing-then-answering, so fewer and shorter:
+ * the console hangs up at the time limit, and a visitor gets a few calls an
+ * hour. The browser talks to OpenAI directly on a key that is only good for
+ * a minute to start the call; the deployment's key never leaves the server.
+ */
+export const LIVE_DEFAULT_MODEL = 'gpt-realtime';
+export const LIVE_DEFAULT_VOICE = 'marin';
+export const LIVE_MAX_SECONDS = 90;
+export const LIVE_CALLS_PER_VISITOR_PER_HOUR = 4;
+export const LIVE_CALLS_PER_DAY = 150;
+const LIVE_KEY_SECONDS = 60;
+const REALTIME_SECRETS_URL = 'https://api.openai.com/v1/realtime/client_secrets';
+
 const HOUR_MS = 3_600_000;
 const DAY_MS = 86_400_000;
 
@@ -141,4 +156,85 @@ async function answerOf(provider: AgentProvider, said: string): Promise<string> 
   const answer = text.trim();
   if (answer === '') throw new Error('The model returned no answer.');
   return answer;
+}
+
+export type LiveOutcome =
+  | { readonly kind: 'ready'; readonly clientSecret: string; readonly model: string; readonly maxSeconds: number }
+  | { readonly kind: 'refused'; readonly status: number; readonly code: string; readonly message: string; readonly detail?: string };
+
+/** The spoken persona, for a conversation rather than one question. */
+const LIVE_PERSONA = `${PERSONA} You are in a live voice conversation: keep each turn short, let the visitor interrupt, and ask one question back now and then about their business. The call ends by itself after ${LIVE_MAX_SECONDS} seconds; if it comes up, say they can keep talking to their own assistant once they sign up.`;
+
+/**
+ * Mints a short-lived key for one live call.
+ *
+ * Counted like a demo turn, but against its own smaller limits. The session
+ * is configured here, not in the browser: the instructions, the voice, the
+ * answer length and the model are fixed into the key, so a visitor holding
+ * it cannot turn the call into something else.
+ */
+export async function startLiveCall(database: Database, visitor: string, fetchImpl: typeof fetch = fetch): Promise<LiveOutcome> {
+  const apiKey = await demoKey();
+  if (apiKey === undefined) {
+    return { kind: 'refused', status: 503, code: 'unsupported', message: 'The voice demo is switched off right now. Sign up to talk to your own assistant.' };
+  }
+  const usage = new DemoUsageRepository(database);
+  if (!(await usage.take(`live:${visitor}`, LIVE_CALLS_PER_VISITOR_PER_HOUR, HOUR_MS))) {
+    return { kind: 'refused', status: 429, code: 'budget_exhausted', message: 'That is all the live calls the demo has for you this hour. Sign up and keep talking to your own assistant.' };
+  }
+  if (!(await usage.take('live:site', LIVE_CALLS_PER_DAY, DAY_MS))) {
+    return { kind: 'refused', status: 429, code: 'budget_exhausted', message: 'The live demo has had a busy day and is resting. Try again tomorrow, or sign up.' };
+  }
+
+  const model = (await platformSetting('landing_voice_realtime_model')) ?? LIVE_DEFAULT_MODEL;
+  const voice = (await platformSetting('landing_voice_voice')) ?? LIVE_DEFAULT_VOICE;
+  let response: Response;
+  try {
+    response = await fetchImpl(REALTIME_SECRETS_URL, {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${apiKey}`,
+        'content-type': 'application/json',
+        // Lets OpenAI tell one abusive visitor from the rest without being told who they are.
+        'openai-safety-identifier': visitor,
+      },
+      body: JSON.stringify(liveSessionRequest(model, voice)),
+      signal: AbortSignal.timeout(15_000),
+    });
+  } catch (caught) {
+    return { kind: 'refused', status: 502, code: 'provider_error', message: 'Could not start a live call. Try again in a moment.', detail: caught instanceof Error ? caught.message : String(caught) };
+  }
+  const body = await response.json().catch(() => undefined) as { value?: unknown; client_secret?: { value?: unknown }; error?: { message?: string } } | undefined;
+  // The key is `value` on the current API; an older shape nested it.
+  const clientSecret = typeof body?.value === 'string' ? body.value
+    : typeof body?.client_secret?.value === 'string' ? body.client_secret.value : undefined;
+  if (!response.ok || clientSecret === undefined) {
+    return {
+      kind: 'refused', status: 502, code: 'provider_error',
+      message: 'The live call is unavailable right now.',
+      detail: `${response.status} ${body?.error?.message ?? 'no client secret in the answer'}`,
+    };
+  }
+  return { kind: 'ready', clientSecret, model, maxSeconds: LIVE_MAX_SECONDS };
+}
+
+/** The session a live call's key is good for. Exported for the test that pins its shape. */
+export function liveSessionRequest(model: string, voice: string): Record<string, unknown> {
+  return {
+    expires_after: { anchor: 'created_at', seconds: LIVE_KEY_SECONDS },
+    session: {
+      type: 'realtime',
+      model,
+      instructions: LIVE_PERSONA,
+      max_output_tokens: 300,
+      audio: {
+        input: {
+          // So the console can write down what the visitor said.
+          transcription: { model: DEMO_TRANSCRIBE_MODEL },
+          turn_detection: { type: 'semantic_vad' },
+        },
+        output: { voice },
+      },
+    },
+  };
 }

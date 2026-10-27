@@ -85,6 +85,8 @@ export const PLATFORM_SETTINGS: readonly PlatformSettingSpec[] = [
   { key: 'platform_ai_base_url', env: 'PLATFORM_AI_BASE_URL', label: 'Base URL', help: 'Only for a proxy or a compatible endpoint. Empty means the vendor\'s own.', secret: false, group: 'ai', placeholder: 'https://' },
 
   { key: 'landing_voice_openai_key', env: 'LANDING_VOICE_OPENAI_KEY', label: 'OpenAI API key', help: 'Checked with OpenAI before it is kept. Visitors to the landing page spend it, within the limits above.', secret: true, group: 'voice', placeholder: 'sk-…' },
+  { key: 'landing_voice_realtime_model', env: 'LANDING_VOICE_REALTIME_MODEL', label: 'Live voice model', help: 'The OpenAI Realtime model visitors talk to, speech to speech. Empty means gpt-realtime. If OpenAI refuses it, the console falls back to hearing, then answering.', secret: false, group: 'voice', placeholder: 'gpt-realtime' },
+  { key: 'landing_voice_voice', env: 'LANDING_VOICE_VOICE', label: 'Voice', help: 'One of OpenAI\'s Realtime voices, such as marin, cedar, alloy, ash, coral, sage or verse. Empty means marin.', secret: false, group: 'voice', placeholder: 'marin' },
 
   { key: 'telegram_bot_token', env: 'TELEGRAM_BOT_TOKEN', label: 'Bot token', help: 'The line BotFather sends after "Use this token to access the HTTP API". Rotating it here updates every connected chat within a day.', secret: true, group: 'telegram', placeholder: '123456789:AA…' },
 

@@ -6,7 +6,14 @@ import { answerFor } from '@/lib/client/landing-brain';
 /**
  * The voice console on the front door, live.
  *
- * Press Start and talk. When the deployment holds an OpenAI key for it
+ * Press Start and talk. With the deployment's OpenAI key, it is a live call
+ * with Bee on OpenAI's Realtime model, speech to speech the way ChatGPT's
+ * voice works: the browser connects to OpenAI over WebRTC on a key the
+ * server minted for one call, the visitor can interrupt, and the call hangs
+ * up by itself after a minute and a half. If the live call cannot start, the
+ * console falls back to the next way down.
+ *
+ * When the deployment holds an OpenAI key for it
  * (Deployment settings → Landing page voice, or HIVE AI's own when that runs
  * on OpenAI), the recording goes to /api/demo/voice: OpenAI hears it, Bee
  * answers, and the browser reads the answer out. That works in every browser
@@ -21,7 +28,7 @@ import { answerFor } from '@/lib/client/landing-brain';
  */
 type Phase = 'idle' | 'listening' | 'thinking' | 'speaking';
 /** How this browser, on this deployment, hears the visitor. Undecided until mounted. */
-type Mode = 'openai' | 'browser' | 'none';
+type Mode = 'live' | 'openai' | 'browser' | 'none';
 
 interface Line { readonly who: 'you' | 'hive'; readonly text: string }
 
@@ -44,6 +51,8 @@ function recognitionCtor(): RecognitionCtor | undefined {
   const w = window as unknown as { SpeechRecognition?: RecognitionCtor; webkitSpeechRecognition?: RecognitionCtor };
   return w.SpeechRecognition ?? w.webkitSpeechRecognition;
 }
+
+const canCall = (): boolean => typeof RTCPeerConnection !== 'undefined';
 
 const canRecord = (): boolean =>
   typeof navigator !== 'undefined' && navigator.mediaDevices?.getUserMedia !== undefined && typeof MediaRecorder !== 'undefined';
@@ -72,12 +81,15 @@ export function LandingVoice() {
   const chunks = useRef<Blob[]>([]);
   const cutoff = useRef<ReturnType<typeof setTimeout>>(null);
   const meter = useRef<{ context: AudioContext; stream: MediaStream; frame: number }>(null);
+  const call = useRef<{ pc: RTCPeerConnection; audio: HTMLAudioElement; stream: MediaStream; timer: ReturnType<typeof setInterval> }>(null);
+  const [inCall, setInCall] = useState(false);
+  const [secondsLeft, setSecondsLeft] = useState<number>();
 
   useEffect(() => {
     const fallback = (): Mode => (recognitionCtor() !== undefined ? 'browser' : 'none');
     fetch('/api/demo/voice', { cache: 'no-store' })
       .then((r) => (r.ok ? r.json() as Promise<{ available?: boolean }> : { available: false }))
-      .then((body) => setMode(body.available === true && canRecord() ? 'openai' : fallback()))
+      .then((body) => setMode(body.available === true && canRecord() ? (canCall() ? 'live' : 'openai') : fallback()))
       .catch(() => setMode(fallback()));
   }, []);
 
@@ -207,6 +219,135 @@ export function LandingVoice() {
     setPhase('listening');
   }, [finishRecording, send, startMeter, stopMeter]);
 
+  /* -------------------------------------------------------------- live -- */
+
+  const endCall = useCallback((why?: string) => {
+    const c = call.current;
+    call.current = null;
+    if (c !== null) {
+      clearInterval(c.timer);
+      c.pc.getSenders().forEach((sender) => sender.track?.stop());
+      c.pc.close();
+      c.stream.getTracks().forEach((t) => t.stop());
+      c.audio.srcObject = null;
+    }
+    stopMeter();
+    setInCall(false);
+    setSecondsLeft(undefined);
+    setPhase('idle');
+    if (why !== undefined) setNote(why);
+  }, [stopMeter]);
+
+  /** Down to hearing-then-answering, for this browser, when a live call cannot be had. */
+  const fallBack = useCallback((why: string, detail?: unknown) => {
+    if (detail !== undefined) console.warn('[landing-voice] live call unavailable:', detail);
+    setMode('openai');
+    setPhase('idle');
+    setNote(`${why} Press Start again: it will hear you, then answer.`);
+  }, []);
+
+  const onEvent = useCallback((event: { type?: string; transcript?: string; error?: { message?: string } }) => {
+    switch (event.type) {
+      case 'input_audio_buffer.speech_started':
+        setPhase('listening');
+        break;
+      case 'conversation.item.input_audio_transcription.completed':
+        if (event.transcript?.trim()) setLines((current) => [...current.slice(-5), { who: 'you', text: event.transcript!.trim() }]);
+        break;
+      // The first name is the current API's, the second the older one's.
+      case 'response.output_audio_transcript.done':
+      case 'response.audio_transcript.done':
+        if (event.transcript?.trim()) setLines((current) => [...current.slice(-5), { who: 'hive', text: event.transcript!.trim() }]);
+        break;
+      case 'output_audio_buffer.started':
+        setPhase('speaking');
+        break;
+      case 'output_audio_buffer.stopped':
+      case 'output_audio_buffer.cleared':
+        setPhase('listening');
+        break;
+      case 'error':
+        console.warn('[landing-voice]', event.error?.message);
+        break;
+      default:
+        break;
+    }
+  }, []);
+
+  const startCall = useCallback(async () => {
+    setPhase('thinking');
+    let session: { clientSecret?: string; maxSeconds?: number } | undefined;
+    try {
+      const response = await fetch('/api/demo/voice/live', { method: 'POST' });
+      const body = await response.json().catch(() => undefined) as
+        { clientSecret?: string; maxSeconds?: number; error?: { message?: string } } | undefined;
+      if (response.status === 429) { setPhase('idle'); setNote(body?.error?.message ?? 'That is all for now. Try again later.'); return; }
+      if (response.status === 503) { setPhase('idle'); setMode(recognitionCtor() !== undefined ? 'browser' : 'none'); setNote(body?.error?.message); return; }
+      if (!response.ok || body?.clientSecret === undefined) { fallBack('The live call could not start.', body?.error?.message); return; }
+      session = body;
+    } catch (caught) {
+      fallBack('Could not reach the live call.', caught);
+      return;
+    }
+
+    let stream: MediaStream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch (caught) {
+      setPhase('idle');
+      setNote(caught instanceof Error && caught.name === 'NotAllowedError'
+        ? 'The microphone was refused. Allow it for this site and try again.'
+        : 'Could not start the microphone.');
+      return;
+    }
+
+    const pc = new RTCPeerConnection();
+    const audio = new Audio();
+    audio.autoplay = true;
+    pc.ontrack = (event) => { audio.srcObject = event.streams[0] ?? null; };
+    for (const track of stream.getAudioTracks()) pc.addTrack(track, stream);
+    const channel = pc.createDataChannel('oai-events');
+    channel.onmessage = (message) => {
+      try { onEvent(JSON.parse(String(message.data))); } catch { /* not ours to read */ }
+    };
+    const maxSeconds = session.maxSeconds ?? 90;
+    const endsAt = Date.now() + maxSeconds * 1000;
+    call.current = {
+      pc, audio, stream,
+      timer: setInterval(() => {
+        const left = Math.max(0, Math.round((endsAt - Date.now()) / 1000));
+        setSecondsLeft(left);
+        if (left === 0) endCall('The demo call ends after a minute and a half. Sign up to keep talking to your own assistant.');
+      }, 1000),
+    };
+    pc.onconnectionstatechange = () => {
+      if ((pc.connectionState === 'failed' || pc.connectionState === 'disconnected') && call.current?.pc === pc) {
+        endCall('The call dropped. Press Start to call again.');
+      }
+    };
+
+    try {
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      const answer = await fetch('https://api.openai.com/v1/realtime/calls', {
+        method: 'POST',
+        body: offer.sdp ?? '',
+        headers: { authorization: `Bearer ${session.clientSecret}`, 'content-type': 'application/sdp' },
+      });
+      if (!answer.ok) throw new Error(`${answer.status} ${await answer.text().catch(() => '')}`);
+      await pc.setRemoteDescription({ type: 'answer', sdp: await answer.text() });
+    } catch (caught) {
+      endCall();
+      fallBack('The live call could not connect.', caught);
+      return;
+    }
+
+    startMeter(stream);
+    setSecondsLeft(maxSeconds);
+    setInCall(true);
+    setPhase('listening');
+  }, [endCall, fallBack, onEvent, startMeter]);
+
   /* ----------------------------------------------------------- browser -- */
 
   const startRecognition = useCallback(() => {
@@ -248,21 +389,29 @@ export function LandingVoice() {
   const start = useCallback(() => {
     setNote(undefined);
     if (typeof speechSynthesis !== 'undefined') speechSynthesis.cancel();
-    if (mode === 'openai') void startRecording();
+    if (mode === 'live') void startCall();
+    else if (mode === 'openai') void startRecording();
     else if (mode === 'browser') startRecognition();
-  }, [mode, startRecording, startRecognition]);
+  }, [mode, startCall, startRecording, startRecognition]);
 
   /** Stop listening. On OpenAI that sends what was said; in the browser it abandons it. */
   const stop = useCallback(() => {
+    if (call.current !== null) { endCall(); return; }
     if (recorder.current !== null) { finishRecording(); return; }
     recognition.current?.abort();
     recognition.current = null;
     stopMeter();
     if (typeof speechSynthesis !== 'undefined') speechSynthesis.cancel();
     setPhase('idle');
-  }, [finishRecording, stopMeter]);
+  }, [endCall, finishRecording, stopMeter]);
 
   useEffect(() => () => {
+    if (call.current !== null) {
+      clearInterval(call.current.timer);
+      call.current.pc.close();
+      call.current.stream.getTracks().forEach((t) => t.stop());
+      call.current = null;
+    }
     if (cutoff.current !== null) clearTimeout(cutoff.current);
     if (recorder.current !== null) { recorder.current.onstop = null; if (recorder.current.state !== 'inactive') recorder.current.stop(); }
     recognition.current?.abort();
@@ -270,9 +419,12 @@ export function LandingVoice() {
     if (typeof speechSynthesis !== 'undefined') speechSynthesis.cancel();
   }, [stopMeter]);
 
-  const live = phase === 'listening';
-  const status = phase === 'listening' ? 'LISTENING' : phase === 'thinking' ? 'THINKING' : phase === 'speaking' ? 'SPEAKING' : 'READY';
-  const idleNote = mode === 'openai'
+  const live = phase === 'listening' || inCall;
+  const status = (phase === 'listening' ? 'LISTENING' : phase === 'thinking' ? (mode === 'live' ? 'CONNECTING' : 'THINKING') : phase === 'speaking' ? 'SPEAKING' : 'READY')
+    + (inCall && secondsLeft !== undefined ? ` · ${secondsLeft}s` : '');
+  const idleNote = mode === 'live'
+    ? 'A live call with Bee on OpenAI\'s realtime voice. Talk naturally and interrupt it any time; it hangs up after 90 seconds.'
+    : mode === 'openai'
     ? 'A live demo: OpenAI hears you and Bee answers. It sends when you stop talking. The real thing does the work.'
     : 'A demo in your browser: scripted answers, nothing sent anywhere. The real thing runs on your key.';
 
@@ -283,7 +435,7 @@ export function LandingVoice() {
       <div className="mock-voice-bars" aria-hidden>
         {Array.from({ length: BARS }, (_, i) => {
           const shape = Math.abs(Math.sin(i * 0.7 + 0.4));
-          const height = live ? 8 + Math.round(90 * level * shape) : 18 + Math.round(72 * shape * (phase === 'speaking' ? 0.6 : 0.35));
+          const height = live && phase !== 'speaking' ? 8 + Math.round(90 * level * shape) : 18 + Math.round(72 * shape * (phase === 'speaking' ? 0.6 : 0.35));
           return <span key={i} style={{ height: `${Math.max(4, height)}%` }} />;
         })}
       </div>
@@ -298,10 +450,10 @@ export function LandingVoice() {
             type="button"
             className={live ? 'danger' : 'primary'}
             onClick={live ? stop : start}
-            disabled={mode === undefined || phase === 'thinking'}
-            aria-label={live ? (mode === 'openai' ? 'Stop and send' : 'Stop listening') : 'Start talking to the demo'}
+            disabled={mode === undefined || (phase === 'thinking' && !inCall)}
+            aria-label={inCall ? 'End the call' : live ? (mode === 'openai' ? 'Stop and send' : 'Stop listening') : 'Start talking to the demo'}
           >
-            {live ? (mode === 'openai' ? '■ Done' : '■ Stop') : phase === 'speaking' ? '● Ask again' : '● Start, and ask it something'}
+            {inCall ? '■ End call' : live ? (mode === 'openai' ? '■ Done' : '■ Stop') : phase === 'speaking' ? '● Ask again' : mode === 'live' ? '● Start a live call' : '● Start, and ask it something'}
           </button>
           <span className="mock-voice-note">{note ?? idleNote}</span>
         </div>

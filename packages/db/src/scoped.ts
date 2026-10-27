@@ -235,7 +235,9 @@ export type PlatformReason =
   /** Resolving a token our own authorization server issued, by its hash. */
   | 'oauth-token-lookup'
   /** Refreshing vendor tokens that are about to expire, across all workspaces, before a run needs them. */
-  | 'token-refresh';
+  | 'token-refresh'
+  /** The deployment's own settings, which belong to no workspace: the site owner's keys. */
+  | 'platform-settings';
 
 export class PlatformDb {
   readonly #db: Db;

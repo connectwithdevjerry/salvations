@@ -28,6 +28,17 @@ export const GLOBAL_COLLECTIONS = [
    * one registration is presented to any assistant a person signs into.
    */
   'oauthClients',
+  /**
+   * Settings for the whole deployment rather than any one workspace: the
+   * site owner's own OpenAI key, which the public voice demo runs on.
+   * Secrets in here are encrypted exactly as a workspace's are.
+   */
+  'platformSettings',
+  /**
+   * Counters for the public voice demo: per visitor and per day, so an
+   * anonymous page cannot spend the site owner's key without limit.
+   */
+  'demoUsage',
 ] as const;
 
 /** Every document belongs to exactly one workspace. */

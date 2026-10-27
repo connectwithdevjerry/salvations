@@ -205,7 +205,7 @@ export function useSpeak(workspaceId: string, agentId: string) {
 }
 
 /** The browser's own voice. Cancels anything still being read first. */
-function say(text: string, done: () => void): void {
+export function say(text: string, done: () => void): void {
   if (typeof speechSynthesis === 'undefined') { done(); return; }
   speechSynthesis.cancel();
   const utterance = new SpeechSynthesisUtterance(text);

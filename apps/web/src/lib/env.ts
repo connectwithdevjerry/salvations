@@ -59,6 +59,16 @@ const schema = z.object({
   GOOGLE_SEARCH_API_KEY: z.string().min(1).optional(),
   GOOGLE_SEARCH_CX: z.string().min(1).optional(),
 
+  /**
+   * Who runs this site, by email, comma-separated.
+   *
+   * They see the site-wide settings on the Admin page, today the OpenAI key
+   * the landing page's voice demo runs on. Their address must be verified to
+   * count: anyone can type an email into a sign-up form. Unset, nobody has
+   * them and the demo stays off.
+   */
+  PLATFORM_ADMIN_EMAILS: z.string().optional(),
+
   INTERNAL_HMAC_SECRET: z.string().min(32, 'INTERNAL_HMAC_SECRET must be at least 32 characters'),
   PUBLIC_BASE_URL: z.string().url().default('http://localhost:3000'),
 

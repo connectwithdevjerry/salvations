@@ -177,6 +177,8 @@ export default function AdminPage({ params }: { params: Promise<{ workspaceId: s
         <Limits workspaceId={workspaceId} initial={overview.workspace.settings} name={overview.workspace.name} onSaved={reload} />
       )}
 
+      <SiteOpenAiKey />
+
       <section className="card">
         <p className="eyebrow" style={{ marginTop: 0 }}>Recent admin activity</p>
         {overview.audit.length === 0 ? (
@@ -479,6 +481,109 @@ function PlanCard({ plan, workspaceId }: { plan: NonNullable<Overview['plan']>; 
           );
         })}
       </div>
+    </section>
+  );
+}
+
+/* ------------------------------------------------------- site OpenAI key -- */
+
+interface SiteKey {
+  key: { hint: string; updatedBy: string; updatedAt: string } | null;
+  limits: {
+    transcribeModel: string; answerModel: string;
+    turnsPerVisitorPerHour: number; turnsPerDay: number; maxAudioKb: number;
+  };
+}
+
+/**
+ * The OpenAI key the whole site runs on, for its operators only.
+ *
+ * It belongs to no workspace: it is what the landing page's voice demo spends,
+ * so the people who see it are the ones named in PLATFORM_ADMIN_EMAILS. For
+ * everyone else the request is refused and the card is simply not here.
+ */
+function SiteOpenAiKey() {
+  const dialog = useDialog();
+  const [state, setState] = useState<SiteKey>();
+  const [value, setValue] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string>();
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    api.get<SiteKey>('/api/platform/openai').then(setState).catch(() => setState(undefined));
+  }, []);
+
+  if (state === undefined) return null;
+  const { key, limits } = state;
+
+  return (
+    <section className="card">
+      <div className="section-head" style={{ marginTop: 0 }}>
+        <div>
+          <p className="eyebrow" style={{ margin: 0 }}>OpenAI API key, whole site</p>
+          <h3 style={{ margin: '2px 0 0', fontSize: 16 }}>
+            {key === null ? 'Not set: the voice demo on the landing page is off' : `Set, ending in ${key.hint}`}
+          </h3>
+        </div>
+        <span className={`badge${key === null ? '' : ' ok'}`}>{key === null ? 'demo off' : 'demo live'}</span>
+      </div>
+      <p className="muted" style={{ margin: '8px 0 0' }}>
+        Visitors to the landing page talk to Bee on this key: {limits.transcribeModel} hears them and{' '}
+        {limits.answerModel} answers. Each visitor gets {limits.turnsPerVisitorPerHour} turns an hour, the site{' '}
+        {limits.turnsPerDay} a day, and recordings up to {limits.maxAudioKb} KB. Workspaces keep using their own keys
+        from the Models page. Only the site&apos;s operators see this card.
+      </p>
+      {key !== null && (
+        <p className="faint" style={{ margin: '6px 0 0' }}>Set by {key.updatedBy}, {ago(key.updatedAt)}.</p>
+      )}
+      {error !== undefined && <p className="error">{error}</p>}
+      <form
+        className="invite"
+        style={{ marginTop: 12 }}
+        onSubmit={async (event) => {
+          event.preventDefault();
+          setBusy(true); setError(undefined); setSaved(false);
+          try {
+            setState(await api.put<SiteKey>('/api/platform/openai', { apiKey: value.trim() }));
+            setValue(''); setSaved(true);
+          } catch (caught) {
+            setError(caught instanceof Error ? caught.message : 'Could not save that key.');
+          } finally { setBusy(false); }
+        }}
+      >
+        <label htmlFor="site-openai-key" className="sr-only">OpenAI API key</label>
+        <input
+          id="site-openai-key" type="password" autoComplete="off" spellCheck={false}
+          placeholder={key === null ? 'sk-…' : 'Paste a new key to replace it'}
+          value={value} onChange={(e) => setValue(e.target.value)}
+        />
+        <button type="submit" className="primary" disabled={busy || value.trim() === ''}>
+          <Icon name="key" size={14} /> {busy ? 'Checking…' : key === null ? 'Save key' : 'Replace'}
+        </button>
+        {key !== null && (
+          <button
+            type="button" className="ghost danger" disabled={busy}
+            onClick={async () => {
+              const yes = await dialog.confirm({
+                title: 'Remove the site\'s OpenAI key?',
+                body: 'The voice demo on the landing page switches off at once. Workspaces are not affected.',
+                confirmLabel: 'Remove', danger: true,
+              });
+              if (!yes) return;
+              setBusy(true); setError(undefined); setSaved(false);
+              try { setState(await api.del<SiteKey>('/api/platform/openai')); } catch (caught) {
+                setError(caught instanceof Error ? caught.message : 'Could not remove the key.');
+              } finally { setBusy(false); }
+            }}
+          >
+            Remove
+          </button>
+        )}
+      </form>
+      <p className="faint" style={{ margin: '6px 0 0' }}>
+        {saved ? 'Checked with OpenAI and saved. The demo is live.' : 'Checked with OpenAI before it is kept, stored encrypted, and never shown again.'}
+      </p>
     </section>
   );
 }

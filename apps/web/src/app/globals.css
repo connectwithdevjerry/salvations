@@ -1595,6 +1595,25 @@ td.danger { color: var(--danger); }
 .mock-voice-log { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; align-items: start; letter-spacing: 0; font-size: 12px; line-height: 1.5; }
 .mock-voice-log span { color: #5b7aa6; text-transform: uppercase; font-size: 10px; letter-spacing: 0.1em; padding-top: 3px; }
 .mock-voice-log p { margin: 0; }
+.live-voice-orb { display: block; padding: 0; background: transparent; color: #cfe3ff; cursor: pointer; transition: transform 0.15s ease; }
+.live-voice-orb:hover:not(:disabled) { transform: scale(1.03); background: transparent; border-color: rgba(245, 158, 11, 0.6); }
+.live-voice-orb:focus-visible { outline: 2px solid #f59e0b; outline-offset: 4px; }
+.live-voice-orb:disabled { cursor: default; }
+.live-voice-icon { position: absolute; inset: 0; display: grid; place-items: center; opacity: 0.9; }
+.live-voice.is-listening .mock-voice-ring { animation: live-voice-spin 1.2s linear infinite; }
+.live-voice.is-hearing .mock-voice-ring { animation: live-voice-spin 0.7s linear infinite; }
+.live-voice.is-speaking .mock-voice-core { animation: live-voice-pulse 1s ease-in-out infinite; }
+.live-voice.is-off { opacity: 0.75; }
+.live-voice.is-off .mock-voice-live { color: #5b7aa6; }
+.live-voice.is-off .mock-voice-live::before { background: #5b7aa6; }
+.live-voice-hint { margin: -6px 0 0; text-align: center; letter-spacing: 0; font-size: 12px; color: #8fb3e0; }
+.live-voice-error { margin: 0; letter-spacing: 0; font-size: 12px; color: #fca5a5; }
+.live-voice .faint-line { color: #5b7aa6; }
+@keyframes live-voice-spin { from { transform: rotate(-40deg); } to { transform: rotate(320deg); } }
+@keyframes live-voice-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+@media (prefers-reduced-motion: reduce) {
+  .live-voice .mock-voice-ring, .live-voice .mock-voice-core { animation: none !important; }
+}
 .land-security { display: grid; grid-template-columns: 1fr 1.2fr; gap: 40px; align-items: start; }
 .land-security ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
 .land-security li { display: flex; gap: 12px; align-items: flex-start; font-size: 14.5px; color: var(--muted); line-height: 1.55; }

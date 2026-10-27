@@ -11,6 +11,8 @@
  * it is. BASE_URL points at the running app.
  */
 import { createRequire } from 'node:module';
+import process from 'node:process';
+import console from 'node:console';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 

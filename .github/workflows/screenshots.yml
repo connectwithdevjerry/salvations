@@ -46,7 +46,8 @@ env:
 jobs:
   tour:
     name: Walk the product and commit the pictures
-    runs-on: ubuntu-latest
+    # 24.04 on purpose: Playwright 1.56 has no browser build for the 26.04 image.
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v5

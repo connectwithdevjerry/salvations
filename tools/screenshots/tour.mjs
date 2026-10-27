@@ -13,7 +13,7 @@
 import { createRequire } from 'node:module';
 import process from 'node:process';
 import console from 'node:console';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readdirSync, unlinkSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 const toolsDir = process.env.TOOLS_DIR ?? process.cwd();
@@ -23,6 +23,8 @@ const { chromium } = require('playwright');
 const BASE = process.env.BASE_URL ?? 'http://127.0.0.1:3101';
 const OUT = path.resolve(process.env.OUT_DIR ?? 'docs/screenshots');
 mkdirSync(OUT, { recursive: true });
+// Only this run's failures should be in the folder.
+for (const stale of readdirSync(OUT)) if (stale.startsWith('failed-')) unlinkSync(path.join(OUT, stale));
 
 const lines = [];
 const log = (line) => { lines.push(`${new Date().toISOString()} ${line}`); console.log(line); };
@@ -32,8 +34,18 @@ const context = await browser.newContext({ viewport: { width: 1280, height: 800 
 const page = await context.newPage();
 page.setDefaultTimeout(20000);
 
+/** The first-visit walkthrough sits over every page until it is skipped. */
+async function dismissWalkthrough() {
+  const skip = page.locator('button.ghost', { hasText: 'Skip' }).first();
+  if (await skip.isVisible().catch(() => false)) {
+    await skip.click();
+    await page.waitForTimeout(400);
+  }
+}
+
 async function settle(ms = 700) {
   await page.waitForLoadState('networkidle').catch(() => undefined);
+  await dismissWalkthrough();
   await page.waitForTimeout(ms);
 }
 
@@ -73,6 +85,15 @@ await step('signup', async () => {
   await page.waitForURL(/\/w\/[^/]+\//, { timeout: 90000 });
   ws = page.url().match(/\/w\/([^/]+)\//)[1];
   log(`workspace ${ws}`);
+});
+
+await step('trial', async () => {
+  await go(`/w/${ws}/billing`);
+  await shot('03b-trial-offer');
+  await page.locator('input[type=checkbox]').first().check();
+  await page.locator('button', { hasText: 'Start the free trial' }).click();
+  await page.waitForTimeout(1500);
+  await shot('03c-trial-started');
 });
 
 await step('team', async () => {
@@ -132,4 +153,4 @@ await step('phone', async () => {
 });
 
 await browser.close();
-writeFileSync(path.join(OUT, 'tour.log'), `${lines.join('\n')}\n`);
+writeFileSync(path.join(OUT, 'tour.txt'), `${lines.join('\n')}\n`);

@@ -18,6 +18,11 @@ export const GLOBAL_COLLECTIONS = [
   'users',
   /** The deployment's own keys and settings, set from the admin dashboard. Belong to no workspace. */
   'platformSettings',
+  /**
+   * Counters for the landing page's voice demo: per visitor and per day, so
+   * an anonymous page cannot spend the deployment's key without limit.
+   */
+  'demoUsage',
   /** Live sessions. Deleting a row revokes a session. */
   'authSessions',
   /** Links to an external identity provider — a Google account. */

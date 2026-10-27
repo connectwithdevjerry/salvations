@@ -61,6 +61,11 @@ export const INDEXES: Readonly<Partial<Record<CollectionName, readonly IndexDef[
       rationale: 'an unused challenge should not outlive its window' },
   ],
 
+  demoUsage: [
+    { name: 'expiry_ttl', key: { expiresAt: 1 }, options: { expireAfterSeconds: 0 },
+      rationale: 'a counter is only good for its window; the server reaps it after' },
+  ],
+
   oauthClients: [
     { name: 'created', key: { createdAt: 1 }, rationale: 'housekeeping of abandoned registrations' },
   ],

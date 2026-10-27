@@ -13,6 +13,7 @@ import { errorResponse, jsonBody, ok } from '@/lib/http';
 import { userRoute } from '@/lib/route';
 import { db } from '@/lib/db';
 import { keyProvider } from '@/lib/keys';
+import { providers } from '@/lib/singletons';
 import { DISCORD_ONE_PRESS } from '@/lib/discord-app';
 import {
   PLATFORM_SETTINGS, SETTING_GROUPS, describePlatformSettings, invalidatePlatformSettings, isPlatformAdmin, settingSpec,
@@ -54,6 +55,15 @@ export const PUT = userRoute(async (request, userId) => {
   }
   if (spec.key === 'meta_whatsapp_verify_token' && input.value.length < 8) {
     return errorResponse(422, 'validation_failed', 'The verify token needs eight characters or more.');
+  }
+  if (spec.key === 'landing_voice_openai_key') {
+    // Checked now, so a bad paste is caught here rather than by the first visitor who speaks.
+    const check = await providers().create('openai' as never, { apiKey: input.value }).verify?.();
+    if (check !== undefined && !check.ok) {
+      return errorResponse(422, 'validation_failed', check.kind === 'rejected'
+        ? 'OpenAI did not accept that key. Check it was copied whole.'
+        : 'Could not reach OpenAI to check that key. Try again in a moment.');
+    }
   }
   await new PlatformSettingsRepository(handle.db, keyProvider()).set(spec.key, input.value, { secret: spec.secret, updatedBy: userId });
   invalidatePlatformSettings();

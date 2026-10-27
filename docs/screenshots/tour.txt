@@ -1,0 +1,26 @@
+2026-10-27T21:24:11.362Z shot 01-landing
+2026-10-27T21:24:13.452Z shot 02-signin
+2026-10-27T21:24:15.503Z shot 03-signup
+2026-10-27T21:24:15.793Z workspace wks_01a17f3f-e2e1-7f8d-9e6f-de13b9dbd5d6
+2026-10-27T21:24:18.373Z shot 03b-trial-offer
+2026-10-27T21:24:20.689Z shot 03c-trial-started
+2026-10-27T21:24:22.714Z shot 04-team-picker
+2026-10-27T21:24:23.681Z shot 05-team-picked
+2026-10-27T21:24:24.518Z shot 06-assistants
+2026-10-27T21:24:44.520Z FAILED assistant: locator.click: Timeout 20000ms exceeded.
+2026-10-27T21:25:04.568Z FAILED ways: locator.click: Timeout 20000ms exceeded.
+2026-10-27T21:25:06.788Z shot 16-models
+2026-10-27T21:25:08.936Z shot 17-approvals
+2026-10-27T21:25:11.050Z shot 18-knowledge
+2026-10-27T21:25:13.393Z shot 19-schedule
+2026-10-27T21:25:15.490Z shot 20-activity
+2026-10-27T21:25:17.615Z shot 21-mcp
+2026-10-27T21:25:19.717Z shot 22-settings
+2026-10-27T21:25:21.820Z shot 23-billing
+2026-10-27T21:25:23.967Z shot 24-admin-dashboard
+2026-10-27T21:25:24.944Z shot 24b-admin-dashboard-full
+2026-10-27T21:25:26.994Z shot 25-platform-admin
+2026-10-27T21:25:27.904Z shot 25b-platform-admin-full
+2026-10-27T21:25:29.952Z shot 26-new-assistant
+2026-10-27T21:25:31.950Z shot 27-import
+2026-10-27T21:25:34.130Z shot 28-phone-chat

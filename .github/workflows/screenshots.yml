@@ -59,7 +59,7 @@ jobs:
         run: echo "CREDENTIAL_KEK=$(openssl rand -base64 32)" >> "$GITHUB_ENV"
 
       - name: Start MongoDB replica set
-        run: pnpm db:up
+        run: node tools/screenshots/mongo-up.mjs
 
       - name: Build the web app
         run: pnpm --filter @salvations/web build

@@ -90,7 +90,7 @@ export function ModelTab({ workspaceId, agentId, agentName }: { workspaceId: str
               options.providers.find((p) => p.id === options.current?.providerConfigId)?.platform === true
                 ? 'Yashayah'
                 : vendorCopy(options.current.providerType).label}`}
-            {options.current.chosen ? '' : ' — the workspace default, not a choice made here yet.'}
+            {options.current.chosen ? '' : '. The workspace default; no choice made here yet.'}
           </span>
         </div>
       )}

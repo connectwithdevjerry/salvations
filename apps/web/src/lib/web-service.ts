@@ -16,7 +16,8 @@ import { env } from './env';
 const TIMEOUT_MS = 15_000;
 const MAX_BYTES = 2_000_000;
 const MAX_REDIRECTS = 5;
-const USER_AGENT = 'YASHAYAH assistant (+https://hive.yashayah.cloud)';
+/** Named after the deployment, so a site owner reading their logs can find where the visits came from. */
+const userAgent = (): string => `YASHAYAH assistant (+${env().PUBLIC_BASE_URL.replace(/\/$/, '')})`;
 
 /** Whether an IP address belongs to a private, loopback, link-local or otherwise non-public range. */
 export function isPrivateAddress(ip: string): boolean {
@@ -117,7 +118,7 @@ export function createWebSource(fetchImpl: typeof fetch = globalThis.fetch): Web
           response = await fetchImpl(current.toString(), {
             redirect: 'manual',
             signal: controller.signal,
-            headers: { 'user-agent': USER_AGENT, accept: 'text/html,application/xhtml+xml,text/plain,application/json;q=0.9,*/*;q=0.5' },
+            headers: { 'user-agent': userAgent(), accept: 'text/html,application/xhtml+xml,text/plain,application/json;q=0.9,*/*;q=0.5' },
           });
         } catch (caught) {
           throw new Error(

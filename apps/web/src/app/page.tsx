@@ -8,7 +8,7 @@ import { AppLogo } from '@/components/app-logo';
 import { LandingApps } from '@/components/landing-apps';
 import { RotatingWord } from '@/components/rotating-word';
 import { LandingVoice } from '@/components/landing-voice';
-import { callerFromCookieHeader } from '@/lib/session';
+import { callerFromCookieHeader, issuer } from '@/lib/session';
 
 /**
  * The front door.
@@ -361,7 +361,7 @@ function AppFrame({ large = false }: { large?: boolean }) {
   ];
   return (
     <div className={`frame${large ? ' large' : ''}`} aria-label="The YASHAYAH app">
-      <div className="frame-bar"><span /><span /><span /><em>hive.yashayah.cloud</em></div>
+      <div className="frame-bar"><span /><span /><span /><em>{issuer().replace(/^https?:\/\//, '')}</em></div>
       <div className="frame-body">
         <aside className="frame-side">
           {assistants.map((a) => (

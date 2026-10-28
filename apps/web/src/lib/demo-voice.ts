@@ -3,8 +3,8 @@
  *
  * A visitor who has not signed up yet presses Start, says something, and
  * hears Bee answer. It runs on the deployment's own OpenAI key: the one set
- * for it under Deployment settings → Landing page voice, or else HIVE AI's
- * when HIVE AI runs on OpenAI. A stranger is spending somebody else's money,
+ * for it under Deployment settings → Landing page voice, or else Yashayah's
+ * when Yashayah runs on OpenAI. A stranger is spending somebody else's money,
  * so everything about it is small:
  *
  *   - no tools, no workspace, no memory: a question in, a short answer out;
@@ -73,7 +73,7 @@ export async function demoKey(): Promise<string | undefined> {
     const hive = await platformAi();
     return hive !== undefined && hive.providerType === 'openai' && hive.baseUrl === undefined ? hive.apiKey : undefined;
   } catch {
-    // A misconfigured HIVE AI is reported where HIVE AI is used; here it just means no key.
+    // A misconfigured Yashayah is reported where Yashayah is used; here it just means no key.
     return undefined;
   }
 }

@@ -1,5 +1,7 @@
 /**
- * The two vendors a person can bring a key for, as cards rather than a list.
+ * The three ways an assistant can think, as cards rather than a list: a key
+ * of your own for Claude or OpenAI, or Yashayah, the model that comes with
+ * the subscription and needs no key at all.
  *
  * Each is recognisable by its mark before its name is read. The marks are
  * drawn here, in the vendor's own colour, rather than pulled from a package:
@@ -21,7 +23,22 @@ export interface VendorCopy {
   readonly voice: boolean;
 }
 
+/**
+ * The card type for the included model. Not a vendor: underneath it is the
+ * deployment's own OpenAI (or Claude) key, which is why its voice note is
+ * worked out from whatever backs it rather than written here.
+ */
+export const YASHAYAH = 'yashayah';
+
 export const VENDORS: Readonly<Record<string, VendorCopy>> = {
+  [YASHAYAH]: {
+    label: 'Yashayah',
+    blurb: 'Included with your subscription. Nothing to connect: think on the go, with a monthly allowance.',
+    keysAt: '',
+    keysUrl: '',
+    keyPrefix: '',
+    voice: true,
+  },
   anthropic: {
     label: 'Claude',
     blurb: 'Anthropic’s models. Strong at long, careful work and tool use.',
@@ -42,6 +59,16 @@ export const VENDORS: Readonly<Record<string, VendorCopy>> = {
 
 export const vendorCopy = (type: string): VendorCopy =>
   VENDORS[type] ?? { label: type, blurb: '', keysAt: 'your provider', keysUrl: '', keyPrefix: '', voice: false };
+
+/** The card a provider row is shown as: Yashayah for the included one, the vendor for a key of your own. */
+export const cardTypeOf = (provider: { providerType: string; platform?: boolean | undefined }): string =>
+  provider.platform === true ? YASHAYAH : provider.providerType;
+
+/** Yashayah's copy, with the voice note of whatever backs it. */
+export const yashayahCopy = (backedBy: string | undefined): VendorCopy => ({
+  ...VENDORS[YASHAYAH] as VendorCopy,
+  voice: backedBy === undefined ? true : vendorCopy(backedBy).voice,
+});
 
 /** Said on a card and in the Model tab: what choosing this vendor means for voice. */
 export const voiceNote = (type: string): string =>
@@ -89,7 +116,18 @@ function OpenAIMark({ size }: { size: number }) {
   );
 }
 
+/** Yashayah's mark: a hexagon cell, the hive's own shape, in the brand colour. */
+function YashayahMark({ size }: { size: number }) {
+  return (
+    <svg viewBox="-18 -18 36 36" width={size} height={size} aria-hidden>
+      <polygon points="0,-15 13,-7.5 13,7.5 0,15 -13,7.5 -13,-7.5" fill="none" stroke="var(--accent)" strokeWidth="2.6" strokeLinejoin="round" />
+      <circle r="4" fill="var(--accent)" />
+    </svg>
+  );
+}
+
 export function VendorMark({ type, size = 30 }: { type: string; size?: number }) {
+  if (type === YASHAYAH) return <YashayahMark size={size} />;
   if (type === 'anthropic') return <ClaudeMark size={size} />;
   if (type === 'openai') return <OpenAIMark size={size} />;
   return (
@@ -136,20 +174,24 @@ const BADGE: Readonly<Record<KeyState, { text: string; className: string }>> = {
  * so choosing is one tap and the page never turns into two forms.
  */
 export function VendorCards({
-  types, selected, keys = {}, onSelect,
+  types, selected, keys = {}, backedBy, onSelect,
 }: {
   types: readonly string[];
   selected?: string;
   keys?: KeyStates;
+  /** What Yashayah runs on, so its voice note is true rather than hopeful. */
+  backedBy?: string;
   onSelect: (type: string) => void;
 }) {
   return (
-    <div className="vendor-grid" role="radiogroup" aria-label="AI provider">
+    <div className={types.length > 2 ? 'vendor-grid three' : 'vendor-grid'} role="radiogroup" aria-label="AI provider">
       {types.map((type) => {
-        const copy = vendorCopy(type);
+        const copy = type === YASHAYAH ? yashayahCopy(backedBy) : vendorCopy(type);
         const isSelected = selected === type;
         const state = keys[type];
-        const badge = state === undefined ? undefined : BADGE[state];
+        const badge = type === YASHAYAH
+          ? { text: 'Included', className: 'badge ok' }
+          : state === undefined ? undefined : BADGE[state];
         return (
           <button
             key={type}
@@ -166,7 +208,7 @@ export function VendorCards({
             </span>
             <span className="vendor-blurb">{copy.blurb}</span>
             <span className={copy.voice ? 'vendor-note' : 'vendor-note off'}>
-              <Icon name="mic" size={13} /> {voiceNote(type)}
+              <Icon name="mic" size={13} /> {copy.voice ? 'Voice notes supported.' : `Voice notes are not available with ${copy.label}.`}
             </span>
             <span className="vendor-tick" aria-hidden>
               <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import type { CatalogModel } from '@salvations/catalog';
 import { api, ws } from '@/lib/client/api';
-import { VendorCards, keyStatesOf, vendorCopy, voiceNote } from '@/components/vendor-mark';
+import { VendorCards, cardTypeOf, keyStatesOf, vendorCopy, voiceNote } from '@/components/vendor-mark';
 import { SkeletonRows } from '@/components/skeleton';
 
 /**
@@ -19,7 +19,7 @@ import { SkeletonRows } from '@/components/skeleton';
 interface Current {
   bindingId: string; providerConfigId: string; providerType?: string; modelId: string; displayName: string; chosen: boolean;
 }
-interface Provider { id: string; providerType: string; name: string; lastCheck?: { ok: boolean } }
+interface Provider { id: string; providerType: string; name: string; platform?: boolean; lastCheck?: { ok: boolean } }
 interface Options { current?: Current; providers: Provider[]; models: CatalogModel[] }
 
 export function ModelTab({ workspaceId, agentId, agentName }: { workspaceId: string; agentId: string; agentName: string }) {
@@ -67,9 +67,12 @@ export function ModelTab({ workspaceId, agentId, agentName }: { workspaceId: str
     }
   }
 
-  // One card per provider row, since a vendor may be connected more than once.
-  const types = options.providers.map((p) => p.providerType);
+  // One card per way of thinking: Yashayah, then each vendor a key is
+  // connected for. A vendor connected twice is one card and a choice of key.
+  const types = options.providers.map(cardTypeOf);
   const distinct = [...new Set(types)];
+  const included = options.providers.find((p) => p.platform === true);
+  const currentCard = provider !== undefined ? cardTypeOf(provider) : undefined;
 
   return (
     <div className="page">
@@ -83,7 +86,10 @@ export function ModelTab({ workspaceId, agentId, agentName }: { workspaceId: str
         <div className="note" style={{ marginBottom: 16 }}>
           <span>
             Now: <strong>{options.current.displayName}</strong>
-            {options.current.providerType !== undefined && ` via ${vendorCopy(options.current.providerType).label}`}
+            {options.current.providerType !== undefined && ` via ${
+              options.providers.find((p) => p.id === options.current?.providerConfigId)?.platform === true
+                ? 'Yashayah'
+                : vendorCopy(options.current.providerType).label}`}
             {options.current.chosen ? '' : ' — the workspace default, not a choice made here yet.'}
           </span>
         </div>
@@ -100,10 +106,11 @@ export function ModelTab({ workspaceId, agentId, agentName }: { workspaceId: str
           <p className="eyebrow">Provider</p>
           <VendorCards
             types={distinct}
-            {...(provider !== undefined ? { selected: provider.providerType } : {})}
-            keys={keyStatesOf(options.providers)}
+            {...(currentCard !== undefined ? { selected: currentCard } : {})}
+            keys={keyStatesOf(options.providers.filter((p) => p.platform !== true))}
+            {...(included !== undefined ? { backedBy: included.providerType } : {})}
             onSelect={(type) => {
-              const first = options.providers.find((p) => p.providerType === type);
+              const first = options.providers.find((p) => cardTypeOf(p) === type);
               setProviderId(first?.id);
               setModelId(undefined);
               setSaved(false);
@@ -117,11 +124,12 @@ export function ModelTab({ workspaceId, agentId, agentName }: { workspaceId: str
                 : ' A voice note sent to this assistant will be answered with a sentence saying so.'}
             </p>
           )}
-          {types.length !== distinct.length && provider !== undefined && (
+          {types.length !== distinct.length && provider !== undefined && provider.platform !== true
+            && options.providers.filter((p) => cardTypeOf(p) === currentCard).length > 1 && (
             <div style={{ marginBottom: 14 }}>
               <label htmlFor="provider-row">Which {vendorCopy(provider.providerType).label} key</label>
               <select id="provider-row" value={provider.id} onChange={(e) => { setProviderId(e.target.value); setSaved(false); }}>
-                {options.providers.filter((p) => p.providerType === provider.providerType).map((p) => (
+                {options.providers.filter((p) => cardTypeOf(p) === currentCard).map((p) => (
                   <option key={p.id} value={p.id}>{p.name} · {voiceNote(p.providerType)}</option>
                 ))}
               </select>

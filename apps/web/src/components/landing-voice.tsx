@@ -14,7 +14,7 @@ import { answerFor } from '@/lib/client/landing-brain';
  * console falls back to the next way down.
  *
  * When the deployment holds an OpenAI key for it
- * (Deployment settings → Landing page voice, or HIVE AI's own when that runs
+ * (Deployment settings → Landing page voice, or Yashayah's own when that runs
  * on OpenAI), the recording goes to /api/demo/voice: OpenAI hears it, Bee
  * answers, and the browser reads the answer out. That works in every browser
  * with a microphone, Firefox included, and stops by itself when the visitor

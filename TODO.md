@@ -8,7 +8,7 @@ page with "Approve all" and a twenty-minute auto-approve window, apps connected 
 five channels at parity (Telegram, WhatsApp, iMessage via the person's own Mac, Slack, Discord)
 with buttons, pictures, clips and voice notes where each platform allows, Telegram, Slack and
 WhatsApp connected in one press from the deployment's own bot and apps ("Connect Telegram",
-"Add to Slack", Meta's Embedded Signup; Discord stays manual by decision) with the do-it-yourself path kept behind a link, HIVE AI as the
+"Add to Slack", Meta's Embedded Signup; Discord stays manual by decision) with the do-it-yourself path kept behind a link, Yashayah as the
 model that comes with the subscription (the deployment's own key, a monthly allowance per
 workspace, the person's own key still welcome), the deployment's keys settable from the admin
 dashboard by a platform admin without a redeploy, a studio for pictures
@@ -582,20 +582,26 @@ Both were assessed and neither fits a request-shaped deployment, so neither is h
       the app secret, routed by the phone number id in each delivery; Meta's GET probe is
       answered with the chosen verify token. Until Meta's App Review, only the app's admins and
       testers can connect.
-- [x] HIVE AI, the model that comes with the subscription (`platform-ai.ts`): a deployment key
+- [x] Yashayah is the third card beside Claude and OpenAI everywhere a model is picked (Models
+      page, the new-assistant wizard, each assistant's Model tab): the included model, on the OpenAI
+      (or Claude) key the operator holds on the admin page, needing nothing connected. The card type
+      is `yashayah` in `vendor-mark.tsx` (`cardTypeOf`, `yashayahCopy`); the provider row is the
+      `platform: true` one, and a row still named "HIVE AI" from before is renamed on its next read
+      (`ModelBindingRepository.renameProvider`).
+- [x] Yashayah, the model that comes with the subscription (`platform-ai.ts`): a deployment key
       (`PLATFORM_AI_API_KEY`, vendor `PLATFORM_AI_PROVIDER` defaulting to openai, chat model and
-      monthly cap configurable) gives every workspace a provider called HIVE AI, created at
+      monthly cap configurable) gives every workspace a provider called Yashayah, created at
       workspace creation and on the first read of models for older workspaces, bound to the
-      vendor's default roles under the "HIVE AI · model" name, only for roles nothing else holds.
+      vendor's default roles under the "Yashayah · model" name, only for roles nothing else holds.
       The provider row carries no credential: every place a provider key is read
       (`providerCredentials`: runs, hearing, embeddings, the studio, the key check) takes the
       deployment's key from the environment for it. `spendGate` learns which binding will answer
-      and refuses with the allowance message once the month's HIVE AI spend reaches the cap; a
+      and refuses with the allowance message once the month's Yashayah spend reaches the cap; a
       key the person brought is theirs to spend. It cannot be removed; the Models page shows it
-      as Included, the wizard offers "Continue with HIVE AI", and the landing page and plan say
+      as Included, the wizard offers "Continue with Yashayah", and the landing page and plan say
       AI is included.
 - [x] Deployment settings on the admin dashboard (`platform-settings.ts`, `PlatformSettingsRepository`
-      in a global `platformSettings` collection): the keys the deployment holds (HIVE AI, the Slack,
+      in a global `platformSettings` collection): the keys the deployment holds (Yashayah, the Slack,
       Discord and Meta apps, WhatsApp sign-up, LinkedIn, Google Workspace) can be set and cleared by
       a platform admin (`PLATFORM_ADMIN_EMAILS`) without a redeploy. Secrets are envelope-encrypted
       under the KEK like every stored credential and never shown back; a dashboard value wins over

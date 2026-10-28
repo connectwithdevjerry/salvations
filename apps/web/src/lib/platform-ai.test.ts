@@ -23,7 +23,7 @@ async function fresh(extra: Record<string, string | undefined>) {
   return { ...platformModule, env: envModule.env };
 }
 
-describe('HIVE AI', () => {
+describe('Yashayah', () => {
   const saved = { ...process.env };
   beforeEach(() => { process.env = { ...saved }; });
   afterEach(() => { process.env = saved; });
@@ -54,12 +54,12 @@ describe('HIVE AI', () => {
     await expect(unknownVendor.platformAi()).rejects.toThrow(/no adapter/);
   });
 
-  it('binds the vendor\'s defaults under the HIVE AI name, with the chosen chat model and catalogue rates', async () => {
+  it('binds the vendor\'s defaults under the Yashayah name, with the chosen chat model and catalogue rates', async () => {
     const some = await fresh({ PLATFORM_AI_API_KEY: 'k', PLATFORM_AI_CHAT_MODEL: 'gpt-4.1' });
     const bindings = some.platformBindings((await some.platformAi())!);
     const chat = bindings.find((b) => b.role === 'chat');
     expect(chat?.modelId).toBe('gpt-4.1');
-    expect(chat?.displayName).toMatch(/^HIVE AI · /);
+    expect(chat?.displayName).toMatch(/^Yashayah · /);
     expect(bindings.map((b) => b.role)).toEqual(expect.arrayContaining(['chat', 'transcription', 'embedding']));
     for (const b of bindings) expect(b.inputPerMTok).toBeGreaterThanOrEqual(0);
   });

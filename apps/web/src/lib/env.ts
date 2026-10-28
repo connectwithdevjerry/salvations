@@ -103,7 +103,7 @@ const schema = z.object({
 
   /**
    * Who may change the deployment's own settings from the admin dashboard:
-   * the keys to its Slack, Discord and Meta apps, HIVE AI's key. Email
+   * the keys to its Slack, Discord and Meta apps, Yashayah's key. Email
    * addresses, comma-separated. Here and not in the database because
    * somebody has to be able to open the dashboard before anything is in it.
    */
@@ -111,7 +111,7 @@ const schema = z.object({
     new Set((raw ?? '').split(',').map((e) => e.trim().toLowerCase()).filter((e) => e !== ''))),
 
   /**
-   * HIVE AI: a model that comes with the subscription, on a key the
+   * Yashayah: the included model that comes with the subscription, on a key the
    * deployment holds. Optional. The vendor is configuration (any the
    * registry knows; openai by default), the chat model a catalogue id for
    * that vendor (the vendor's default when unset), and the cap what one

@@ -185,7 +185,7 @@ export default async function Home() {
           <ul className="land-ticks">
             <li><Icon name="mic" size={16} /><span><strong>Hands free.</strong> Ask for the morning summary while you make the coffee.</span></li>
             <li><Icon name="chat" size={16} /><span><strong>Written down.</strong> Every word, both ways, in the transcript beside the console.</span></li>
-            <li><Icon name="key" size={16} /><span><strong>Included, or your key.</strong> HIVE AI comes with the subscription, with a monthly allowance. Bring your own Claude or OpenAI key for more, billed to you directly.</span></li>
+            <li><Icon name="key" size={16} /><span><strong>Included, or your key.</strong> Yashayah, the included model, comes with the subscription and a monthly allowance. Bring your own Claude or OpenAI key for more, billed to you directly.</span></li>
             <li><Icon name="arrow" size={16} /><span><strong>Try it here.</strong> The console beside this hears you and answers out loud. A demo: it sees nothing of yours and does nothing for real.</span></li>
           </ul>
         </div>

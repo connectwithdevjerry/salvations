@@ -29,7 +29,7 @@ async function verdict(
   }
   const given = await providerCredentials(credentials, provider);
   if (given === undefined) {
-    return { at, ok: false, message: isPlatformProvider(provider) ? 'This deployment no longer has a key for HIVE AI.' : 'The stored key has been revoked.' };
+    return { at, ok: false, message: isPlatformProvider(provider) ? 'This deployment no longer has a key for Yashayah.' : 'The stored key has been revoked.' };
   }
   const adapter = providers().create(provider.providerType as never, given);
   const result = adapter.verify === undefined ? { ok: true as const } : await adapter.verify();

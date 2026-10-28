@@ -1,11 +1,11 @@
 /**
- * HIVE AI: a model that comes with the subscription.
+ * Yashayah: a model that comes with the subscription.
  *
  * Until now every workspace brought its own Claude or OpenAI key. That is
  * still offered, and still where the heavier use belongs; but a person who
  * has just subscribed should be able to talk to an assistant before they
  * have been to a vendor's console. So a deployment may hold one key of its
- * own, and every workspace gets a provider called HIVE AI backed by it,
+ * own, and every workspace gets a provider called Yashayah backed by it,
  * bound to the usual roles, with the deployment paying the vendor and the
  * plan's allowance capping what one workspace can spend of it a month.
  *
@@ -13,7 +13,7 @@
  * the operator asked, and any vendor the registry knows will do. Nothing
  * here names one.
  *
- * The key is never written to a workspace: the HIVE AI provider row holds
+ * The key is never written to a workspace: the Yashayah provider row holds
  * no credential, and the key is read from the environment at the moment of
  * use, so it cannot be listed, exported or revoked from inside a workspace,
  * and rotating it is one change on the deployment.
@@ -25,7 +25,13 @@ import { ModelBindingRepository, type Database, type ProviderConfigDoc } from '@
 import type { CredentialRepository } from '@salvations/db';
 import type { ProviderCredentials } from '@salvations/core';
 
-export const PLATFORM_PROVIDER_NAME = 'HIVE AI';
+/**
+ * What the included model is called, everywhere a person sees it. It changed
+ * once, from "Yashayah": a workspace that still carries the old name is
+ * renamed the next time its models are read.
+ */
+export const PLATFORM_PROVIDER_NAME = 'Yashayah';
+const FORMER_NAMES: readonly string[] = ['Yashayah'];
 
 /** Who created the rows. Not a person; must never be mistaken for one. */
 const PLATFORM_ACTOR = 'platform';
@@ -44,7 +50,7 @@ export interface PlatformAi {
  * The deployment's own model, or undefined when it has none. Misconfiguration
  * is an error, not a silent absence: a key with a vendor the registry does
  * not know, or a model the catalogue does not list, would otherwise be a
- * HIVE AI that every assistant fails on.
+ * Yashayah that every assistant fails on.
  */
 export async function platformAi(): Promise<PlatformAi | undefined> {
   const [apiKey, provider, chatModel, baseUrl, cap] = await platformSettings(
@@ -53,7 +59,7 @@ export async function platformAi(): Promise<PlatformAi | undefined> {
   if (apiKey === undefined) return undefined;
   const providerType = provider ?? 'openai';
   if (!isKnownProviderType(providerType)) {
-    throw new Error(`The HIVE AI vendor is "${providerType}", which no adapter is registered for.`);
+    throw new Error(`The Yashayah vendor is "${providerType}", which no adapter is registered for.`);
   }
   const models = modelsFor(providerType);
   const chat = chatModel !== undefined
@@ -61,12 +67,12 @@ export async function platformAi(): Promise<PlatformAi | undefined> {
     : models.find((m) => m.roles.includes('chat'));
   if (chat === undefined) {
     throw new Error(chatModel !== undefined
-      ? `The HIVE AI chat model "${chatModel}" is not a ${providerType} model the catalogue lists.`
+      ? `The Yashayah chat model "${chatModel}" is not a ${providerType} model the catalogue lists.`
       : `The catalogue lists no chat model for ${providerType}.`);
   }
   const monthlyUsdCap = Number(cap ?? '25');
   if (!Number.isFinite(monthlyUsdCap) || monthlyUsdCap <= 0) {
-    throw new Error(`The HIVE AI monthly allowance "${cap ?? ''}" is not a positive number of dollars.`);
+    throw new Error(`The Yashayah monthly allowance "${cap ?? ''}" is not a positive number of dollars.`);
   }
   return {
     providerType,
@@ -82,7 +88,7 @@ export const isPlatformProvider = (provider: Pick<ProviderConfigDoc, 'platform'>
 
 /**
  * What a provider's adapter is given to speak to the vendor: the
- * deployment's key for HIVE AI, the workspace's stored key for the rest.
+ * deployment's key for Yashayah, the workspace's stored key for the rest.
  * Decrypted at use and held only for the call.
  */
 export async function providerCredentials(
@@ -102,7 +108,7 @@ export async function providerCredentials(
   return secret === null ? undefined : withBase(secret.expose());
 }
 
-/** The bindings HIVE AI makes for a workspace: the vendor's defaults, with the chat model the deployment chose. */
+/** The bindings Yashayah makes for a workspace: the vendor's defaults, with the chat model the deployment chose. */
 export function platformBindings(platform: PlatformAi): readonly { role: ModelRole; modelId: string; displayName: string; inputPerMTok: number; outputPerMTok: number }[] {
   const chosen = modelsFor(platform.providerType).find((m) => m.id === platform.chatModelId);
   return defaultBindings(platform.providerType)
@@ -117,7 +123,7 @@ export function platformBindings(platform: PlatformAi): readonly { role: ModelRo
 }
 
 /**
- * Gives a workspace HIVE AI, once.
+ * Gives a workspace Yashayah, once.
  *
  * Idempotent and cheap to call from anywhere a workspace's models are read:
  * a workspace made before the deployment had a key gets it on its next
@@ -131,7 +137,13 @@ export async function ensurePlatformAi(database: Database, workspaceId: string):
 
   const models = new ModelBindingRepository(database, workspaceId);
   const existing = (await models.listProviders()).find(isPlatformProvider);
-  if (existing !== undefined) return existing;
+  if (existing !== undefined) {
+    if (FORMER_NAMES.includes(existing.name)) {
+      await models.renameProvider(existing._id, existing.name, PLATFORM_PROVIDER_NAME);
+      return { ...existing, name: PLATFORM_PROVIDER_NAME };
+    }
+    return existing;
+  }
 
   const now = new Date();
   const provider = await models.createProvider({
@@ -177,4 +189,4 @@ export async function platformBindingIds(database: Database, workspaceId: string
 
 /** What the person is told when the month's allowance is used up. */
 export const allowanceReason = (cap: number): string =>
-  `This month's included AI allowance of $${cap.toFixed(cap % 1 === 0 ? 0 : 2)} has been used up. Add your own key on the Models page to keep going now, or wait for next month.`;
+  `This month's included Yashayah allowance of $${cap.toFixed(cap % 1 === 0 ? 0 : 2)} has been used up. Add your own key on the Models page to keep going now, or wait for next month.`;

@@ -2,7 +2,7 @@
  * Provider registry.
  *
  * The one place that knows which vendors exist. Two, by decision: the person
- * connects their own Claude or OpenAI key, or uses HIVE AI, a key the
+ * connects their own Claude or OpenAI key, or uses Yashayah, a key the
  * deployment holds on one of the same two vendors, within a monthly
  * allowance the plan includes.
  *

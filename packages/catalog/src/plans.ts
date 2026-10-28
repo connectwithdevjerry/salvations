@@ -44,7 +44,7 @@ export const PLANS: readonly Plan[] = [
     interval: 'month',
     tagline: 'One subscription, agents that stay online.',
     features: [
-      'HIVE AI included, with a monthly allowance; bring your own key for more',
+      'Yashayah, the included model, with a monthly allowance; bring your own key for more',
       'Agents run on their own schedule, not only while a tab is open',
       'Work asynchronously — hand over a task, come back to the result',
       'As many automations as you want',

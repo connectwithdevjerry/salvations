@@ -1171,6 +1171,7 @@ button.square {
  * sits under the cards so choosing never opens a second form.
  */
 .vendor-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 18px; }
+.vendor-grid.three { grid-template-columns: 1fr 1fr 1fr; }
 .vendor-card {
   position: relative;
   display: grid;
@@ -1230,7 +1231,8 @@ td > .vendor-note { margin-top: 3px; white-space: nowrap; }
 }
 .vendor-card.selected .vendor-tick { opacity: 1; transform: scale(1); }
 .vendor-form { margin-top: 4px; }
-@media (max-width: 600px) { .vendor-grid { grid-template-columns: 1fr; } }
+@media (max-width: 760px) { .vendor-grid.three { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 600px) { .vendor-grid, .vendor-grid.three { grid-template-columns: 1fr; } }
 
 /* --------------------------------------------------------------- consent -- */
 

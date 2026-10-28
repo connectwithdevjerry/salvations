@@ -189,7 +189,7 @@ export async function openSession(
       if (provider === null) return {};
       // Decrypted at use and held only for this call: a provider key that
       // outlives the request it was needed for is a key with no expiry.
-      // HIVE AI's is the deployment's own, read from its environment.
+      // Yashayah's is the deployment's own, read from its environment.
       return await providerCredentials(credentials, provider) ?? {};
     },
 

@@ -3,7 +3,7 @@
 import { use, useCallback, useEffect, useState } from 'react';
 import { api, ws } from '@/lib/client/api';
 import { rateHasExpired, type CatalogModel } from '@salvations/catalog';
-import { VendorCards, keyStatesOf, vendorCopy, voiceNote } from '@/components/vendor-mark';
+import { VendorCards, YASHAYAH, keyStatesOf, vendorCopy, voiceNote } from '@/components/vendor-mark';
 import { useDialog } from '@/components/dialog';
 import { Icon } from '@/components/ui';
 
@@ -80,7 +80,7 @@ export default function ModelsPage({ params }: { params: Promise<{ workspaceId: 
         <div className="note" style={{ marginBottom: 16 }}>
           <span className="tile" aria-hidden><Icon name="spark" size={16} /></span>
           <span>
-            <strong>HIVE AI is included.</strong> Your assistants think with it unless you connect a key of your own below.
+            <strong>Yashayah is included.</strong> Your assistants think with it unless you connect a key of your own below.
             It comes with a monthly allowance; your own key has no such limit.
           </span>
         </div>
@@ -89,6 +89,7 @@ export default function ModelsPage({ params }: { params: Promise<{ workspaceId: 
       <ProviderForm
         workspaceId={workspaceId}
         knownTypes={knownTypes}
+        included={providers.find((p) => p.platform === true)}
         keys={keyStatesOf(providers.filter((p) => p.platform !== true))}
         onDone={reload}
         onError={setError}
@@ -262,10 +263,12 @@ function ProviderRow({
 }
 
 function ProviderForm({
-  workspaceId, knownTypes, keys, onDone, onError,
+  workspaceId, knownTypes, included, keys, onDone, onError,
 }: {
   workspaceId: string;
   knownTypes: readonly string[];
+  /** The included model's row, when this deployment has one. */
+  included?: Provider | undefined;
   keys: ReturnType<typeof keyStatesOf>;
   onDone: () => void;
   onError: (message: string) => void;
@@ -273,23 +276,37 @@ function ProviderForm({
   const [vendor, setVendor] = useState<string>();
   const [apiKey, setApiKey] = useState('');
   const [busy, setBusy] = useState(false);
-  const chosen = vendor ?? knownTypes[0];
+  // Three cards when the included model is there: it first, since it is the
+  // one that needs nothing typed.
+  const types = included !== undefined ? [YASHAYAH, ...knownTypes] : knownTypes;
+  const chosen = vendor ?? types[0];
   const copy = chosen !== undefined ? vendorCopy(chosen) : undefined;
 
   return (
     <div className="card">
-      <strong>Connect a provider</strong>
+      <strong>How your assistants think</strong>
       <p className="muted" style={{ margin: '4px 0 12px' }}>
-        Your own key, billed by the vendor. It is checked with them before it is stored, then
-        encrypted and never shown again.
+        {included !== undefined
+          ? 'Yashayah is included and needs nothing from you. A key of your own is billed by the vendor: it is checked with them before it is stored, then encrypted and never shown again.'
+          : 'Your own key, billed by the vendor. It is checked with them before it is stored, then encrypted and never shown again.'}
       </p>
       <VendorCards
-        types={knownTypes}
+        types={types}
         {...(chosen !== undefined ? { selected: chosen } : {})}
         keys={keys}
+        {...(included !== undefined ? { backedBy: included.providerType } : {})}
         onSelect={(type) => { setVendor(type); onError(''); }}
       />
-      {chosen !== undefined && copy !== undefined && (
+      {chosen === YASHAYAH && included !== undefined && (
+        <div className="note">
+          <span className="tile" aria-hidden><Icon name="check" size={16} /></span>
+          <span>
+            <strong>Yashayah is ready.</strong> Every assistant thinks with it until you choose another model for it on its
+            Model tab. It comes with a monthly allowance; a key of your own has no such limit.
+          </span>
+        </div>
+      )}
+      {chosen !== undefined && chosen !== YASHAYAH && copy !== undefined && (
         <form
           className="stack vendor-form"
           onSubmit={async (event) => {

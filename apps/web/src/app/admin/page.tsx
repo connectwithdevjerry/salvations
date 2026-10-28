@@ -36,7 +36,7 @@ export default function DeploymentAdminPage() {
         <p className="eyebrow" style={{ marginTop: 0 }}>Deployment</p>
         <h2 style={{ margin: '2px 0 6px' }}>Keys this deployment holds</h2>
         <p className="lede" style={{ margin: 0 }}>
-          The model behind HIVE AI and the apps behind one-press Slack, Discord and WhatsApp.
+          The OpenAI key behind Yashayah, the included model, and the apps behind one-press Slack, Discord and WhatsApp.
           Set them here and they are in force within a minute, with no redeploy.
         </p>
         <p style={{ margin: '10px 0 0' }}>

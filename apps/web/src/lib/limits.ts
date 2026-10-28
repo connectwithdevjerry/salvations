@@ -94,7 +94,7 @@ export async function spendGate(
 
 /**
  * Whether a run would spend the deployment's key: the named binding is
- * HIVE AI's, or, when none was named, the chat role resolves to it.
+ * Yashayah's, or, when none was named, the chat role resolves to it.
  */
 async function spendsIncludedAi(database: Database, workspaceId: string, modelBindingId: string | undefined): Promise<boolean> {
   const ids = await platformBindingIds(database, workspaceId);

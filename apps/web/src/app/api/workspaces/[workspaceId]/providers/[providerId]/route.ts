@@ -13,7 +13,7 @@ export const DELETE = workspaceRoute<{ providerId: string }>('providers:write', 
   const provider = await ctx.repos.models.findProvider(params.providerId);
   if (provider === null) return errorResponse(404, 'not_found', 'No provider with that id.');
   if (provider.platform === true) {
-    return errorResponse(409, 'conflict', 'HIVE AI comes with the subscription and cannot be removed. To think with your own key instead, add it here and pick it on the assistant\'s Model tab.');
+    return errorResponse(409, 'conflict', 'Yashayah comes with the subscription and cannot be removed. To think with your own key instead, add it here and pick it on the assistant\'s Model tab.');
   }
 
   if (provider.credentialId !== null && provider.credentialId !== undefined) {

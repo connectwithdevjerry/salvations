@@ -3,7 +3,7 @@
  * second.
  *
  * Every integration the deployment owns (its Slack and Discord apps, its
- * Meta app, HIVE AI's model key) used to be configured only through
+ * Meta app, Yashayah's model key) used to be configured only through
  * environment variables, which means a redeploy to rotate a key. Now each
  * of those settings may also be set from the admin dashboard by a platform
  * admin, and a value set there wins over the environment. The environment
@@ -37,9 +37,9 @@ export interface PlatformSettingSpec {
 export interface VendorAddress { readonly label: string; readonly path: string; readonly where: string }
 
 export const SETTING_GROUPS: Readonly<Record<SettingGroup, { title: string; lede: string; addresses: readonly VendorAddress[] }>> = {
-  ai: { title: 'HIVE AI', lede: 'The model that comes with the subscription. The deployment pays the vendor; each workspace gets a monthly allowance.', addresses: [] },
+  ai: { title: 'Yashayah', lede: 'The included model: the third option beside Claude and OpenAI, for people who want to work without connecting a key of their own. The deployment pays the vendor; each workspace gets a monthly allowance.', addresses: [] },
   voice: {
-    title: 'Landing page voice', lede: 'The OpenAI key the voice console on the front page runs on: OpenAI hears the visitor and Bee answers. Each visitor gets a few questions an hour and the site a few hundred a day. Empty uses the HIVE AI key when HIVE AI runs on OpenAI; with neither, the console falls back to scripted answers in the browser.',
+    title: 'Landing page voice', lede: 'The OpenAI key the voice console on the front page runs on: OpenAI hears the visitor and Bee answers. Each visitor gets a few questions an hour and the site a few hundred a day. Empty uses the Yashayah key when Yashayah runs on OpenAI; with neither, the console falls back to scripted answers in the browser.',
     addresses: [],
   },
   telegram: {
@@ -78,10 +78,10 @@ export const SETTING_GROUPS: Readonly<Record<SettingGroup, { title: string; lede
 };
 
 export const PLATFORM_SETTINGS: readonly PlatformSettingSpec[] = [
-  { key: 'platform_ai_api_key', env: 'PLATFORM_AI_API_KEY', label: 'API key', help: 'The vendor key HIVE AI runs on. Rotating it here takes effect within a minute.', secret: true, group: 'ai', placeholder: 'sk-…' },
+  { key: 'platform_ai_api_key', env: 'PLATFORM_AI_API_KEY', label: 'API key', help: 'The vendor key Yashayah runs on. Rotating it here takes effect within a minute.', secret: true, group: 'ai', placeholder: 'sk-…' },
   { key: 'platform_ai_provider', env: 'PLATFORM_AI_PROVIDER', label: 'Vendor', help: 'openai or anthropic. Must match the key.', secret: false, group: 'ai', placeholder: 'openai' },
   { key: 'platform_ai_chat_model', env: 'PLATFORM_AI_CHAT_MODEL', label: 'Chat model', help: 'A catalogue model id for that vendor. Empty means the vendor\'s default.', secret: false, group: 'ai', placeholder: 'gpt-4.1' },
-  { key: 'platform_ai_monthly_usd_cap', env: 'PLATFORM_AI_MONTHLY_USD_CAP', label: 'Monthly allowance per workspace', help: 'In dollars. Once a workspace has spent this much of HIVE AI in a month it is asked to bring its own key or wait.', secret: false, group: 'ai', placeholder: '25' },
+  { key: 'platform_ai_monthly_usd_cap', env: 'PLATFORM_AI_MONTHLY_USD_CAP', label: 'Monthly allowance per workspace', help: 'In dollars. Once a workspace has spent this much of Yashayah in a month it is asked to bring its own key or wait.', secret: false, group: 'ai', placeholder: '25' },
   { key: 'platform_ai_base_url', env: 'PLATFORM_AI_BASE_URL', label: 'Base URL', help: 'Only for a proxy or a compatible endpoint. Empty means the vendor\'s own.', secret: false, group: 'ai', placeholder: 'https://' },
 
   { key: 'landing_voice_openai_key', env: 'LANDING_VOICE_OPENAI_KEY', label: 'OpenAI API key', help: 'Checked with OpenAI before it is kept. Visitors to the landing page spend it, within the limits above.', secret: true, group: 'voice', placeholder: 'sk-…' },

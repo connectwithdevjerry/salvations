@@ -26,7 +26,7 @@ export interface ProviderConfigDoc extends TenantDoc {
    */
   lastCheck?: ProviderCheck | null;
   /**
-   * The deployment's own provider, HIVE AI, rather than a key the workspace
+   * The deployment's own provider, Yashayah, rather than a key the workspace
    * brought. It holds no credential: the key is the deployment's, read from
    * its environment at use, and never stored under a workspace.
    */
@@ -232,6 +232,22 @@ export class ModelBindingRepository {
       { _id: providerId } as never,
       { $set: { lastCheck: check } } as never,
     );
+  }
+
+  /**
+   * Gives a provider a new name, and every binding named after it the same.
+   * Bindings are called "<provider> · <model>", so the prefix moves with it.
+   */
+  async renameProvider(providerId: string, from: string, to: string): Promise<void> {
+    await this.#providers.updateOne({ _id: providerId } as never, { $set: { name: to } } as never);
+    const named = await this.#bindings.find({ providerConfigId: providerId } as never);
+    for (const binding of named) {
+      if (!binding.displayName.startsWith(`${from} · `)) continue;
+      await this.#bindings.updateOne(
+        { _id: binding._id } as never,
+        { $set: { displayName: `${to} · ${binding.displayName.slice(from.length + 3)}` } } as never,
+      );
+    }
   }
 
   /**

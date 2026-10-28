@@ -38,6 +38,7 @@ export const GET = workspaceRoute<{ agentId: string }>('workspace:read', async (
       id: p._id,
       providerType: p.providerType,
       name: p.name,
+      ...(p.platform === true ? { platform: true } : {}),
       lastCheck: p.lastCheck === null || p.lastCheck === undefined ? undefined : { ok: p.lastCheck.ok },
     })),
     models: CATALOG_MODELS.filter((m) => m.roles.includes('chat')),

@@ -67,7 +67,7 @@ export interface CatalogModel {
 
 /**
  * Two vendors, by decision. The person connects their own Claude or OpenAI key,
- * or uses HIVE AI, the deployment's own key on one of the same two.
+ * or uses Yashayah, the deployment's own key on one of the same two.
  */
 
 /** Checked against the vendor's own pricing page on this date. */

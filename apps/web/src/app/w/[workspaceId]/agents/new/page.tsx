@@ -13,7 +13,7 @@ import { OneClickConnect } from '@/components/one-click-connect';
 import { WhatsAppInstall, type WhatsAppSignupConfig } from '@/components/whatsapp-signup';
 import { Qr } from '@/components/qr';
 import { GroupPicker } from '@/components/group-picker';
-import { VendorCards, keyStatesOf, vendorCopy } from '@/components/vendor-mark';
+import { VendorCards, YASHAYAH, keyStatesOf, vendorCopy } from '@/components/vendor-mark';
 import { AppDialog, AppPickerDialog, ConnectedApps, type AppStatus } from '@/components/app-grid';
 import { IntegrationSetup, type Binding } from '@/components/integration-setup';
 import { PhoneMock, WayCards, WAYS, type TalkWay } from '@/components/ways-to-talk';
@@ -947,7 +947,8 @@ function ModelStep({
         setTypes(result.knownTypes);
         setModels(result.models);
         setExisting(result.items);
-        setVendor(result.knownTypes[0]);
+        // The included model first, when there is one: it is the choice that needs nothing typed.
+        setVendor(result.items.some((p) => p.platform === true) ? YASHAYAH : result.knownTypes[0]);
       })
       .catch(() => onError('Could not load the available providers.'));
   }, [workspaceId, onError]);
@@ -984,35 +985,36 @@ function ModelStep({
   const options = vendor !== undefined ? chatModelsFor(vendor) : [];
   const own = existing.filter((p) => p.platform !== true);
   const already = own.find((p) => p.providerType === vendor);
-  const included = existing.some((p) => p.platform === true);
+  const included = existing.find((p) => p.platform === true);
 
   return (
     <>
       <Head
         icon="spark"
         title={`How should ${agentName} think?`}
-        lede={included
-          ? `HIVE AI is included with your subscription, so ${agentName} can think right away. Connect your own Claude or OpenAI key instead if you would rather they bill you directly.`
+        lede={included !== undefined
+          ? `Yashayah is included with your subscription, so ${agentName} can think right away. Connect your own Claude or OpenAI key instead if you would rather they bill you directly.`
           : 'Connect your own Claude or OpenAI key. They bill you directly; we never see the invoice. The key is checked with them, encrypted before it is stored, and never shown again.'}
       />
 
-      {included && (
+      <VendorCards
+        types={included !== undefined ? [YASHAYAH, ...types] : types}
+        {...(vendor !== undefined ? { selected: vendor } : {})}
+        keys={keyStatesOf(own)}
+        {...(included !== undefined ? { backedBy: included.providerType } : {})}
+        onSelect={(type) => { setVendor(type); setModelId(''); onError(''); }}
+      />
+
+      {vendor === YASHAYAH && included !== undefined && (
         <div className="wizard-foot" style={{ marginBottom: 16 }}>
-          <span className="faint">HIVE AI is ready, with a monthly allowance included.</span>
+          <span className="faint">Yashayah is ready, with a monthly allowance included. Nothing to connect.</span>
           <button className="primary" type="button" onClick={onDone}>
-            Continue with HIVE AI <Icon name="arrow" size={15} />
+            Continue with Yashayah <Icon name="arrow" size={15} />
           </button>
         </div>
       )}
 
-      <VendorCards
-        types={types}
-        {...(vendor !== undefined ? { selected: vendor } : {})}
-        keys={keyStatesOf(own)}
-        onSelect={(type) => { setVendor(type); setModelId(''); onError(''); }}
-      />
-
-      {vendor !== undefined && copy !== undefined && (
+      {vendor !== undefined && vendor !== YASHAYAH && copy !== undefined && (
         <form
           className="stack vendor-form"
           onSubmit={(event) => { event.preventDefault(); void connect(vendor); }}

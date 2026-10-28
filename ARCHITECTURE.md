@@ -1,4 +1,4 @@
-# HIVE — MCP-Native Agent Host Platform
+# YASHAYAH — MCP-Native Agent Host Platform
 
 **Status:** Proposed architecture, revision 2 — **awaiting final approval. No application code
 has been written.**
@@ -40,7 +40,7 @@ Inspected before any design work:
 
 ## 1. Product thesis and the non-negotiable principle
 
-HIVE is an **MCP-native agent host / orchestration platform**. It is explicitly *not* a
+YASHAYAH is an **MCP-native agent host / orchestration platform**. It is explicitly *not* a
 chatbot with integrations bolted on.
 
 The layering is the product:

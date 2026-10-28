@@ -262,7 +262,7 @@ export class ChannelRepository {
     return this.#identities.findOne({ _id: identityId } as never);
   }
 
-  /** Ties a platform account to a HIVE account, or cuts the tie with null. */
+  /** Ties a platform account to a YASHAYAH account, or cuts the tie with null. */
   async setIdentityUser(identityId: string, userId: string | null): Promise<boolean> {
     const result = await this.#identities.updateOne({ _id: identityId } as never, { $set: { userId } } as never);
     return result.matchedCount === 1;

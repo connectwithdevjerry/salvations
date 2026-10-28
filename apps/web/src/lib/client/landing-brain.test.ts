@@ -7,7 +7,7 @@ describe('the front door voice demo', () => {
     expect(answerFor('can I use it on WhatsApp')).toMatch(/WhatsApp/);
     expect(answerFor('does it connect to Gmail')).toMatch(/Gmail/);
     expect(answerFor('is my data safe')).toMatch(/your own database/i);
-    expect(answerFor('what is HIVE')).toMatch(/team of assistants/);
+    expect(answerFor('what is YASHAYAH')).toMatch(/team of assistants/);
   });
 
   it('says it is a demo when asked about the voice itself', () => {

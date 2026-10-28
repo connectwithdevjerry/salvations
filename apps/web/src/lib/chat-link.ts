@@ -1,5 +1,5 @@
 /**
- * Tying a chat account to a HIVE account.
+ * Tying a chat account to a YASHAYAH account.
  *
  * A Telegram id proves somebody can reach the bot and nothing more, so a
  * run it starts carries `trust: 'unlinked'` and the permissions of a

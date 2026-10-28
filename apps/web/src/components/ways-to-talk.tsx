@@ -36,7 +36,7 @@ export const WAYS: readonly TalkWay[] = [
  * The phone, showing the assistant where the hovered or chosen way puts it.
  *
  * Each way is drawn the way that app looks: Telegram's bubbles, Discord's
- * and Slack's rows under a channel name, HIVE's own chat, and the voice
+ * and Slack's rows under a channel name, YASHAYAH's own chat, and the voice
  * console for out loud. The words are the same so the eye compares the
  * place, not the conversation.
  */
@@ -74,7 +74,7 @@ export function PhoneMock({ agentName, way }: { agentName: string; way: TalkWay 
           <div className="phone-head">
             <span className="phone-avatar" style={{ background: way.accent }} />
             <strong>{agentName}</strong>
-            <small style={{ color: way.accent }}>on {way.id === 'web' ? 'HIVE' : way.name}</small>
+            <small style={{ color: way.accent }}>on {way.id === 'web' ? 'YASHAYAH' : way.name}</small>
           </div>
           <div className="phone-body">
             {way.id === 'discord' || way.id === 'slack' ? rows('general') : (

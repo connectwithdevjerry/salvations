@@ -3,7 +3,7 @@
  *
  * GET validates what the client sent and describes it for the consent page:
  * who is asking, for which assistant, in which workspace. POST records the
- * person's answer. Both require the HIVE session cookie — the consent page
+ * person's answer. Both require the YASHAYAH session cookie — the consent page
  * sends anyone without one to sign in and back.
  *
  * Every refusal that reaches the client goes through its redirect URI only

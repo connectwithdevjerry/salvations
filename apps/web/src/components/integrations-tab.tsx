@@ -561,7 +561,7 @@ function ConnectedChannel({
         <div className="note">
           <span className="tile" aria-hidden><Icon name="check" size={16} /></span>
           <span>
-            {INSTALLED_NOTE[entry.id] ?? `Connected through HIVE's own ${entry.name} app.`}
+            {INSTALLED_NOTE[entry.id] ?? `Connected through YASHAYAH's own ${entry.name} app.`}
             {connection.teamName !== undefined && <> Workspace: <strong>{connection.teamName}</strong>.</>}
           </span>
         </div>

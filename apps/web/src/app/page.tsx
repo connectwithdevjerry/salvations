@@ -64,7 +64,7 @@ export default async function Home() {
             Stop doing what you can <span className="accent">hand over</span>.
           </h1>
           <p className="land-lede">
-            Ask once, get finished work back. HIVE is a team of assistants for marketing, sales,
+            Ask once, get finished work back. YASHAYAH is a team of assistants for marketing, sales,
             support, product design and your own to-do list. Text it like a teammate on{' '}
             <RotatingWord words={WAYS_TO_TEXT} />. It talks with you out loud, reads your documents,
             works in your tools, and stops to ask before anything it cannot undo.
@@ -105,7 +105,7 @@ export default async function Home() {
 
       {/* ------------------------------------------------------- explain -- */}
       <section className="land-section land-center">
-        <p className="kicker">What HIVE is</p>
+        <p className="kicker">What YASHAYAH is</p>
         <h2>An assistant that has read everything,<br className="wide" /> remembers everyone, and answers where you text.</h2>
         <p className="land-sub">
           Teach it your prices and policies. Connect the tools you use. Then text it like a colleague.
@@ -212,7 +212,7 @@ export default async function Home() {
       {/* ----------------------------------------------------------- how -- */}
       <section className="land-section" id="how">
         <p className="kicker land-center">How it works</p>
-        <h2 className="land-center">Now hand it to <span className="accent">HIVE</span>.</h2>
+        <h2 className="land-center">Now hand it to <span className="accent">YASHAYAH</span>.</h2>
         <ol className="land-steps">
           <Step n={1} title="Connect your stack" body="Your Telegram, WhatsApp, Slack or Discord bot, your Gmail, your calendar, GitHub, Notion, Linear, or an assistant you already run on your own machine. Each on the vendor's own consent screen; the tokens stay encrypted in your database.">
             <div className="mock-rows">
@@ -221,9 +221,9 @@ export default async function Home() {
               ))}
             </div>
           </Step>
-          <Step n={2} title="HIVE learns your business" body="Drop in the documents that answer the questions you get asked twice a day: PDFs, Word files, price lists, policies, the company profile. It searches them before it guesses, and says which page it drew on.">
+          <Step n={2} title="YASHAYAH learns your business" body="Drop in the documents that answer the questions you get asked twice a day: PDFs, Word files, price lists, policies, the company profile. It searches them before it guesses, and says which page it drew on.">
             <div className="mock-graph" aria-hidden>
-              <span className="mock-node core">HIVE</span>
+              <span className="mock-node core">YASHAYAH</span>
               <span className="mock-node n1">Price list</span>
               <span className="mock-node n2">Refund policy</span>
               <span className="mock-node n3">Suppliers</span>
@@ -306,7 +306,7 @@ export default async function Home() {
               <li><Icon name="check" size={14} />A walkthrough for your team</li>
             </ul>
             {contact !== undefined && contact !== ''
-              ? <a href={`mailto:${contact}?subject=HIVE%20done%20for%20you`}><button type="button" className="lg">Tell us what it should do</button></a>
+              ? <a href={`mailto:${contact}?subject=YASHAYAH%20done%20for%20you`}><button type="button" className="lg">Tell us what it should do</button></a>
               : <Link href="/signup"><button type="button" className="lg">Start, then ask us from inside</button></Link>}
           </div>
         </div>
@@ -360,7 +360,7 @@ function AppFrame({ large = false }: { large?: boolean }) {
     { name: 'Research', color: '#8B5CF6', last: 'No conversations yet' },
   ];
   return (
-    <div className={`frame${large ? ' large' : ''}`} aria-label="The HIVE app">
+    <div className={`frame${large ? ' large' : ''}`} aria-label="The YASHAYAH app">
       <div className="frame-bar"><span /><span /><span /><em>hive.yashayah.cloud</em></div>
       <div className="frame-body">
         <aside className="frame-side">

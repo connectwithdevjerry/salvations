@@ -5,8 +5,8 @@
  * and the person who pressed the button; the person signed in here has to
  * be that person. The code is redeemed for proof of the install, the
  * server Discord added the bot to, and the connection is live: everyone in
- * that server may use /hive. The bot token stored is the application's own,
- * because Discord has no per-server token; the /hive command is created on
+ * that server may use /yashayah. The bot token stored is the application's own,
+ * because Discord has no per-server token; the /yashayah command is created on
  * the application here, which is harmless to repeat.
  *
  * Every failure lands the person back on the assistant's integrations tab
@@ -72,7 +72,7 @@ export async function GET(request: Request): Promise<Response> {
     return back(pending.workspaceId, pending.agentId, { error: 'discord_failed', detail: caught instanceof Error ? caught.message : String(caught) });
   }
 
-  // One Discord server, one HIVE workspace: two connections for the same
+  // One Discord server, one YASHAYAH workspace: two connections for the same
   // server would both answer every command there.
   const platform = new PlatformDb(database, 'app-install');
   const elsewhere = await platform.collection<ChannelDoc>('channels').findOne(
@@ -114,7 +114,7 @@ export async function GET(request: Request): Promise<Response> {
     createdBy: caller.userId,
   });
 
-  // The /hive command lives on the application, so creating it once would
+  // The /yashayah command lives on the application, so creating it once would
   // do; creating it by name again only updates it, and doing so here means
   // the first server ever added finds the command waiting.
   try {

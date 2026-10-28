@@ -109,14 +109,14 @@ export function stepsFor(context: TourContext): readonly TourStep[] {
         target: 'tab-server',
         activate: true,
         title: 'Server',
-        body: `Use ${name} from Claude.ai or ChatGPT too. It has its own address, and you sign in to it with your HIVE account.`,
+        body: `Use ${name} from Claude.ai or ChatGPT too. It has its own address, and you sign in to it with your YASHAYAH account.`,
       },
     ];
 
   return [
     {
       id: 'welcome',
-      title: 'Welcome to HIVE',
+      title: 'Welcome to YASHAYAH',
       body: 'Assistants that answer wherever you text, Telegram, WhatsApp, iMessage, Slack or Discord, learn from your documents and act in your tools, with your approval before anything consequential. This takes about a minute.',
     },
     {

@@ -1,5 +1,5 @@
 /**
- * What HIVE costs.
+ * What YASHAYAH costs.
  *
  * Hard-coded for the same reason the integrations are: a price is a promise,
  * and a promise assembled at runtime from a vendor's API is one nobody can read

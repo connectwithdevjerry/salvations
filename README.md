@@ -1,4 +1,4 @@
-# HIVE
+# YASHAYAH
 
 An **MCP-native agent host / orchestration platform**. Not a chatbot with integrations.
 

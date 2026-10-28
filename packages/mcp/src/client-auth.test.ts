@@ -20,7 +20,7 @@ const ISSUER = 'https://auth.test';
 const CONFIG: OAuthClientConfig = {
   clientMetadataUrl: 'https://host.test/.well-known/mcp-client-metadata.json',
   redirectUri: 'https://host.test/api/mcp/callback',
-  clientName: 'HIVE',
+  clientName: 'YASHAYAH',
 };
 
 const json = (body: unknown, status = 200, headers: Record<string, string> = {}) =>

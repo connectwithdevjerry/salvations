@@ -1,7 +1,7 @@
 /**
  * The catalogue.
  *
- * Everything HIVE connects to, named. Two lists because they answer different
+ * Everything YASHAYAH connects to, named. Two lists because they answer different
  * questions — a channel is where you talk to your agent, an integration is what
  * your agent can touch — and a single merged list makes people hunt.
  */

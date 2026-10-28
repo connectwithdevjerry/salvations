@@ -57,7 +57,7 @@ export const POST = workspaceRoute('channels:write', async (ctx) => {
     return errorResponse(422, 'validation_failed', caught instanceof Error ? caught.message : 'Meta did not complete the sign-up.');
   }
 
-  // One number, one HIVE workspace: two connections for the same number
+  // One number, one YASHAYAH workspace: two connections for the same number
   // would both answer every message to it.
   const platform = new PlatformDb(ctx.database, 'app-install');
   const elsewhere = await platform.collection<ChannelDoc>('channels').findOne(
@@ -65,7 +65,7 @@ export const POST = workspaceRoute('channels:write', async (ctx) => {
     { comment: platform.comment },
   );
   if (elsewhere !== null) {
-    return errorResponse(409, 'conflict', 'That WhatsApp number is already connected to another HIVE workspace. Disconnect it there first.');
+    return errorResponse(409, 'conflict', 'That WhatsApp number is already connected to another YASHAYAH workspace. Disconnect it there first.');
   }
 
   // The token is composed the way the adapter wants it, and proved before

@@ -9,7 +9,7 @@
  * deployment's bot token and delivers to one shared address, and the
  * server id inside each interaction is what routes it. A DM with the bot
  * names no server (Discord sends "0" there), so with the shared app the
- * /hive command works in servers, and a DM is told so.
+ * /yashayah command works in servers, and a DM is told so.
  *
  * Checked against Discord's own documentation: a plain bot authorization
  * has no redirect, so a scope beyond `bot` and `applications.commands`

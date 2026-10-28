@@ -48,7 +48,7 @@ export const SETTING_GROUPS: Readonly<Record<SettingGroup, { title: string; lede
     addresses: [],
   },
   telegram: {
-    title: 'Telegram bot', lede: 'The bot behind "Connect Telegram": one bot, made once with BotFather, that every workspace talks to. HIVE points its webhook at itself the first time anyone presses the button; nothing to paste into Telegram.',
+    title: 'Telegram bot', lede: 'The bot behind "Connect Telegram": one bot, made once with BotFather, that every workspace talks to. YASHAYAH points its webhook at itself the first time anyone presses the button; nothing to paste into Telegram.',
     addresses: [],
   },
   slack: {

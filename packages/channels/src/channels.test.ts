@@ -500,13 +500,13 @@ describe('discord as a teammate', () => {
     return { impl, calls };
   }
 
-  it('creates the /hive command on the application when registered', async () => {
+  it('creates the /yashayah command on the application when registered', async () => {
     const { impl, calls } = sequence([{ body: { id: 'app_1' } }, { body: { id: 'cmd_1' } }]);
     await discordAdapter.register('tok', context, impl);
     expect(calls[0]?.url).toContain('/oauth2/applications/@me');
     expect(calls[1]?.url).toContain('/applications/app_1/commands');
     const command = JSON.parse(String(calls[1]?.init.body)) as { name: string; options: { name: string; required: boolean }[]; contexts: number[] };
-    expect(command.name).toBe('hive');
+    expect(command.name).toBe('yashayah');
     expect(command.options[0]).toMatchObject({ name: 'message', required: true });
     // In a server and in the bot's DMs.
     expect(command.contexts).toEqual([0, 1]);

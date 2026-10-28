@@ -72,7 +72,7 @@ export async function GET(request: Request): Promise<Response> {
     return back(pending.workspaceId, pending.agentId, { error: 'slack_failed', detail: caught instanceof Error ? caught.message : String(caught) });
   }
 
-  // One Slack workspace, one HIVE workspace. Two connections for the same
+  // One Slack workspace, one YASHAYAH workspace. Two connections for the same
   // Slack workspace would both answer every message there, and the second
   // would be spending somebody else's budget on it.
   const platform = new PlatformDb(database, 'app-install');

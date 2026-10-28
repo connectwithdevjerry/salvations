@@ -22,7 +22,7 @@ export function LegalPage({ title, effective, children }: { title: string; effec
         </div>
       </header>
       <main className="legal-body">
-        <p className="kicker">HIVE</p>
+        <p className="kicker">YASHAYAH</p>
         <h1>{title}</h1>
         <p className="muted">In effect from {effective}.</p>
         {children}

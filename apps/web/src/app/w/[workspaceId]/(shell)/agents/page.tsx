@@ -37,7 +37,7 @@ export default function AgentsIndex({ params }: { params: Promise<{ workspaceId:
             <Tile name="agent" large />
           </div>
           <h3 style={{ margin: '0 0 6px', fontSize: 18 }}>
-            {ended ? 'Your free trial has ended' : `Try HIVE free for ${plan.trialDays} days`}
+            {ended ? 'Your free trial has ended' : `Try YASHAYAH free for ${plan.trialDays} days`}
           </h3>
           <p className="muted" style={{ margin: '0 0 18px' }}>
             {ended

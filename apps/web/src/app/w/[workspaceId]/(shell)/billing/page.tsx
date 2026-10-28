@@ -102,7 +102,7 @@ export default function BillingPage({
     : billing.state === 'exempt' ? 'Your plan'
     : billing.state === 'trial' ? `${remaining} ${remaining === 1 ? 'day' : 'days'} left in your free trial`
     : billing.state === 'trial_ended' ? 'Your free trial has ended'
-    : `Try HIVE free for ${billing.trialDays} days`;
+    : `Try YASHAYAH free for ${billing.trialDays} days`;
 
   const lede = billing.state === 'trial'
     ? `Everything is on until ${new Date(billing.trialEndsAt ?? 0).toLocaleDateString()}. Subscribe any time to keep it that way.`

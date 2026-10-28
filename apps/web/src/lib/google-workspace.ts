@@ -382,7 +382,7 @@ const REVOKE_URL = 'https://oauth2.googleapis.com/revoke';
 
 /**
  * Tells Google the grant is over, so the refresh token stops working there
- * and the person's Google account no longer lists HIVE. True when Google
+ * and the person's Google account no longer lists YASHAYAH. True when Google
  * accepted it; false when there was nothing stored to revoke.
  */
 export async function revokeGoogleTokens(

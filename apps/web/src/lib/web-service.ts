@@ -16,7 +16,7 @@ import { env } from './env';
 const TIMEOUT_MS = 15_000;
 const MAX_BYTES = 2_000_000;
 const MAX_REDIRECTS = 5;
-const USER_AGENT = 'HIVE assistant (+https://hive.yashayah.cloud)';
+const USER_AGENT = 'YASHAYAH assistant (+https://hive.yashayah.cloud)';
 
 /** Whether an IP address belongs to a private, loopback, link-local or otherwise non-public range. */
 export function isPrivateAddress(ip: string): boolean {

@@ -23,7 +23,7 @@ interface Answer { readonly when: RegExp; readonly say: string }
 const ANSWERS: readonly Answer[] = [
   {
     when: /\b(hi|hello|hey|good (morning|afternoon|evening))\b/i,
-    say: 'Hello. I am the demo on this page. Ask me what HIVE costs, where it talks to you, what it connects to, or how it keeps your data.',
+    say: 'Hello. I am the demo on this page. Ask me what YASHAYAH costs, where it talks to you, what it connects to, or how it keeps your data.',
   },
   {
     when: /\b(price|pricing|cost|how much|pay|subscription|trial|free)\b/i,
@@ -54,20 +54,20 @@ const ANSWERS: readonly Answer[] = [
     say: 'This is the demo: your browser hears you, I answer from the page, your browser reads it back. The real Speak tab runs on your own OpenAI key and does real work.',
   },
   {
-    when: /\b(what (is|are|does)|what's) (hive|this|it)\b|\babout hive\b|\bwhat (do|does) (you|it|hive) do\b|\btell me about\b/i,
-    say: 'HIVE is a team of assistants that read your documents, work in your tools, answer where you text, and stop to ask before anything consequential. Ask once, get finished work back.',
+    when: /\b(what (is|are|does)|what's) (yashayah|hive|this|it)\b|\babout (yashayah|hive)\b|\bwhat (do|does) (you|it|yashayah|hive) do\b|\btell me about\b/i,
+    say: 'YASHAYAH is a team of assistants that read your documents, work in your tools, answer where you text, and stop to ask before anything consequential. Ask once, get finished work back.',
   },
   {
     when: /\b(start|sign ?up|begin|try|get started|how do i)\b/i,
     say: 'Press Start free at the top. Ten days, no card. The one-minute walkthrough runs on your first visit.',
   },
   {
-    when: /\b(who (made|built)|yashayah|company)\b/i,
-    say: 'HIVE is made by Yashayah. Everything here is built to run on your keys and your data.',
+    when: /\b(who (made|built|is behind)|company|yashayah\.ai)\b/i,
+    say: 'YASHAYAH is made by the team at Yashayah.ai. Everything here is built to run on your keys and your data.',
   },
 ];
 
-export const FALLBACK = 'I am only the demo, and I only know this page. Ask me what HIVE costs, where it talks to you, what it connects to, or how it keeps your data.';
+export const FALLBACK = 'I am only the demo, and I only know this page. Ask me what YASHAYAH costs, where it talks to you, what it connects to, or how it keeps your data.';
 
 /** The scripted answer to what was heard. */
 export function answerFor(heard: string): string {

@@ -81,7 +81,7 @@ export function createAssistantServer(context: ServerContext, source: AssistantS
       const answer = await source.ask(args.text, args.conversationId);
       const footer = `\n\n[conversationId: ${answer.conversationId}]`;
       const text = answer.outcome === 'waiting_for_approval'
-        ? `${answer.text}\n\nStopped: this needs a person's approval in HIVE before it goes further. Ask again once it is approved.`
+        ? `${answer.text}\n\nStopped: this needs a person's approval in YASHAYAH before it goes further. Ask again once it is approved.`
         : answer.outcome === 'timed_out'
           ? `${answer.text}\n\nStill working — ask again in a moment with the conversationId to read the answer.`
           : answer.text;

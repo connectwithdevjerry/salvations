@@ -1,6 +1,6 @@
 /**
  * Where Telegram delivers for the deployment's shared bot: its one webhook,
- * pointed here by HIVE itself. The chat id inside each update is what finds
+ * pointed here by YASHAYAH itself. The chat id inside each update is what finds
  * the connection; a chat nobody has connected is bound by the code in its
  * first message.
  */

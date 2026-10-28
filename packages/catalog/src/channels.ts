@@ -25,7 +25,7 @@ const TELEGRAM: CatalogEntry = {
   kind: 'channel',
   category: 'Chat',
   name: 'Telegram',
-  summary: 'DM your agent on Telegram in one press through HIVE\'s bot, or through a bot of your own made with BotFather.',
+  summary: 'DM your agent on Telegram in one press through YASHAYAH\'s bot, or through a bot of your own made with BotFather.',
   setup: 'bot_token',
   accent: '#2AABEE',
   docs: 'https://core.telegram.org/bots#how-do-i-create-a-bot',
@@ -65,7 +65,7 @@ const DISCORD: CatalogEntry = {
   kind: 'channel',
   category: 'Chat',
   name: 'Discord',
-  summary: 'Ask your agent from any Discord channel, or its DMs, with the /hive command. It answers with buttons, pictures and clips.',
+  summary: 'Ask your agent from any Discord channel, or its DMs, with the /yashayah command. It answers with buttons, pictures and clips.',
   setup: 'bot_token',
   accent: '#5865F2',
   docs: 'https://discord.com/developers/docs/interactions/overview',
@@ -96,11 +96,11 @@ const DISCORD: CatalogEntry = {
       title: 'Invite it where you want it',
       body: 'Under OAuth2 → URL Generator, tick "bot" and "applications.commands", then ' +
         '"Send Messages" and "Embed Links". Open the URL it builds and pick a server. ' +
-        'The /hive command is created for you the moment you connect.',
+        'The /yashayah command is created for you the moment you connect.',
     },
   ],
   scopes: [
-    { label: 'Receive the /hive command wherever it is invited', scope: 'applications.commands', writes: false },
+    { label: 'Receive the /yashayah command wherever it is invited', scope: 'applications.commands', writes: false },
     { label: 'Send messages, buttons, pictures and clips in those channels', scope: 'bot:send_messages', writes: true },
   ],
 };

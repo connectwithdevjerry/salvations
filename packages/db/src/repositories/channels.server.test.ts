@@ -27,7 +27,7 @@ let client: MongoClient | undefined;
 let db: Db;
 let repo: ChannelRepository;
 
-const identity = { handle: '@hive_bot', displayName: 'HIVE', botRef: '1' };
+const identity = { handle: '@hive_bot', displayName: 'YASHAYAH', botRef: '1' };
 
 const connect = (code: string, ttlMs = 60_000) => repo.connect({
   type: 'telegram',

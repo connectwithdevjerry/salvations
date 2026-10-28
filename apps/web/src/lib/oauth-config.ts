@@ -40,7 +40,7 @@ export function oauthClientConfig(): OAuthClientConfig {
       ? { clientMetadataUrl: `${base}${CLIENT_METADATA_PATH}` }
       : {}),
     redirectUri: `${base}${OAUTH_CALLBACK_PATH}`,
-    clientName: 'HIVE',
+    clientName: 'YASHAYAH',
     clientUri: base,
     ...(registeredClients() !== undefined ? { registeredClients: registeredClients() as Record<string, RegisteredClient> } : {}),
   };

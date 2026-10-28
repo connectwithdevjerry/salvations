@@ -9,7 +9,7 @@
  * will conclude the product is broken.
  *
  * The command itself is ours to create: Discord has no dashboard for slash
- * commands, so `register` creates `/hive` on the application, and a person
+ * commands, so `register` creates `/yashayah` on the application, and a person
  * who has pasted a token and invited the bot has nothing else to do.
  *
  * Discord reads the HTTP response to an interaction as the bot's first word,
@@ -51,7 +51,7 @@ const PRIMARY = 1;
 const SECONDARY = 2;
 
 /** The slash command, as the person types it. */
-export const COMMAND_NAME = 'hive';
+export const COMMAND_NAME = 'yashayah';
 const COMMAND_OPTION = 'message';
 
 /** What the response to a command says, before the answer arrives. */
@@ -82,7 +82,7 @@ export function discordGuildOf(raw: string): string | undefined {
 export const NOT_IN_SERVER: Ack = {
   body: JSON.stringify({
     type: 4,
-    data: { content: 'Use /hive in a server where the assistant was added. Direct messages are not connected.', flags: EPHEMERAL },
+    data: { content: 'Use /yashayah in a server where the assistant was added. Direct messages are not connected.', flags: EPHEMERAL },
   }),
   contentType: 'application/json',
 };

@@ -59,7 +59,7 @@ export const ADDRESS_LABEL: Readonly<Record<string, string>> = {
 /** The note under that address. */
 export const ADDRESS_NOTE: Readonly<Record<string, string>> = {
   slack: 'Paste it twice in Slack: under Event Subscriptions, and under Interactivity & Shortcuts so buttons work.',
-  discord: 'Paste it on the application’s General Information page. The /hive command is already created.',
+  discord: 'Paste it on the application’s General Information page. The /yashayah command is already created.',
   whatsapp: 'Under WhatsApp → Configuration in your Meta app, with the verify token below. Then subscribe to the messages field.',
 };
 
@@ -80,7 +80,7 @@ export const AFTER_CONNECT: Readonly<Record<string, readonly string[]>> = {
     'The assistant can message someone only within 24 hours of their last message. Outside that window a reply needs an approved template.',
   ],
   discord: [
-    'The /hive command can take a minute to show up in a server. If it is still missing, reopen Discord so it refreshes the command list.',
+    'The /yashayah command can take a minute to show up in a server. If it is still missing, reopen Discord so it refreshes the command list.',
   ],
 };
 
@@ -94,7 +94,7 @@ export const ONE_CLICK: Readonly<Record<string, { title: string; lede: string; b
   },
   discord: {
     title: 'Add it to your Discord server in one press',
-    lede: 'Discord asks which server and whether to allow it, and you are back here connected. Anyone in that server can then use /hive, and each person gets their own thread.',
+    lede: 'Discord asks which server and whether to allow it, and you are back here connected. Anyone in that server can then use /yashayah, and each person gets their own thread.',
     button: 'Add to Discord',
     manual: 'Prefer your own Discord application? Do it the long way',
   },
@@ -106,7 +106,7 @@ export const ONE_CLICK: Readonly<Record<string, { title: string; lede: string; b
   },
   telegram: {
     title: 'Connect Telegram in one press',
-    lede: 'Press, then say hello to HIVE\'s bot from your phone: a link opens the chat with your code already typed. That first message is what makes the chat yours.',
+    lede: 'Press, then say hello to YASHAYAH\'s bot from your phone: a link opens the chat with your code already typed. That first message is what makes the chat yours.',
     button: 'Connect Telegram',
     manual: 'Prefer a bot of your own, under your own name? Do it the long way',
   },
@@ -114,10 +114,10 @@ export const ONE_CLICK: Readonly<Record<string, { title: string; lede: string; b
 
 /** What to say beside a connection made through this deployment\'s own app. */
 export const INSTALLED_NOTE: Readonly<Record<string, string>> = {
-  slack: 'Connected through HIVE\'s own Slack app. Nothing to paste into Slack: messages already reach it.',
-  discord: 'Connected through HIVE\'s own Discord application. Nothing to paste into Discord: /hive already reaches it.',
-  whatsapp: 'Connected through HIVE\'s own Meta app. Nothing to paste into Meta: messages to that number already reach it.',
-  telegram: 'Connected through HIVE\'s own Telegram bot. This chat is bound to it; nothing to paste into Telegram.',
+  slack: 'Connected through YASHAYAH\'s own Slack app. Nothing to paste into Slack: messages already reach it.',
+  discord: 'Connected through YASHAYAH\'s own Discord application. Nothing to paste into Discord: /yashayah already reaches it.',
+  whatsapp: 'Connected through YASHAYAH\'s own Meta app. Nothing to paste into Meta: messages to that number already reach it.',
+  telegram: 'Connected through YASHAYAH\'s own Telegram bot. This chat is bound to it; nothing to paste into Telegram.',
 };
 
 /** The snags that remain once the app did the setup. */
@@ -127,8 +127,8 @@ export const AFTER_INSTALL: Readonly<Record<string, readonly string[]>> = {
     'Disconnecting here revokes its token, so Slack stops reaching it at once. To remove the app from Slack entirely as well, do that under Slack\'s app settings.',
   ],
   discord: [
-    'The /hive command can take a minute to show up in the server. If it is still missing, reopen Discord so it refreshes the command list.',
-    'Direct messages to the bot are not connected with the shared application: use /hive in a channel of the server you added it to.',
+    'The /yashayah command can take a minute to show up in the server. If it is still missing, reopen Discord so it refreshes the command list.',
+    'Direct messages to the bot are not connected with the shared application: use /yashayah in a channel of the server you added it to.',
     'Disconnecting here stops the assistant answering. To remove the bot from the server as well, kick it under Server Settings → Integrations.',
   ],
   whatsapp: [
@@ -137,7 +137,7 @@ export const AFTER_INSTALL: Readonly<Record<string, readonly string[]>> = {
     'A number already in use on the WhatsApp app has to be moved to the Cloud API first, which Meta\'s window walks through.',
   ],
   telegram: [
-    'The bot is shared by every workspace on this deployment, so it carries HIVE\'s name rather than yours. A bot under your own name is the long way.',
+    'The bot is shared by every workspace on this deployment, so it carries YASHAYAH\'s name rather than yours. A bot under your own name is the long way.',
     'Only this chat is connected. To connect another phone or person, disconnect here and press Connect Telegram again from their account.',
   ],
 };
@@ -147,5 +147,5 @@ export const ONE_CLICK_UNSET: Readonly<Record<string, string>> = {
   slack: 'Slack can be one press, "Add to Slack", once whoever runs this deployment adds its Slack app keys on the admin dashboard. Until then, the steps below.',
   // Discord is connected the manual way by decision; no hint promises a press.
   whatsapp: 'WhatsApp can be one press once whoever runs this deployment adds its Meta app and WhatsApp sign-up configuration on the admin dashboard. Until then, the steps below.',
-  telegram: 'Telegram can be one press, with a bot HIVE provides, once whoever runs this deployment adds its bot token on the admin dashboard. Until then, the steps below make a bot of your own.',
+  telegram: 'Telegram can be one press, with a bot YASHAYAH provides, once whoever runs this deployment adds its bot token on the admin dashboard. Until then, the steps below make a bot of your own.',
 };

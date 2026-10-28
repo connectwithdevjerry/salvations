@@ -93,7 +93,7 @@ export function createAssistantSource(options: {
     const agent = await new AgentRepository(database, workspaceId).findById(agentId);
     const binding = agent === null ? null : await modelForAgent(repos.models, agent);
     if (binding === null) {
-      throw new Error('This assistant has no model to think with yet. Connect one in HIVE.');
+      throw new Error('This assistant has no model to think with yet. Connect one in YASHAYAH.');
     }
     return binding._id;
   }

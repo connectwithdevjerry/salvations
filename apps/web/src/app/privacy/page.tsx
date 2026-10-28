@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import { ContactLine, LegalPage } from '@/components/legal-page';
 
 export const metadata: Metadata = {
-  title: 'Privacy · HIVE',
-  description: 'What HIVE stores, where it stays, and what it never does with it.',
+  title: 'Privacy · YASHAYAH',
+  description: 'What YASHAYAH stores, where it stays, and what it never does with it.',
 };
 
 /**
@@ -18,15 +18,15 @@ export default function PrivacyPage() {
   return (
     <LegalPage title="Privacy" effective="14 October 2026">
       <p className="legal-lede">
-        HIVE is a place where you run assistants on your own documents, your own tools and your
+        YASHAYAH is a place where you run assistants on your own documents, your own tools and your
         own model keys. The shortest version of this policy is: your data goes into a database you
         control, it is used only to do what you asked, and nobody else is in between.
       </p>
 
       <h2>Who we are</h2>
       <p>
-        HIVE is operated by Yashayah. When this policy says &ldquo;we&rdquo;, it means the people
-        who run this deployment of HIVE.
+        YASHAYAH is operated by Yashayah.ai. When this policy says &ldquo;we&rdquo;, it means the people
+        who run this deployment of YASHAYAH.
       </p>
 
       <h2>What we store</h2>
@@ -44,7 +44,7 @@ export default function PrivacyPage() {
       <p>
         Everything above lives in the database this deployment is configured with. There is no
         analytics vendor, no identity broker, no data warehouse and no advertising network in
-        HIVE. We do not sell data, share it with third parties for their own purposes, or use it
+        YASHAYAH. We do not sell data, share it with third parties for their own purposes, or use it
         to train models.
       </p>
       <p>
@@ -58,7 +58,7 @@ export default function PrivacyPage() {
 
       <h2>Google user data</h2>
       <p>
-        If you connect Google Workspace to an assistant, HIVE asks Google for permission to read
+        If you connect Google Workspace to an assistant, YASHAYAH asks Google for permission to read
         and label your Gmail, read and create calendar events, and read your Drive files. It uses
         that access only to do what you or your assistant&rsquo;s routine asked: answer a question
         about your mail, draft a reply, book a slot, find a document. Nothing it reads is stored
@@ -66,7 +66,7 @@ export default function PrivacyPage() {
         encrypted and tied to the one assistant you connected.
       </p>
       <p>
-        HIVE&rsquo;s use and transfer of information received from Google APIs adheres to the{' '}
+        YASHAYAH&rsquo;s use and transfer of information received from Google APIs adheres to the{' '}
         <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noreferrer">Google API Services User Data Policy</a>,
         including the Limited Use requirements. In particular, Google user data is never used for
         advertising, never sold, never used to train models, and never read by a person except
@@ -80,10 +80,10 @@ export default function PrivacyPage() {
 
       <h2>Chat platforms</h2>
       <p>
-        If you connect Telegram, Discord or Slack, HIVE stores the bot token you gave, encrypted,
+        If you connect Telegram, Discord or Slack, YASHAYAH stores the bot token you gave, encrypted,
         and the platform&rsquo;s identifier for each chat and person who writes to the assistant.
         Messages sent to the bot become part of a conversation like any other. Linking a chat
-        account to your HIVE account is your choice and can be undone in Settings.
+        account to your YASHAYAH account is your choice and can be undone in Settings.
       </p>
 
       <h2>Approvals and the record</h2>
@@ -104,7 +104,7 @@ export default function PrivacyPage() {
 
       <h2>Cookies</h2>
       <p>
-        HIVE sets one cookie to keep you signed in, and a short-lived one while a consent flow is
+        YASHAYAH sets one cookie to keep you signed in, and a short-lived one while a consent flow is
         in progress so that the service you are connecting can send you back to the right place.
         There are no tracking cookies.
       </p>

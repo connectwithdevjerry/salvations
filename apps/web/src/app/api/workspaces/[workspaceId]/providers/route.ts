@@ -17,7 +17,7 @@ import { providers } from '@/lib/singletons';
 export const runtime = 'nodejs';
 
 export const GET = workspaceRoute('providers:read', async (ctx) => {
-  // A workspace made before the deployment had a key of its own gets HIVE
+  // A workspace made before the deployment had a key of its own gets YASHAYAH
   // AI the first time its models are looked at.
   await ensurePlatformAi(ctx.database, ctx.workspaceId);
   const items = await ctx.repos.models.listProviders();

@@ -42,7 +42,7 @@ async function serve(request: Request, context: Params): Promise<Response> {
       principal,
       name: agent.name,
       description: agent.description === '' || agent.description === undefined
-        ? 'An assistant in HIVE.'
+        ? 'An assistant in YASHAYAH.'
         : agent.description,
     });
 
@@ -56,7 +56,7 @@ async function serve(request: Request, context: Params): Promise<Response> {
       const response = jsonError(status, error.code, publicMessageOf(error));
       // Tells an MCP client where to find out how to sign in: the resource
       // metadata names this platform as the authorization server, and a
-      // client that follows it ends on the consent page with a HIVE login.
+      // client that follows it ends on the consent page with a YASHAYAH login.
       if (status === 401) response.headers.set('www-authenticate', bearerChallenge(workspaceId, agentId));
       return response;
     }

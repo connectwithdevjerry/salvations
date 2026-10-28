@@ -7,7 +7,7 @@ import { userScope, workspaceScope } from './scope';
 const CONFIG: OAuthClientConfig = {
   clientMetadataUrl: 'https://app.test/.well-known/mcp-client-metadata.json',
   redirectUri: 'https://app.test/api/mcp/callback',
-  clientName: 'HIVE',
+  clientName: 'YASHAYAH',
   clientUri: 'https://app.test',
 };
 

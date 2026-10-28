@@ -225,10 +225,11 @@ h1, h2, h3 { letter-spacing: -0.018em; }
 /* --------------------------------------------------------------- brand --- */
 
 .brand { display: flex; align-items: center; gap: 10px; }
-/* The ant brings its own colours; the tile behind it stays quiet. */
-.brand .brand-tile { background: var(--surface-raised); box-shadow: inset 0 0 0 1px var(--border); }
-.brand .brand-tile svg { width: 70%; height: 70%; }
-.brand .wordmark { display: flex; flex-direction: column; font-size: 15px; font-weight: 650; letter-spacing: -0.01em; line-height: 1.05; }
+/* The emblem brings its own dark ground and glow; a hairline keeps it neat on a light page. */
+.brand .brand-logo { width: 34px; height: 34px; flex: none; border-radius: 9px; box-shadow: 0 0 0 1px var(--border); object-fit: cover; }
+.brand .wordmark { display: flex; align-items: baseline; font-size: 15px; font-weight: 700; letter-spacing: 0.06em; line-height: 1.05; white-space: nowrap; }
+/* The gold of the emblem's right arm, as in the full logo. */
+.brand .wordmark-ai { color: #e0a93a; }
 /* Who made it, under the name: small, quiet, and never louder than the name. */
 .brand .byline { font-size: 10px; font-weight: 500; letter-spacing: 0.02em; color: var(--muted); white-space: nowrap; }
 

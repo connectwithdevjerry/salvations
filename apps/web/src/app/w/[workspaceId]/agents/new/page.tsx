@@ -572,7 +572,7 @@ function TelegramSetup({
 
 /** A Telegram bot username: the assistant's name, a few random characters, and the required "Bot". */
 function botUsername(agentName: string): string {
-  const base = agentName.replace(/[^a-zA-Z0-9]/g, '').slice(0, 20) || 'Hive';
+  const base = agentName.replace(/[^a-zA-Z0-9]/g, '').slice(0, 20) || 'Yashayah';
   const salt = Math.random().toString(36).replace(/[^a-z0-9]/g, '').slice(0, 4).toUpperCase();
   return `${base}${salt}Bot`;
 }

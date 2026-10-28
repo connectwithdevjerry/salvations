@@ -20,7 +20,7 @@ export const codeHash = (userId: string, code: string): string =>
 
 export const isCodeShaped = (code: string): boolean => /^\d{6}$/.test(code.trim());
 
-export const verificationMail = (code: string, appName = 'HIVE') => ({
+export const verificationMail = (code: string, appName = 'YASHAYAH') => ({
   subject: `${code} is your ${appName} verification code`,
   text: `Your ${appName} verification code is ${code}.\n\nIt works for ten minutes. If you did not ask for it, ignore this message.`,
 });

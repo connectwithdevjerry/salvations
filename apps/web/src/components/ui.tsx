@@ -7,7 +7,6 @@
  * that fit in this file.
  */
 import type { ReactNode } from 'react';
-import { AntMark } from '@/components/ant-mark';
 
 export type IconName =
   | 'spark' | 'plug' | 'key' | 'agent' | 'server' | 'shield'
@@ -95,13 +94,11 @@ export function Tile({ name, large = false }: { name: IconName; large?: boolean 
 export function BrandMark({ wordmark = true }: { wordmark?: boolean }) {
   return (
     <span className="brand">
-      <span className="tile brand-tile" aria-hidden>
-        <AntMark size={24} />
-      </span>
+      {/* The emblem from the brand artwork; the name beside it is text, so it stays crisp and readable. */}
+      <img className="brand-logo" src="/logo-mark.png" width={34} height={34} alt="" aria-hidden />
       {wordmark && (
         <span className="wordmark">
-          HIVE
-          <span className="byline">by Yashayah</span>
+          YASHAYAH<span className="wordmark-ai">.AI</span>
         </span>
       )}
     </span>

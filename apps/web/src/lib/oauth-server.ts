@@ -1,9 +1,9 @@
 /**
- * HIVE as an authorization server for MCP clients.
+ * YASHAYAH as an authorization server for MCP clients.
  *
- * The direction here is the reverse of `mcp-auth.ts`: there HIVE is the
+ * The direction here is the reverse of `mcp-auth.ts`: there YASHAYAH is the
  * client signing into someone else's server; here Claude.ai or ChatGPT is the
- * client signing into an assistant. The person signs in with their HIVE
+ * client signing into an assistant. The person signs in with their YASHAYAH
  * account, consents on a page of ours, and the client gets tokens for one
  * assistant. No identity vendor is involved and nothing leaves the platform.
  *
@@ -44,7 +44,7 @@ export const protectedResourceMetadata = (workspaceId: string, agentId: string) 
   authorization_servers: [issuer()],
   scopes_supported: [ASSISTANT_SCOPE],
   bearer_methods_supported: ['header'],
-  resource_name: 'HIVE assistant',
+  resource_name: 'YASHAYAH assistant',
 });
 
 /** RFC 8414. Public clients only, PKCE required, registration open. */

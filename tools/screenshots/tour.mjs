@@ -1,5 +1,5 @@
 /**
- * Walks a fresh HIVE and photographs it.
+ * Walks a fresh YASHAYAH and photographs it.
  *
  * Run by the Screenshots workflow against a built app and an empty database:
  * it signs up, builds a team, opens an assistant, visits every page, and

@@ -190,14 +190,14 @@ async function claimTelegramChat(
     } as never, { comment: platform.comment })
     : null;
   if (waiting === null) {
-    await say('Hello. I am an assistant on HIVE. To connect this chat, press Connect Telegram in HIVE and send me the code it shows.');
+    await say('Hello. I am an assistant on YASHAYAH. To connect this chat, press Connect Telegram in YASHAYAH and send me the code it shows.');
     return plain(200, 'ok');
   }
 
   const channels = new ChannelRepository(database, waiting.workspaceId);
   const claimed = await channels.claim(waiting._id, offered, chatRef);
   if (claimed === null) {
-    await say('That code is not right, or it has expired. Open HIVE for a new one.');
+    await say('That code is not right, or it has expired. Open YASHAYAH for a new one.');
     return plain(200, 'ok');
   }
   await channels.bindInstall(waiting._id, chatRef, message.senderLabel);
@@ -532,7 +532,7 @@ async function startRun(
      * A platform id identifies somebody; it does not entitle them to anything.
      * `trust: 'unlinked'` says exactly that — this is a Telegram account that
      * has proved it can reach the bot and nothing more. It becomes 'linked'
-     * only when the platform account is tied to a HIVE account, and until then
+     * only when the platform account is tied to a YASHAYAH account, and until then
      * policy can treat it as the stranger it is.
      */
     principal: {

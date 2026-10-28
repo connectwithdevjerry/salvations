@@ -116,13 +116,13 @@ function OpenAIMark({ size }: { size: number }) {
   );
 }
 
-/** Yashayah's mark: a hexagon cell, the hive's own shape, in the brand colour. */
+/** Yashayah's mark: the emblem from the brand artwork, the same as the header's. */
 function YashayahMark({ size }: { size: number }) {
   return (
-    <svg viewBox="-18 -18 36 36" width={size} height={size} aria-hidden>
-      <polygon points="0,-15 13,-7.5 13,7.5 0,15 -13,7.5 -13,-7.5" fill="none" stroke="var(--accent)" strokeWidth="2.6" strokeLinejoin="round" />
-      <circle r="4" fill="var(--accent)" />
-    </svg>
+    <img
+      src="/logo-mark.png" width={size} height={size} alt="" aria-hidden
+      style={{ borderRadius: Math.round(size / 4), display: 'block', flex: 'none' }}
+    />
   );
 }
 

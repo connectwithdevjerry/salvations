@@ -432,7 +432,7 @@ export interface ChannelIdentityDoc extends TenantDoc {
   chatRef: string;
   conversationId: string;
   label: string;
-  /** Set only when a platform account has been linked to a HIVE account. */
+  /** Set only when a platform account has been linked to a YASHAYAH account. */
   userId?: string | null;
   createdAt: Date;
   lastSeenAt: Date;

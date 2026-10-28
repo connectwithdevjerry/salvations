@@ -1,4 +1,4 @@
-# HIVE — Implementation Roadmap
+# YASHAYAH — Implementation Roadmap
 
 Companion to [ARCHITECTURE.md](./ARCHITECTURE.md) and the documents in [docs/](./docs).
 
@@ -358,7 +358,7 @@ platform exist beside the first three.
 - [x] Who registers apps by hand, from what the vendors answer today: GitHub and Box offer no
       dynamic registration (a GitHub App or Box app goes in `MCP_OAUTH_CLIENTS`); Asana does,
       so it no longer waits on one. Every catalogue server answered 401 with resource metadata
-      and PKCE S256, which is the whole handshake HIVE relies on
+      and PKCE S256, which is the whole handshake YASHAYAH relies on
 - [x] Pay or try first: a workspace runs assistants on a subscription, a 10-day free trial
       (one click, no card, once per workspace, `POST /billing/trial`), or the operator's
       exemption (`COMPLIMENTARY_WORKSPACES`). Nothing else makes or runs an assistant: the
@@ -380,7 +380,7 @@ platform exist beside the first three.
       no longer waiting is refused, on the page and in the chat
 - [x] The assistant server is an OAuth 2.1 authorization server (RFC 9728/8414/7591/7636/8707):
       Claude.ai and ChatGPT connect by URL, the person consents on `/oauth/authorize` with the
-      HIVE login, tokens are opaque and hashed (`oauthGrants`), refresh rotates with family
+      YASHAYAH login, tokens are opaque and hashed (`oauthGrants`), refresh rotates with family
       revocation on replay
 - [x] Disconnecting an integration: tokens (revoked at Google), every person's row, discovery,
       the gateway token and the server row when unused; Google tokens renewed by the sweeper six
@@ -398,7 +398,7 @@ platform exist beside the first three.
 - [x] Server tab: URL, what it unites, keys shown once, client config
 - [ ] Re-export integration tools raw on the assistant's server — see §1.5.7
 - [x] OAuth on the assistant's server: an OAuth 2.1 authorization server (RFC 9728/8414/7591/
-      7636/8707), consent on `/oauth/authorize` with the HIVE login, opaque hashed tokens
+      7636/8707), consent on `/oauth/authorize` with the YASHAYAH login, opaque hashed tokens
 
 ### 1.5.7 Two things that want a long-lived process
 
@@ -483,7 +483,7 @@ Both were assessed and neither fits a request-shaped deployment, so neither is h
 - [x] 🔒 `channelIdentities` linking flow (§1.5.8)
 - [x] Slack and Discord at parity with Telegram: approval buttons (Block Kit, message
       components), pictures and clips (image block and file upload; embed and link), the live
-      draft, typing on Discord, voice clips on Slack. Discord's `/hive` command is created by
+      draft, typing on Discord, voice clips on Slack. Discord's `/yashayah` command is created by
       `register`, and the interaction is answered in the HTTP response (a word under the
       command, the rewritten message for a press) so Discord never shows "did not respond".
 - [x] The hero's channel word rotates through where you can text it (Telegram, Slack,
@@ -539,7 +539,7 @@ Both were assessed and neither fits a request-shaped deployment, so neither is h
       handshake, every chat in that workspace allowed). Slack delivers for every such workspace
       to one shared address (`/api/channels/slack/app`), signed with the app's secret and routed
       by the team id inside the delivery (`handleSharedDelivery`). One Slack workspace maps to one
-      HIVE workspace. Disconnecting revokes the token at Slack. The do-it-yourself path with the
+      YASHAYAH workspace. Disconnecting revokes the token at Slack. The do-it-yourself path with the
       person's own app stays behind "Prefer your own Slack app?".
 - [x] "Add to Discord" is switched OFF by decision (`DISCORD_ONE_PRESS = false` in
       `discord-app.ts`): Discord is connected the manual way, with each workspace's own
@@ -552,7 +552,7 @@ Both were assessed and neither fits a request-shaped deployment, so neither is h
       application's, so each connection holds a copy and the sweep brings copies up to date when
       the deployment rotates it. One shared interactions endpoint (`/api/channels/discord/app`),
       verified with the application's public key, routed by `guild_id`; a DM names no server, so it
-      is answered in the response with "use /hive in a server". `/hive` is created on the
+      is answered in the response with "use /yashayah in a server". `/yashayah` is created on the
       application at the first install.
 - [x] Once a channel is connected, an "If something looks off" panel (`AFTER_CONNECT` in
       `channel-fields.ts`) lists the platform's usual snags with the fix: Slack's messages-tab

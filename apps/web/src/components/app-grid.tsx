@@ -11,7 +11,7 @@ import { AppLogo } from '@/components/app-logo';
  * The app picker.
  *
  * A grid of everything an assistant can be connected to, searchable, on
- * shelves. Each card is a service reached directly: HIVE's own adapters, or
+ * shelves. Each card is a service reached directly: YASHAYAH's own adapters, or
  * the vendor's own MCP server at the vendor's documented address. There is
  * no third-party hub behind this grid, which is why its count is honest
  * rather than large.

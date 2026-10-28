@@ -19,6 +19,7 @@ type Source = 'dashboard' | 'environment' | 'unset';
 
 interface Setting {
   key: string; label: string; help: string; secret: boolean; group: string; placeholder?: string;
+  options?: { value: string; label: string }[];
   source: Source; hint?: string; updatedAt?: string;
 }
 interface Group { id: string; title: string; lede: string; addresses: { label: string; path: string; where: string }[] }
@@ -144,14 +145,21 @@ function SettingRow({ setting, onSaved, onError }: {
         className="setting-form"
         onSubmit={(event) => { event.preventDefault(); void save(); }}
       >
-        <input
-          id={`setting-${setting.key}`}
-          type={setting.secret ? 'password' : 'text'}
-          autoComplete="off"
-          placeholder={setting.placeholder ?? (setting.secret ? 'New secret' : 'New value')}
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-        />
+        {setting.options !== undefined ? (
+          <select id={`setting-${setting.key}`} value={value} onChange={(e) => setValue(e.target.value)}>
+            <option value="">{setting.source === 'unset' ? `Choose (now ${setting.options[0]?.label ?? 'the default'})` : `Choose (now ${setting.options.find((o) => o.value === setting.hint)?.label ?? setting.hint ?? 'the default'})`}</option>
+            {setting.options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+          </select>
+        ) : (
+          <input
+            id={`setting-${setting.key}`}
+            type={setting.secret ? 'password' : 'text'}
+            autoComplete="off"
+            placeholder={setting.placeholder ?? (setting.secret ? 'New secret' : 'New value')}
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+          />
+        )}
         <button className="primary" type="submit" disabled={busy !== undefined || value.trim() === ''}>
           {busy === 'save' ? 'Saving…' : 'Save'}
         </button>

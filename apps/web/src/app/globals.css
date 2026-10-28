@@ -630,7 +630,7 @@ button.google {
 .setting-row:first-child { border-top: 0; padding-top: 0; }
 .setting-row label { font-weight: 600; }
 .setting-form { display: flex; gap: 8px; align-items: center; }
-.setting-form input { flex: 1; min-width: 0; }
+.setting-form input, .setting-form select { flex: 1; min-width: 0; }
 @media (max-width: 720px) { .setting-row { grid-template-columns: 1fr; } }
 .one-click strong { font-size: 15px; }
 

@@ -50,6 +50,9 @@ export const PUT = userRoute(async (request, userId) => {
   const input = await jsonBody(request, putSchema);
   const spec = settingSpec(input.key);
   if (spec === undefined) return errorResponse(404, 'not_found', `There is no setting called "${input.key}".`);
+  if (spec.options !== undefined && !spec.options.some((o) => o.value === input.value)) {
+    return errorResponse(422, 'validation_failed', `${spec.label} is one of: ${spec.options.map((o) => o.value).join(', ')}.`);
+  }
   if (spec.key === 'platform_ai_monthly_usd_cap' && !(Number(input.value) > 0)) {
     return errorResponse(422, 'validation_failed', 'The allowance is a positive number of dollars.');
   }

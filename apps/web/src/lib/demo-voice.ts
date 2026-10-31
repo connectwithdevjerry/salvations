@@ -2,7 +2,7 @@
  * The landing page's voice demo, on OpenAI.
  *
  * A visitor who has not signed up yet presses Start, says something, and
- * hears YASHAYAH answer. It runs on the deployment's own OpenAI key: the one set
+ * hears Jarvis answer. It runs on the deployment's own OpenAI key: the one set
  * for it under Deployment settings → Landing page voice, or else Yashayah's
  * when Yashayah runs on OpenAI. A stranger is spending somebody else's money,
  * so everything about it is small:
@@ -50,7 +50,7 @@ const HOUR_MS = 3_600_000;
 const DAY_MS = 86_400_000;
 
 const PERSONA = [
-  'You are the voice of YASHAYAH, speaking with a visitor on the landing page.',
+  'You are Jarvis, the voice of YASHAYAH, speaking with a visitor on the landing page.',
   'You sound like a composed British AI butler: a calm, low, measured voice with a refined English accent,',
   'impeccably courteous, quietly confident and precise, with a dry, understated wit. Never gushing, never salesy.',
   'YASHAYAH gives a small business a team of AI assistants that work in the tools it already uses:',
@@ -147,7 +147,7 @@ async function answerOf(provider: AgentProvider, said: string): Promise<string> 
     tools: [],
     toolChoice: 'none',
     maxOutputTokens: 220,
-    metadata: { runId: 'demo', workspaceId: 'platform', agentId: 'landing-demo' },
+    metadata: { runId: 'demo', workspaceId: 'platform', agentId: 'jarvis-demo' },
   } as unknown as GenerationRequest;
 
   let text = '';

@@ -180,7 +180,7 @@ export default async function Home() {
           <p className="land-sub">
             Open the Speak tab, press Start, and talk. It listens, answers in its own voice, and writes
             down everything it heard and said. The same assistant, the same memory, the same approvals.
-            Try the console here: press Start and ask it what it can do for you.
+            Try the console here: press Start and ask Jarvis what it can do for you.
           </p>
           <ul className="land-ticks">
             <li><Icon name="mic" size={16} /><span><strong>Hands free.</strong> Ask for the morning summary while you make the coffee.</span></li>

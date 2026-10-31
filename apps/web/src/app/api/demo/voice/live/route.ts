@@ -1,5 +1,5 @@
 /**
- * Starting a live call on the landing page: a key good for one
+ * Starting a live call with Jarvis on the landing page: a key good for one
  * minute to connect, and the model it is for. Public, so it is limited —
  * see `startLiveCall`.
  */

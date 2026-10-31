@@ -7,7 +7,7 @@ import { answerFor } from '@/lib/client/landing-brain';
  * The voice console on the front door, live.
  *
  * Press Start and talk. With the deployment's OpenAI key, it is a live call
- * with Bee on OpenAI's Realtime model, speech to speech the way ChatGPT's
+ * on OpenAI's Realtime model, speech to speech the way ChatGPT's
  * voice works: the browser connects to OpenAI over WebRTC on a key the
  * server minted for one call, the visitor can interrupt, and the call hangs
  * up by itself after a minute and a half. If the live call cannot start, the
@@ -15,7 +15,7 @@ import { answerFor } from '@/lib/client/landing-brain';
  *
  * When the deployment holds an OpenAI key for it
  * (Deployment settings → Landing page voice, or Yashayah's own when that runs
- * on OpenAI), the recording goes to /api/demo/voice: OpenAI hears it, Bee
+ * on OpenAI), the recording goes to /api/demo/voice: OpenAI hears it, YASHAYAH
  * answers, and the browser reads the answer out. That works in every browser
  * with a microphone, Firefox included, and stops by itself when the visitor
  * goes quiet.
@@ -61,6 +61,16 @@ const OPENING: readonly Line[] = [
   { who: 'you', text: 'what is waiting on me today?' },
   { who: 'hive', text: 'Three things. Okoro’s invoice query, Bright Lane’s quote, and Tunde’s delivery date. Want me to draft the replies?' },
 ];
+
+/**
+ * The browser's closest thing to a composed British butler: a UK English male
+ * voice where the system has one, else any UK English voice, else the default.
+ */
+function butlerVoice(): SpeechSynthesisVoice | undefined {
+  const voices = speechSynthesis.getVoices().filter((v) => v.lang.replace('_', '-').toLowerCase() === 'en-gb');
+  return voices.find((v) => /\b(male|daniel|arthur|oliver|george|ryan|thomas)\b/i.test(v.name) && !/female/i.test(v.name))
+    ?? voices[0];
+}
 
 const BARS = 32;
 /** A question, not a monologue; the endpoint refuses much more. */
@@ -136,6 +146,10 @@ export function LandingVoice() {
     if (typeof speechSynthesis === 'undefined') { setPhase('idle'); return; }
     speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
+    const voice = butlerVoice();
+    if (voice !== undefined) utterance.voice = voice;
+    utterance.rate = 0.98;
+    utterance.pitch = 0.9;
     utterance.onend = () => setPhase('idle');
     utterance.onerror = () => setPhase('idle');
     speechSynthesis.speak(utterance);
@@ -423,14 +437,14 @@ export function LandingVoice() {
   const status = (phase === 'listening' ? 'LISTENING' : phase === 'thinking' ? (mode === 'live' ? 'CONNECTING' : 'THINKING') : phase === 'speaking' ? 'SPEAKING' : 'READY')
     + (inCall && secondsLeft !== undefined ? ` · ${secondsLeft}s` : '');
   const idleNote = mode === 'live'
-    ? 'A live call with Bee on OpenAI\'s realtime voice. Talk naturally and interrupt it any time; it hangs up after 90 seconds.'
+    ? 'A live call on OpenAI\'s realtime voice. Talk naturally and interrupt it any time; it hangs up after 90 seconds.'
     : mode === 'openai'
-    ? 'A live demo: OpenAI hears you and Bee answers. It sends when you stop talking. The real thing does the work.'
+    ? 'A live demo: OpenAI hears you and YASHAYAH answers. It sends when you stop talking. The real thing does the work.'
     : 'A demo in your browser: scripted answers, nothing sent anywhere. The real thing runs on your key.';
 
   return (
     <div className={`mock-voice live-voice ${phase}`}>
-      <div className="mock-voice-top"><span>BEE // VOICE LINK</span><span className={live ? 'mock-voice-live' : 'mock-voice-idle'}>{status}</span></div>
+      <div className="mock-voice-top"><span>VOICE LINK</span><span className={live ? 'mock-voice-live' : 'mock-voice-idle'}>{status}</span></div>
       <div className="mock-voice-orb"><span className="mock-voice-ring" /><span className="mock-voice-core" style={{ transform: `scale(${1 + level * 0.35})` }} /></div>
       <div className="mock-voice-bars" aria-hidden>
         {Array.from({ length: BARS }, (_, i) => {
@@ -465,7 +479,7 @@ export function LandingVoice() {
 function Line({ line }: { line: Line }) {
   return (
     <>
-      <span>{line.who === 'you' ? 'you' : 'bee'}</span>
+      <span>{line.who === 'you' ? 'you' : 'yashayah'}</span>
       <p>{line.text}</p>
     </>
   );

@@ -1,5 +1,5 @@
 /**
- * The landing page's voice demo: a recording in, what was heard and Bee's
+ * The landing page's voice demo: a recording in, what was heard and YASHAYAH's
  * answer out. Public, so it is limited — see `runDemoTurn`.
  */
 import { errorResponse, ok } from '@/lib/http';

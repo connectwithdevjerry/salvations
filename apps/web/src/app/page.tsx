@@ -180,7 +180,7 @@ export default async function Home() {
           <p className="land-sub">
             Open the Speak tab, press Start, and talk. It listens, answers in its own voice, and writes
             down everything it heard and said. The same assistant, the same memory, the same approvals.
-            Try the console here: press Start and ask Bee what it can do for you.
+            Try the console here: press Start and ask it what it can do for you.
           </p>
           <ul className="land-ticks">
             <li><Icon name="mic" size={16} /><span><strong>Hands free.</strong> Ask for the morning summary while you make the coffee.</span></li>
@@ -285,7 +285,7 @@ export default async function Home() {
         <div className="land-plans">
           <div className="land-plan">
             <p className="kicker">Do it yourself</p>
-            <p className="land-price">${plan === undefined ? 67 : Math.round(plan.amountCents / 100)}<span>/month</span></p>
+            <p className="land-price">${plan === undefined ? 67 : Math.round(plan.amountCents / 100)}<span>/ month</span></p>
             <p className="muted">{plan?.tagline ?? 'One subscription, assistants that stay online.'}</p>
             <ul>
               {(plan?.features ?? []).map((f) => <li key={f}><Icon name="check" size={14} />{f}</li>)}

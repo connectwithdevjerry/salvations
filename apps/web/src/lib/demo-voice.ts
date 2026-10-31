@@ -2,7 +2,7 @@
  * The landing page's voice demo, on OpenAI.
  *
  * A visitor who has not signed up yet presses Start, says something, and
- * hears Bee answer. It runs on the deployment's own OpenAI key: the one set
+ * hears YASHAYAH answer. It runs on the deployment's own OpenAI key: the one set
  * for it under Deployment settings → Landing page voice, or else Yashayah's
  * when Yashayah runs on OpenAI. A stranger is spending somebody else's money,
  * so everything about it is small:
@@ -39,7 +39,7 @@ export const DEMO_TURNS_PER_DAY = 400;
  * a minute to start the call; the deployment's key never leaves the server.
  */
 export const LIVE_DEFAULT_MODEL = 'gpt-realtime';
-export const LIVE_DEFAULT_VOICE = 'marin';
+export const LIVE_DEFAULT_VOICE = 'cedar';
 export const LIVE_MAX_SECONDS = 90;
 export const LIVE_CALLS_PER_VISITOR_PER_HOUR = 4;
 export const LIVE_CALLS_PER_DAY = 150;
@@ -50,7 +50,9 @@ const HOUR_MS = 3_600_000;
 const DAY_MS = 86_400_000;
 
 const PERSONA = [
-  'You are Bee, the voice of YASHAYAH, speaking with a visitor on the landing page.',
+  'You are the voice of YASHAYAH, speaking with a visitor on the landing page.',
+  'You sound like a composed British AI butler: a calm, low, measured voice with a refined English accent,',
+  'impeccably courteous, quietly confident and precise, with a dry, understated wit. Never gushing, never salesy.',
   'YASHAYAH gives a small business a team of AI assistants that work in the tools it already uses:',
   'Telegram, WhatsApp, Slack, Gmail, Calendar, Drive, Instagram and more. Each assistant has a job, remembers how',
   'the business likes things done, and asks before it does anything that changes something.',
@@ -145,7 +147,7 @@ async function answerOf(provider: AgentProvider, said: string): Promise<string> 
     tools: [],
     toolChoice: 'none',
     maxOutputTokens: 220,
-    metadata: { runId: 'demo', workspaceId: 'platform', agentId: 'bee-demo' },
+    metadata: { runId: 'demo', workspaceId: 'platform', agentId: 'landing-demo' },
   } as unknown as GenerationRequest;
 
   let text = '';

@@ -39,7 +39,7 @@ export const DEMO_TURNS_PER_DAY = 400;
  * a minute to start the call; the deployment's key never leaves the server.
  */
 export const LIVE_DEFAULT_MODEL = 'gpt-realtime';
-export const LIVE_DEFAULT_VOICE = 'cedar';
+export const LIVE_DEFAULT_VOICE = 'ballad';
 export const LIVE_MAX_SECONDS = 90;
 export const LIVE_CALLS_PER_VISITOR_PER_HOUR = 4;
 export const LIVE_CALLS_PER_DAY = 150;
@@ -165,7 +165,19 @@ export type LiveOutcome =
   | { readonly kind: 'refused'; readonly status: number; readonly code: string; readonly message: string; readonly detail?: string };
 
 /** The spoken persona, for a conversation rather than one question. */
-const LIVE_PERSONA = `${PERSONA} You are in a live voice conversation: keep each turn short, let the visitor interrupt, and ask one question back now and then about their business. The call ends by itself after ${LIVE_MAX_SECONDS} seconds; if it comes up, say they can keep talking to their own assistant once they sign up.`;
+/**
+ * How the live voice speaks, as opposed to what it says. The realtime model
+ * follows delivery instructions, so the accent is asked for here.
+ */
+const DELIVERY = [
+  'Delivery: speak in a distinctly British accent, received pronunciation, the voice of an English butler.',
+  'Low, smooth and unhurried, at a measured pace with small pauses between thoughts. Crisp consonants,',
+  'non-rhotic vowels: "rather" and "certainly" sound English, never American. Calm and even, never excited;',
+  'let the wit come through in a slightly dry, understated tone. Address the visitor as "sir" or "madam" only',
+  'when they have said which they prefer; otherwise no form of address.',
+].join(' ');
+
+const LIVE_PERSONA = `${PERSONA} ${DELIVERY} You are in a live voice conversation: keep each turn short, let the visitor interrupt, and ask one question back now and then about their business. The call ends by itself after ${LIVE_MAX_SECONDS} seconds; if it comes up, say they can keep talking to their own assistant once they sign up.`;
 
 /**
  * Mints a short-lived key for one live call.

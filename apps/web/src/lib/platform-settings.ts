@@ -91,7 +91,7 @@ export const PLATFORM_SETTINGS: readonly PlatformSettingSpec[] = [
 
   { key: 'landing_voice_openai_key', env: 'LANDING_VOICE_OPENAI_KEY', label: 'OpenAI API key', help: 'Checked with OpenAI before it is kept. Visitors to the landing page spend it, within the limits above.', secret: true, group: 'voice', placeholder: 'sk-…' },
   { key: 'landing_voice_realtime_model', env: 'LANDING_VOICE_REALTIME_MODEL', label: 'Live voice model', help: 'The OpenAI Realtime model visitors talk to, speech to speech. Empty means gpt-realtime. If OpenAI refuses it, the console falls back to hearing, then answering.', secret: false, group: 'voice', placeholder: 'gpt-realtime' },
-  { key: 'landing_voice_voice', env: 'LANDING_VOICE_VOICE', label: 'Voice', help: 'The voice Jarvis speaks with on the live call. Empty means cedar.', secret: false, group: 'voice', placeholder: 'cedar', options: REALTIME_VOICES.map((v) => ({ value: v, label: v.charAt(0).toUpperCase() + v.slice(1) })) },
+  { key: 'landing_voice_voice', env: 'LANDING_VOICE_VOICE', label: 'Voice', help: 'The voice Jarvis speaks with on the live call. Empty means ballad.', secret: false, group: 'voice', placeholder: 'ballad', options: REALTIME_VOICES.map((v) => ({ value: v, label: v.charAt(0).toUpperCase() + v.slice(1) })) },
 
   { key: 'telegram_bot_token', env: 'TELEGRAM_BOT_TOKEN', label: 'Bot token', help: 'The line BotFather sends after "Use this token to access the HTTP API". Rotating it here updates every connected chat within a day.', secret: true, group: 'telegram', placeholder: '123456789:AA…' },
 

@@ -15,6 +15,7 @@ import { db } from '@/lib/db';
 import { keyProvider } from '@/lib/keys';
 import { providers } from '@/lib/singletons';
 import { DISCORD_ONE_PRESS } from '@/lib/discord-app';
+import { verifyFishKey } from '@/lib/fish-voice';
 import {
   PLATFORM_SETTINGS, SETTING_GROUPS, describePlatformSettings, invalidatePlatformSettings, isPlatformAdmin, settingSpec,
 } from '@/lib/platform-settings';
@@ -66,6 +67,14 @@ export const PUT = userRoute(async (request, userId) => {
       return errorResponse(422, 'validation_failed', check.kind === 'rejected'
         ? 'OpenAI did not accept that key. Check it was copied whole.'
         : 'Could not reach OpenAI to check that key. Try again in a moment.');
+    }
+  }
+  if (spec.key === 'landing_voice_fish_key') {
+    const check = await verifyFishKey(input.value);
+    if (check !== 'ok') {
+      return errorResponse(422, 'validation_failed', check === 'rejected'
+        ? 'Fish Audio did not accept that key. Check it was copied whole.'
+        : 'Could not reach Fish Audio to check that key. Try again in a moment.');
     }
   }
   await new PlatformSettingsRepository(handle.db, keyProvider()).set(spec.key, input.value, { secret: spec.secret, updatedBy: userId });

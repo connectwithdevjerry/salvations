@@ -5,14 +5,19 @@
 import { errorResponse, ok } from '@/lib/http';
 import { db } from '@/lib/db';
 import { DEMO_MAX_AUDIO_BYTES, demoKey, runDemoTurn, visitorKey } from '@/lib/demo-voice';
+import { fishSpeech, fishVoice } from '@/lib/fish-voice';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-/** Whether the demo runs on OpenAI, so the console knows which way to listen. */
+/**
+ * Whether the demo runs on OpenAI, so the console knows which way to listen,
+ * and whether Fish speaks the answers, which rules out the live call.
+ */
 export async function GET(): Promise<Response> {
   try {
-    return ok({ available: (await demoKey()) !== undefined });
+    const [key, fish] = await Promise.all([demoKey(), fishVoice()]);
+    return ok({ available: key !== undefined, speaks: fish === undefined ? 'openai' : 'fish' });
   } catch (error) {
     return errorResponse.fromUnknown(error);
   }
@@ -38,7 +43,10 @@ export async function POST(request: Request): Promise<Response> {
       if (outcome.detail !== undefined) console.error(JSON.stringify({ at: 'demo-voice', detail: outcome.detail }));
       return errorResponse(outcome.status, outcome.code, outcome.message);
     }
-    return ok({ transcript: outcome.transcript, answer: outcome.answer });
+    // Spoken only once there is an answer; without speech the browser reads it out.
+    const fish = await fishVoice();
+    const speech = fish === undefined ? undefined : await fishSpeech(outcome.answer, fish);
+    return ok({ transcript: outcome.transcript, answer: outcome.answer, ...(speech === undefined ? {} : { audio: speech.audio, audioType: speech.mimeType }) });
   } catch (error) {
     return errorResponse.fromUnknown(error);
   }

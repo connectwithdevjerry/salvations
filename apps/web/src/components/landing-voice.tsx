@@ -16,7 +16,9 @@ import { answerFor } from '@/lib/client/landing-brain';
  * When the deployment holds an OpenAI key for it
  * (Deployment settings → Landing page voice, or Yashayah's own when that runs
  * on OpenAI), the recording goes to /api/demo/voice: OpenAI hears it, Jarvis
- * answers, and the browser reads the answer out. That works in every browser
+ * answers, and the browser reads the answer out — or, when the deployment
+ * holds a Fish Audio voice, plays it in that voice, which is why a Fish voice
+ * rules out the live call. That works in every browser
  * with a microphone, Firefox included, and stops by itself when the visitor
  * goes quiet.
  *
@@ -94,12 +96,18 @@ export function LandingVoice() {
   const call = useRef<{ pc: RTCPeerConnection; audio: HTMLAudioElement; stream: MediaStream; timer: ReturnType<typeof setInterval> }>(null);
   const [inCall, setInCall] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState<number>();
+  const [fish, setFish] = useState(false);
+  const playing = useRef<HTMLAudioElement>(null);
 
   useEffect(() => {
     const fallback = (): Mode => (recognitionCtor() !== undefined ? 'browser' : 'none');
     fetch('/api/demo/voice', { cache: 'no-store' })
-      .then((r) => (r.ok ? r.json() as Promise<{ available?: boolean }> : { available: false }))
-      .then((body) => setMode(body.available === true && canRecord() ? (canCall() ? 'live' : 'openai') : fallback()))
+      .then((r) => (r.ok ? r.json() as Promise<{ available?: boolean; speaks?: string }> : { available: false }))
+      .then((body) => {
+        const fishSpeaks = 'speaks' in body && body.speaks === 'fish';
+        setFish(fishSpeaks);
+        setMode(body.available === true && canRecord() ? (canCall() && !fishSpeaks ? 'live' : 'openai') : fallback());
+      })
       .catch(() => setMode(fallback()));
   }, []);
 
@@ -155,6 +163,25 @@ export function LandingVoice() {
     speechSynthesis.speak(utterance);
   }, []);
 
+  const hush = useCallback(() => {
+    if (typeof speechSynthesis !== 'undefined') speechSynthesis.cancel();
+    const p = playing.current;
+    playing.current = null;
+    if (p !== null) { p.pause(); p.src = ''; }
+  }, []);
+
+  /** Fish's recording of the answer; the browser's own voice if it will not play. */
+  const play = useCallback((audio: string, type: string, text: string) => {
+    hush();
+    setPhase('speaking');
+    const player = new Audio(`data:${type};base64,${audio}`);
+    playing.current = player;
+    const done = () => { if (playing.current === player) { playing.current = null; setPhase('idle'); } };
+    player.onended = done;
+    player.onerror = () => { if (playing.current === player) { playing.current = null; speak(text); } };
+    player.play().catch(() => { if (playing.current === player) { playing.current = null; speak(text); } });
+  }, [hush, speak]);
+
   const heard = useCallback((said: string, answer: string) => {
     setLines((current) => [...current.slice(-4), { who: 'you', text: said }, { who: 'hive', text: answer }]);
   }, []);
@@ -174,7 +201,7 @@ export function LandingVoice() {
       form.set('audio', new File([blob], `speech.${extension}`, { type: blob.type }));
       const response = await fetch('/api/demo/voice', { method: 'POST', body: form });
       const body = await response.json().catch(() => undefined) as
-        { transcript?: string; answer?: string; error?: { message?: string } } | undefined;
+        { transcript?: string; answer?: string; audio?: string; audioType?: string; error?: { message?: string } } | undefined;
       if (!response.ok || body?.answer === undefined) {
         setPhase('idle');
         setNote(body?.error?.message ?? 'The demo did not answer. Try again in a moment.');
@@ -183,12 +210,13 @@ export function LandingVoice() {
         return;
       }
       heard(body.transcript ?? '', body.answer);
-      speak(body.answer);
+      if (body.audio !== undefined) play(body.audio, body.audioType ?? 'audio/mpeg', body.answer);
+      else speak(body.answer);
     } catch {
       setPhase('idle');
       setNote('Could not reach the demo. Check your connection and try again.');
     }
-  }, [heard, speak]);
+  }, [heard, play, speak]);
 
   const finishRecording = useCallback(() => {
     if (cutoff.current !== null) { clearTimeout(cutoff.current); cutoff.current = null; }
@@ -402,11 +430,11 @@ export function LandingVoice() {
 
   const start = useCallback(() => {
     setNote(undefined);
-    if (typeof speechSynthesis !== 'undefined') speechSynthesis.cancel();
+    hush();
     if (mode === 'live') void startCall();
     else if (mode === 'openai') void startRecording();
     else if (mode === 'browser') startRecognition();
-  }, [mode, startCall, startRecording, startRecognition]);
+  }, [hush, mode, startCall, startRecording, startRecognition]);
 
   /** Stop listening. On OpenAI that sends what was said; in the browser it abandons it. */
   const stop = useCallback(() => {
@@ -415,9 +443,9 @@ export function LandingVoice() {
     recognition.current?.abort();
     recognition.current = null;
     stopMeter();
-    if (typeof speechSynthesis !== 'undefined') speechSynthesis.cancel();
+    hush();
     setPhase('idle');
-  }, [endCall, finishRecording, stopMeter]);
+  }, [endCall, finishRecording, hush, stopMeter]);
 
   useEffect(() => () => {
     if (call.current !== null) {
@@ -430,8 +458,8 @@ export function LandingVoice() {
     if (recorder.current !== null) { recorder.current.onstop = null; if (recorder.current.state !== 'inactive') recorder.current.stop(); }
     recognition.current?.abort();
     stopMeter();
-    if (typeof speechSynthesis !== 'undefined') speechSynthesis.cancel();
-  }, [stopMeter]);
+    hush();
+  }, [hush, stopMeter]);
 
   const live = phase === 'listening' || inCall;
   const status = (phase === 'listening' ? 'LISTENING' : phase === 'thinking' ? (mode === 'live' ? 'CONNECTING' : 'THINKING') : phase === 'speaking' ? 'SPEAKING' : 'READY')
@@ -439,7 +467,9 @@ export function LandingVoice() {
   const idleNote = mode === 'live'
     ? 'A live call with Jarvis on OpenAI\'s realtime voice. Talk naturally and interrupt it any time; it hangs up after 90 seconds.'
     : mode === 'openai'
-    ? 'A live demo: OpenAI hears you and Jarvis answers. It sends when you stop talking. The real thing does the work.'
+    ? (fish
+      ? 'A live demo: OpenAI hears you and Jarvis answers aloud. It sends when you stop talking. The real thing does the work.'
+      : 'A live demo: OpenAI hears you and Jarvis answers. It sends when you stop talking. The real thing does the work.')
     : 'A demo in your browser: scripted answers, nothing sent anywhere. The real thing runs on your key.';
 
   return (

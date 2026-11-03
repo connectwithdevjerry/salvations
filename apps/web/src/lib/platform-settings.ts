@@ -44,7 +44,7 @@ export interface VendorAddress { readonly label: string; readonly path: string; 
 export const SETTING_GROUPS: Readonly<Record<SettingGroup, { title: string; lede: string; addresses: readonly VendorAddress[] }>> = {
   ai: { title: 'Yashayah', lede: 'The included model: the third option beside Claude and OpenAI, for people who want to work without connecting a key of their own. The deployment pays the vendor; each workspace gets a monthly allowance.', addresses: [] },
   voice: {
-    title: 'Landing page voice', lede: 'The OpenAI key the voice console on the front page runs on: OpenAI hears the visitor and Jarvis answers. Each visitor gets a few questions an hour and the site a few hundred a day. Empty uses the Yashayah key when Yashayah runs on OpenAI; with neither, the console falls back to scripted answers in the browser.',
+    title: 'Landing page voice', lede: 'The OpenAI key the voice console on the front page runs on: OpenAI hears the visitor and Jarvis answers. Each visitor gets a few questions an hour and the site a few hundred a day. Empty uses the Yashayah key when Yashayah runs on OpenAI; with neither, the console falls back to scripted answers in the browser. With a Fish key and voice, Fish speaks the answers.',
     addresses: [],
   },
   telegram: {
@@ -92,6 +92,9 @@ export const PLATFORM_SETTINGS: readonly PlatformSettingSpec[] = [
   { key: 'landing_voice_openai_key', env: 'LANDING_VOICE_OPENAI_KEY', label: 'OpenAI API key', help: 'Checked with OpenAI before it is kept. Visitors to the landing page spend it, within the limits above.', secret: true, group: 'voice', placeholder: 'sk-…' },
   { key: 'landing_voice_realtime_model', env: 'LANDING_VOICE_REALTIME_MODEL', label: 'Live voice model', help: 'The OpenAI Realtime model visitors talk to, speech to speech. Empty means gpt-realtime. If OpenAI refuses it, the console falls back to hearing, then answering.', secret: false, group: 'voice', placeholder: 'gpt-realtime' },
   { key: 'landing_voice_voice', env: 'LANDING_VOICE_VOICE', label: 'Voice', help: 'The voice Jarvis speaks with on the live call. Empty means ballad.', secret: false, group: 'voice', placeholder: 'ballad', options: REALTIME_VOICES.map((v) => ({ value: v, label: v.charAt(0).toUpperCase() + v.slice(1) })) },
+  { key: 'landing_voice_fish_key', env: 'FISH_API_KEY', label: 'Fish Audio API key', help: 'With a Fish voice below, Fish reads Jarvis\'s answers aloud instead of OpenAI\'s live call: OpenAI still hears the visitor and writes the answer. Checked with Fish before it is kept.', secret: true, group: 'voice', placeholder: 'sk-fish-…' },
+  { key: 'landing_voice_fish_voice', env: 'FISH_VOICE_ID', label: 'Fish voice', help: 'The id of the Fish voice model, from its page on fish.audio (fish.audio/m/<id>). Use a voice you are licensed to use commercially, not a clone of a real person without their consent.', secret: false, group: 'voice', placeholder: 'voice model id' },
+  { key: 'landing_voice_fish_model', env: 'FISH_TTS_MODEL', label: 'Fish model', help: 'The Fish speech model. Empty means s2.1-pro-free, the one a key with no paid credit can use; s2.1-pro once the account has API credit.', secret: false, group: 'voice', placeholder: 's2.1-pro-free' },
 
   { key: 'telegram_bot_token', env: 'TELEGRAM_BOT_TOKEN', label: 'Bot token', help: 'The line BotFather sends after "Use this token to access the HTTP API". Rotating it here updates every connected chat within a day.', secret: true, group: 'telegram', placeholder: '123456789:AA…' },
 

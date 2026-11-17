@@ -24,7 +24,8 @@ import { platformAi } from './platform-ai';
 import { fileNameFor, plainFailure } from './transcribe';
 
 export const DEMO_TRANSCRIBE_MODEL = 'gpt-4o-mini-transcribe';
-export const DEMO_ANSWER_MODEL = 'gpt-4.1';
+/** Two or three spoken sentences: the small model writes them as well, and sooner. */
+export const DEMO_ANSWER_MODEL = 'gpt-4.1-mini';
 
 /** About twenty seconds of compressed speech. A question, not a monologue. */
 export const DEMO_MAX_AUDIO_BYTES = 1024 * 1024;

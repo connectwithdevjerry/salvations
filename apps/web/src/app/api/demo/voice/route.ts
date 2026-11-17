@@ -5,7 +5,8 @@
 import { errorResponse, ok } from '@/lib/http';
 import { db } from '@/lib/db';
 import { DEMO_MAX_AUDIO_BYTES, demoKey, runDemoTurn, visitorKey } from '@/lib/demo-voice';
-import { fishSpeech, fishVoice } from '@/lib/fish-voice';
+import { env } from '@/lib/env';
+import { fishVoice, speechTicket } from '@/lib/fish-voice';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -43,10 +44,9 @@ export async function POST(request: Request): Promise<Response> {
       if (outcome.detail !== undefined) console.error(JSON.stringify({ at: 'demo-voice', detail: outcome.detail }));
       return errorResponse(outcome.status, outcome.code, outcome.message);
     }
-    // Spoken only once there is an answer; without speech the browser reads it out.
-    const fish = await fishVoice();
-    const speech = fish === undefined ? undefined : await fishSpeech(outcome.answer, fish);
-    return ok({ transcript: outcome.transcript, answer: outcome.answer, ...(speech === undefined ? {} : { audio: speech.audio, audioType: speech.mimeType }) });
+    // The text now, and a ticket the browser plays the speech with as Fish makes it.
+    const speech = (await fishVoice()) === undefined ? undefined : speechTicket(outcome.answer, env().INTERNAL_HMAC_SECRET);
+    return ok({ transcript: outcome.transcript, answer: outcome.answer, ...(speech === undefined ? {} : { speech }) });
   } catch (error) {
     return errorResponse.fromUnknown(error);
   }

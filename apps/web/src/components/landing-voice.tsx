@@ -78,7 +78,7 @@ const BARS = 32;
 /** A question, not a monologue; the endpoint refuses much more. */
 const MAX_RECORDING_MS = 15_000;
 /** Once the visitor has spoken, this much quiet sends what they said. */
-const QUIET_MS = 1_400;
+const QUIET_MS = 1_000;
 const SPEAKING_LEVEL = 0.12;
 const QUIET_LEVEL = 0.05;
 
@@ -170,11 +170,11 @@ export function LandingVoice() {
     if (p !== null) { p.pause(); p.src = ''; }
   }, []);
 
-  /** Fish's recording of the answer; the browser's own voice if it will not play. */
-  const play = useCallback((audio: string, type: string, text: string) => {
+  /** Fish's speech, played as it streams in; the browser's own voice if it will not play. */
+  const play = useCallback((ticket: string, text: string) => {
     hush();
     setPhase('speaking');
-    const player = new Audio(`data:${type};base64,${audio}`);
+    const player = new Audio(`/api/demo/voice/speak?t=${encodeURIComponent(ticket)}`);
     playing.current = player;
     const done = () => { if (playing.current === player) { playing.current = null; setPhase('idle'); } };
     player.onended = done;
@@ -201,7 +201,7 @@ export function LandingVoice() {
       form.set('audio', new File([blob], `speech.${extension}`, { type: blob.type }));
       const response = await fetch('/api/demo/voice', { method: 'POST', body: form });
       const body = await response.json().catch(() => undefined) as
-        { transcript?: string; answer?: string; audio?: string; audioType?: string; error?: { message?: string } } | undefined;
+        { transcript?: string; answer?: string; speech?: string; error?: { message?: string } } | undefined;
       if (!response.ok || body?.answer === undefined) {
         setPhase('idle');
         setNote(body?.error?.message ?? 'The demo did not answer. Try again in a moment.');
@@ -210,7 +210,7 @@ export function LandingVoice() {
         return;
       }
       heard(body.transcript ?? '', body.answer);
-      if (body.audio !== undefined) play(body.audio, body.audioType ?? 'audio/mpeg', body.answer);
+      if (body.speech !== undefined) play(body.speech, body.answer);
       else speak(body.answer);
     } catch {
       setPhase('idle');

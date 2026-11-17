@@ -18,6 +18,8 @@ const FISH_TTS_URL = 'https://api.fish.audio/v1/tts';
 export const FISH_DEFAULT_MODEL = 's2.1-pro-free';
 const FISH_TIMEOUT_MS = 15_000;
 const SPEECH_TICKET_MS = 60_000;
+/** Raw 16-bit mono samples at this rate: the browser plays them as they arrive. */
+export const FISH_SAMPLE_RATE = 24_000;
 
 export interface FishVoice { readonly apiKey: string; readonly voiceId: string; readonly model: string }
 
@@ -32,7 +34,7 @@ export async function fishVoice(): Promise<FishVoice | undefined> {
 export function fishSpeechRequest(text: string, voice: FishVoice): { headers: Record<string, string>; body: Record<string, unknown> } {
   return {
     headers: { 'content-type': 'application/json', model: voice.model },
-    body: { text, reference_id: voice.voiceId, format: 'mp3', mp3_bitrate: 64, latency: 'low', language: 'en' },
+    body: { text, reference_id: voice.voiceId, format: 'pcm', sample_rate: FISH_SAMPLE_RATE, latency: 'low', language: 'en' },
   };
 }
 

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { answerFor } from '@/lib/client/landing-brain';
+import { playPcmStream, type PcmPlayback } from '@/lib/client/pcm-stream';
 
 /**
  * The voice console on the front door, live.
@@ -97,7 +98,8 @@ export function LandingVoice() {
   const [inCall, setInCall] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState<number>();
   const [fish, setFish] = useState(false);
-  const playing = useRef<HTMLAudioElement>(null);
+  const playing = useRef<{ controller: AbortController; playback?: PcmPlayback }>(null);
+  const audio = useRef<AudioContext>(null);
 
   useEffect(() => {
     const fallback = (): Mode => (recognitionCtor() !== undefined ? 'browser' : 'none');
@@ -167,19 +169,39 @@ export function LandingVoice() {
     if (typeof speechSynthesis !== 'undefined') speechSynthesis.cancel();
     const p = playing.current;
     playing.current = null;
-    if (p !== null) { p.pause(); p.src = ''; }
+    if (p !== null) { p.controller.abort(); p.playback?.stop(); }
   }, []);
 
-  /** Fish's speech, played as it streams in; the browser's own voice if it will not play. */
+  /**
+   * Readies Web Audio while a press is under way: phones only let a page make
+   * sound from a context started by the visitor's own touch.
+   */
+  const readyAudio = useCallback(() => {
+    if (typeof AudioContext === 'undefined') return;
+    audio.current ??= new AudioContext();
+    if (audio.current.state === 'suspended') void audio.current.resume().catch(() => undefined);
+  }, []);
+
+  /** Fish's speech, played piece by piece as it streams in; the browser's own voice if it will not play. */
   const play = useCallback((ticket: string, text: string) => {
     hush();
+    const context = audio.current;
+    if (context === null) { speak(text); return; }
     setPhase('speaking');
-    const player = new Audio(`/api/demo/voice/speak?t=${encodeURIComponent(ticket)}`);
-    playing.current = player;
-    const done = () => { if (playing.current === player) { playing.current = null; setPhase('idle'); } };
-    player.onended = done;
-    player.onerror = () => { if (playing.current === player) { playing.current = null; speak(text); } };
-    player.play().catch(() => { if (playing.current === player) { playing.current = null; speak(text); } });
+    const entry: { controller: AbortController; playback?: PcmPlayback } = { controller: new AbortController() };
+    playing.current = entry;
+    fetch(`/api/demo/voice/speak?t=${encodeURIComponent(ticket)}`, { signal: entry.controller.signal, cache: 'no-store' })
+      .then((response) => {
+        if (!response.ok || response.body === null) throw new Error(`speech ${response.status}`);
+        entry.playback = playPcmStream(context, response.body, Number(response.headers.get('x-sample-rate')) || 24_000);
+        return entry.playback.finished;
+      })
+      .then((played) => {
+        if (playing.current !== entry) return;
+        playing.current = null;
+        if (played) setPhase('idle'); else speak(text);
+      })
+      .catch(() => { if (playing.current === entry) { playing.current = null; speak(text); } });
   }, [hush, speak]);
 
   const heard = useCallback((said: string, answer: string) => {
@@ -431,10 +453,11 @@ export function LandingVoice() {
   const start = useCallback(() => {
     setNote(undefined);
     hush();
+    if (fish) readyAudio();
     if (mode === 'live') void startCall();
     else if (mode === 'openai') void startRecording();
     else if (mode === 'browser') startRecognition();
-  }, [hush, mode, startCall, startRecording, startRecognition]);
+  }, [fish, hush, mode, readyAudio, startCall, startRecording, startRecognition]);
 
   /** Stop listening. On OpenAI that sends what was said; in the browser it abandons it. */
   const stop = useCallback(() => {
@@ -459,6 +482,7 @@ export function LandingVoice() {
     recognition.current?.abort();
     stopMeter();
     hush();
+    void audio.current?.close().catch(() => undefined);
   }, [hush, stopMeter]);
 
   const live = phase === 'listening' || inCall;

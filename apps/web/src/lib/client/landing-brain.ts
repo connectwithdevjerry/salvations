@@ -27,7 +27,7 @@ const ANSWERS: readonly Answer[] = [
   },
   {
     when: /\b(price|pricing|cost|how much|pay|subscription|trial|free)\b/i,
-    say: `${price} for the workspace, with ten days free and no card to start. Your own Claude or OpenAI key is on top, and you pay that provider directly.`,
+    say: `${price} for the workspace, with three days free and no card to start. Your own Claude or OpenAI key is on top, and you pay that provider directly.`,
   },
   {
     when: /\b(telegram|whatsapp|imessage|slack|discord|channel|text|message|chat|phone|where)\b/i,
@@ -59,7 +59,7 @@ const ANSWERS: readonly Answer[] = [
   },
   {
     when: /\b(start|sign ?up|begin|try|get started|how do i)\b/i,
-    say: 'Press Start free at the top. Ten days, no card. The one-minute walkthrough runs on your first visit.',
+    say: 'Press Start free at the top. Three days, no card. The one-minute walkthrough runs on your first visit.',
   },
   {
     when: /\b(who (made|built|is behind)|company|yashayah\.ai)\b/i,

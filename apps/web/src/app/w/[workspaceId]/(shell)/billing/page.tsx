@@ -10,7 +10,7 @@ import { daysLeft, type PlanState } from '@/lib/client/use-plan';
 /**
  * The plan.
  *
- * Two ways in: a free trial, ten days from the click with no card asked for,
+ * Two ways in: a free trial, three days from the click with no card asked for,
  * or a subscription. Card details never touch this page. The Subscribe button
  * starts a session with the processor and sends the browser there; what comes
  * back is an identifier. Accepting a card number anywhere in this codebase

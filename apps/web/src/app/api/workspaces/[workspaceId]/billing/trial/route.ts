@@ -1,7 +1,7 @@
 /**
  * The free trial.
  *
- * Ten days from the click, no card asked for, once per workspace. The
+ * Three days from the click, no card asked for, once per workspace. The
  * repository refuses a second one by construction, so a double click or a
  * replayed request changes nothing.
  */

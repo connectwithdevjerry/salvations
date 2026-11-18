@@ -29,7 +29,7 @@ export function usePlan(workspaceId: string): PlanStatus | undefined {
     api.get<PlanStatus>(`${ws(workspaceId)}/billing`)
       .then((result) => { if (live) setPlan(result); })
       .catch(() => {
-        if (live) setPlan({ configured: false, active: true, state: 'exempt', trialDays: 10, canStartTrial: false });
+        if (live) setPlan({ configured: false, active: true, state: 'exempt', trialDays: 3, canStartTrial: false });
       });
     return () => { live = false; };
   }, [workspaceId]);

@@ -3,7 +3,7 @@
  *
  * Three ways in: a subscription the processor confirmed, a free trial the
  * workspace started itself, or an exemption the operator granted. Nothing
- * else runs an assistant. A trial is ten days from the click, no card asked
+ * else runs an assistant. A trial is three days from the click, no card asked
  * for, and it is used once.
  *
  * What a failed payment does: nothing yet. `past_due` keeps working while the
@@ -14,7 +14,7 @@ import { planById, DEFAULT_PLAN_ID, type Plan } from '@salvations/catalog';
 import type { Subscription } from './port';
 
 /** How long a free trial lasts, from the moment it is started. */
-export const TRIAL_DAYS = 10;
+export const TRIAL_DAYS = 3;
 
 export type EntitlementState =
   /** The operator said so: nothing is counted and nothing refused. */
@@ -71,7 +71,7 @@ export function entitlementsOf(subscription: Subscription | undefined): Entitlem
 /**
  * A trial, while it lasts.
  *
- * It grants the default plan's limits, so what somebody builds in ten days is
+ * It grants the default plan's limits, so what somebody builds in three days is
  * what the plan will hold afterwards, and nothing has to be taken away on the
  * day they pay.
  */

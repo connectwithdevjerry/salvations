@@ -139,8 +139,8 @@ describe('entitlements', () => {
   });
 
   it('tells a workspace that never started what to do', () => {
-    expect(withinLimit(entitlementsOf(undefined), 'agents', 0).reason).toMatch(/Start your 10-day free trial/);
-    expect(TRIAL_DAYS).toBe(10);
+    expect(withinLimit(entitlementsOf(undefined), 'agents', 0).reason).toMatch(/Start your 3-day free trial/);
+    expect(TRIAL_DAYS).toBe(3);
   });
 
   it('keeps a past_due workspace running', () => {

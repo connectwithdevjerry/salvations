@@ -8,7 +8,7 @@
  * prove them.
  */
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { MongoClient, type Db } from 'mongodb';
+import { MongoClient, ObjectId, type Db } from 'mongodb';
 import { syncIndexes } from '../indexes';
 import { ScopedDb } from '../scoped';
 import type { McpCapabilityDoc } from '../documents';
@@ -86,5 +86,37 @@ describe.skipIf(URI === undefined || URI === '')('capabilities against a real da
     expect(after?.approval.state).toBe('pending');
     expect(after?.approval.approvedBy).toBe('usr_1');
     expect(after?.firstSeenAt).toEqual(before?.firstSeenAt);
+  });
+
+  it('gives a new capability its own string id', async () => {
+    await repo.reconcile('mcb_1', 'workspace', [tool()], new Date());
+    const [row] = await db.collection('mcpCapabilities').find({}).toArray();
+    expect(typeof row?._id).toBe('string');
+    expect(String(row?._id)).toMatch(/^cap_/);
+  });
+
+  it('finds, approves and revokes a capability saved with an ObjectId before ids were minted', async () => {
+    const now = new Date();
+    await repo.reconcile('mcb_1', 'workspace', [tool()], now);
+    const raw = db.collection('mcpCapabilities');
+    const row = await raw.findOne({});
+    const legacy = new ObjectId();
+    await raw.deleteOne({ _id: row?._id } as never);
+    await raw.insertOne({ ...row, _id: legacy } as never);
+
+    const id = legacy.toHexString();
+    const [found] = await repo.findByIds([id]);
+    expect(found?._id).toBe(id);
+    const [listed] = await repo.listForBinding('mcb_1', 'workspace');
+    expect(listed?._id).toBe(id);
+
+    expect(await repo.approve(id, found?.definitionHash as string, 'usr_1', now)).toBe(true);
+    expect((await repo.findByIds([id]))[0]?.approval.state).toBe('approved');
+    await repo.revoke(id);
+    expect((await repo.findByIds([id]))[0]?.approval.state).toBe('revoked');
+
+    // Rediscovery updates the same row rather than adding a second.
+    await repo.reconcile('mcb_1', 'workspace', [tool()], new Date());
+    expect(await raw.countDocuments({})).toBe(1);
   });
 });

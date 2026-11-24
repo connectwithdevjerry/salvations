@@ -73,6 +73,9 @@ function fakeScoped(seed: Record<string, unknown>[] = []) {
       if (v !== null && typeof v === 'object' && '$eq' in (v as object)) {
         return doc[k] === (v as { $eq: unknown }).$eq;
       }
+      if (v !== null && typeof v === 'object' && '$in' in (v as object)) {
+        return (v as { $in: unknown[] }).$in.some((x) => doc[k] === x);
+      }
       return doc[k] === v || (v === null && doc[k] === undefined);
     });
 

@@ -11,7 +11,8 @@
  * tool is still approved, and no cross-document race to reason about.
  */
 import { createHash } from 'node:crypto';
-import { canonicalJson, type DiscoveredCapability } from '@salvations/core';
+import { ObjectId } from 'mongodb';
+import { IdPrefix, canonicalJson, newId, type DiscoveredCapability } from '@salvations/core';
 import type { McpCapabilityDoc } from '../documents';
 import type { ScopedCollection } from '../scoped';
 
@@ -50,6 +51,26 @@ export interface DiscoveryDiff {
   readonly removed: readonly string[];
 }
 
+/**
+ * Every form a capability id may be stored in.
+ *
+ * Rows saved before ids were minted here got MongoDB's own ObjectId, and every
+ * caller holds its id as a string, so a lookup by that string alone never
+ * found them: approving one failed as "no longer exists". Both forms are
+ * asked for until those rows are gone.
+ */
+function storedIds(ids: readonly string[]): unknown[] {
+  return ids.flatMap((id) => (/^[0-9a-f]{24}$/i.test(id) ? [id, new ObjectId(id)] : [id]));
+}
+
+/** A row with its id as the string every caller compares against. */
+const withStringId = (doc: McpCapabilityDoc): McpCapabilityDoc =>
+  (typeof doc._id === 'string' ? doc : { ...doc, _id: String(doc._id) });
+
+/** A second insert of the same capability, lost to a concurrent discovery. */
+const isDuplicateKey = (caught: unknown): boolean =>
+  typeof caught === 'object' && caught !== null && (caught as { code?: unknown }).code === 11000;
+
 export class CapabilityRepository {
   readonly #collection: ScopedCollection<McpCapabilityDoc>;
 
@@ -58,7 +79,7 @@ export class CapabilityRepository {
   }
 
   async listForBinding(bindingId: string, scopeKey: string): Promise<McpCapabilityDoc[]> {
-    return this.#collection.find({ bindingId, scopeKey, removedAt: null });
+    return (await this.#collection.find({ bindingId, scopeKey, removedAt: null })).map(withStringId);
   }
 
   /**
@@ -69,7 +90,7 @@ export class CapabilityRepository {
    * every single step.
    */
   async listForScope(scopeKeys: readonly string[]): Promise<McpCapabilityDoc[]> {
-    return this.#collection.find({ scopeKey: { $in: [...scopeKeys] }, removedAt: null });
+    return (await this.#collection.find({ scopeKey: { $in: [...scopeKeys] }, removedAt: null })).map(withStringId);
   }
 
   /**
@@ -100,7 +121,8 @@ export class CapabilityRepository {
     scopeKey: string,
     canonicalName: string,
   ): Promise<McpCapabilityDoc | null> {
-    return this.#collection.findOne({ bindingId, scopeKey, canonicalName, removedAt: null });
+    const row = await this.#collection.findOne({ bindingId, scopeKey, canonicalName, removedAt: null });
+    return row === null ? null : withStringId(row);
   }
 
   /**
@@ -146,7 +168,7 @@ export class CapabilityRepository {
       else if (prior.definitionHash !== hash) changed.push(cap.canonicalName);
       else unchanged.push(cap.canonicalName);
 
-      await this.#upsert(bindingId, scopeKey, cap, hash, now, options.autoApprove === true);
+      await this.#upsert(bindingId, scopeKey, cap, hash, now, options.autoApprove === true, prior === undefined);
     }
 
     // Anything still in the map was not returned by the server this time.
@@ -171,6 +193,29 @@ export class CapabilityRepository {
     hash: string,
     now: Date,
     autoApprove: boolean,
+    isNew: boolean,
+  ): Promise<void> {
+    const key = { bindingId, scopeKey, kind: cap.kind, name: cap.name };
+    // A new row is given its id here: left to MongoDB it would be an ObjectId,
+    // which no string id from a caller ever matches. If another discovery
+    // inserted it first, the unique key refuses this one and it is updated.
+    if (isNew) {
+      try {
+        await this.#write({ ...key, _id: newId(IdPrefix.mcpCapability) }, cap, hash, now, autoApprove);
+        return;
+      } catch (caught) {
+        if (!isDuplicateKey(caught)) throw caught;
+      }
+    }
+    await this.#write(key, cap, hash, now, autoApprove);
+  }
+
+  async #write(
+    filter: Record<string, unknown>,
+    cap: DiscoveredCapability,
+    hash: string,
+    now: Date,
+    autoApprove: boolean,
   ): Promise<void> {
     // An aggregation-pipeline update, because approval must be decided FROM the
     // stored hash in the same write that replaces it. Expressions in a $set
@@ -184,12 +229,12 @@ export class CapabilityRepository {
     // as nothing. Both are the server's data, and the server does not get to
     // choose how this write is parsed.
     await this.#collection.updateOne(
-      { bindingId, scopeKey, kind: cap.kind, name: cap.name },
+      filter as never,
       [
         {
           $set: {
-            bindingId,
-            scopeKey,
+            bindingId: filter['bindingId'],
+            scopeKey: filter['scopeKey'],
             kind: cap.kind,
             name: { $literal: cap.name },
             canonicalName: { $literal: cap.canonicalName },
@@ -236,7 +281,7 @@ export class CapabilityRepository {
     const result = await this.#collection.updateOne(
       // The hash guard matters: between an operator reading the diff and
       // clicking approve, discovery may have moved the capability again.
-      { _id: capabilityId, definitionHash },
+      { _id: { $in: storedIds([capabilityId]) }, definitionHash } as never,
       { $set: { approval: { state: 'approved', definitionHash, approvedBy: userId, approvedAt: now } } },
     );
     return result.matchedCount === 1;
@@ -244,7 +289,7 @@ export class CapabilityRepository {
 
   async findByIds(capabilityIds: readonly string[]): Promise<McpCapabilityDoc[]> {
     if (capabilityIds.length === 0) return [];
-    return this.#collection.find({ _id: { $in: [...capabilityIds] } } as never);
+    return (await this.#collection.find({ _id: { $in: storedIds(capabilityIds) } } as never)).map(withStringId);
   }
 
   /**
@@ -272,12 +317,12 @@ export class CapabilityRepository {
 
   async revoke(capabilityId: string): Promise<void> {
     await this.#collection.updateOne(
-      { _id: capabilityId },
+      { _id: { $in: storedIds([capabilityId]) } } as never,
       { $set: { 'approval.state': 'revoked' } },
     );
   }
 
   async listPendingApproval(): Promise<McpCapabilityDoc[]> {
-    return this.#collection.find({ 'approval.state': 'pending', removedAt: null } as never);
+    return (await this.#collection.find({ 'approval.state': 'pending', removedAt: null } as never)).map(withStringId);
   }
 }

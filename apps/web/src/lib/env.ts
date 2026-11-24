@@ -199,6 +199,12 @@ const schema = z.object({
    */
   COMPLIMENTARY_WORKSPACES: z.string().optional().transform((raw) =>
     new Set((raw ?? '').split(',').map((id) => id.trim()).filter((id) => id !== ''))),
+  /**
+   * People who are never asked to pay: every workspace they own is free, with
+   * no card asked for. Comma-separated addresses; counted only once verified.
+   */
+  COMPLIMENTARY_EMAILS: z.string().optional().transform((raw) =>
+    new Set((raw ?? '').split(',').map((e) => e.trim().toLowerCase()).filter((e) => e !== ''))),
 
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
 }).refine(

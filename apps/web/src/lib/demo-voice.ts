@@ -24,7 +24,7 @@ import { platformAi } from './platform-ai';
 import { fileNameFor, plainFailure } from './transcribe';
 
 export const DEMO_TRANSCRIBE_MODEL = 'gpt-4o-mini-transcribe';
-/** Two or three spoken sentences: the small model writes them as well, and sooner. */
+/** One or two spoken sentences: the small model writes them as well, and sooner. */
 export const DEMO_ANSWER_MODEL = 'gpt-4.1-mini';
 
 /** About twenty seconds of compressed speech. A question, not a monologue. */
@@ -60,7 +60,7 @@ const PERSONA = [
   'People talk to it by text or by voice, and their data stays in their own database.',
   'This is a demo: you cannot see anyone\'s inbox, calendar or files, and you have no tools. If asked to do',
   'something real, say in one sentence what the assistant would do once they sign up.',
-  'Your answer is read aloud: two or three short sentences, plain spoken English, no lists, no markdown, no links.',
+  'Your answer is read aloud: one or two short sentences, never more, plain spoken English, no lists, no markdown, no links.',
 ].join(' ');
 
 export type DemoOutcome =
@@ -147,7 +147,8 @@ async function answerOf(provider: AgentProvider, said: string): Promise<string> 
     messages: [{ role: 'user', content: [{ type: 'text', text: said }] }],
     tools: [],
     toolChoice: 'none',
-    maxOutputTokens: 220,
+    // A backstop, not the limit: the persona asks for two sentences at most.
+    maxOutputTokens: 120,
     metadata: { runId: 'demo', workspaceId: 'platform', agentId: 'jarvis-demo' },
   } as unknown as GenerationRequest;
 

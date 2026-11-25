@@ -25,6 +25,7 @@ describe('the live call', () => {
     expect(request.session.audio.output.voice).toBe('marin');
     expect(request.session.audio.input.transcription.model).toBeTruthy();
     expect(request.session.max_output_tokens).toBeLessThanOrEqual(400);
+    expect(request.session.instructions).toContain('one or two short sentences');
     expect(request.session.instructions).toContain('Jarvis');
   });
 });

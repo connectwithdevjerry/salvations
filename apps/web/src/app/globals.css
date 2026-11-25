@@ -1865,11 +1865,6 @@ button.link { background: none; border: 0; padding: 0; color: var(--accent); fon
 .vl-facts div { display: flex; gap: 10px; justify-content: flex-end; }
 .vl-facts dt { color: var(--vl-dim); }
 .vl-facts dd { margin: 0; color: var(--vl-ink); }
-.vl-model { background: transparent; color: var(--vl-ink); border: 1px solid var(--vl-line); font: inherit; font-size: 10.5px; letter-spacing: 0.04em; padding: 2px 6px; max-width: 220px; cursor: pointer; }
-.vl-model:hover:not(:disabled) { border-color: var(--vl-ink); }
-.vl-model:disabled { opacity: 0.6; cursor: default; }
-.vl-model option, .vl-model optgroup { background: #05070b; color: #e6edf3; }
-.vl-model-error { color: var(--vl-amber); max-width: 260px; text-align: right; }
 .vl-left { grid-area: left; padding: 10px 22px; overflow: hidden; }
 .vl-rightcol { grid-area: right; padding: 10px 22px; overflow: hidden; text-align: right; }
 .vl-eyebrow { margin: 10px 0 12px; color: var(--vl-dim); font-size: 10.5px; letter-spacing: 0.26em; }

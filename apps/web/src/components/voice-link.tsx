@@ -1,8 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import type { CatalogModel } from '@salvations/catalog';
+import { useEffect, useRef, useState } from 'react';
 import { api, ws } from '@/lib/client/api';
 import { Icon } from '@/components/ui';
 import { useSpeak, type Phase } from '@/lib/client/use-speak';
@@ -17,13 +16,6 @@ import { useSpeak, type Phase } from '@/lib/client/use-speak';
  * behind a toggle so the circle is the room, not the text.
  */
 
-/** What the assistant's Model tab works from: the choice in force, and what it may change to. */
-interface ModelOptions {
-  current?: { providerConfigId: string; modelId: string; displayName: string };
-  providers: { id: string; providerType: string; name: string; platform?: boolean }[];
-  models: CatalogModel[];
-}
-
 const STATE: Record<Phase, string> = {
   idle: 'STANDBY', listening: 'LISTENING', hearing: 'HEARING', answering: 'THINKING', speaking: 'SPEAKING',
 };
@@ -33,9 +25,7 @@ export function VoiceLink({ workspaceId, agentId, agentName }: { workspaceId: st
   const [startedAt] = useState(() => Date.now());
   const [now, setNow] = useState(Date.now());
   const [showText, setShowText] = useState(false);
-  const [models, setModels] = useState<ModelOptions>();
-  const [switching, setSwitching] = useState(false);
-  const [modelError, setModelError] = useState<string>();
+  const [model, setModel] = useState<string>();
   const shell = useRef<HTMLDivElement>(null);
   const [full, setFull] = useState(false);
 
@@ -44,27 +34,10 @@ export function VoiceLink({ workspaceId, agentId, agentName }: { workspaceId: st
     return () => clearInterval(timer);
   }, []);
 
-  const loadModels = useCallback(() => {
-    void api.get<ModelOptions>(`${ws(workspaceId)}/agents/${agentId}/model`)
-      .then(setModels).catch(() => undefined);
+  useEffect(() => {
+    void api.get<{ current?: { displayName?: string } }>(`${ws(workspaceId)}/agents/${agentId}/model`)
+      .then((r) => setModel(r.current?.displayName)).catch(() => undefined);
   }, [workspaceId, agentId]);
-  useEffect(() => { loadModels(); }, [loadModels]);
-
-  /** The same choice as the Model tab, so Chat and Speak never think with different models. */
-  async function switchModel(value: string) {
-    const [providerConfigId, modelId] = value.split('|');
-    if (providerConfigId === undefined || modelId === undefined) return;
-    setSwitching(true);
-    setModelError(undefined);
-    try {
-      await api.put(`${ws(workspaceId)}/agents/${agentId}/model`, { providerConfigId, modelId });
-      loadModels();
-    } catch (caught) {
-      setModelError(caught instanceof Error ? caught.message : 'Could not change the model.');
-    } finally {
-      setSwitching(false);
-    }
-  }
 
   // Escape leaves full screen; the browser handles the rest.
   useEffect(() => {
@@ -117,17 +90,7 @@ export function VoiceLink({ workspaceId, agentId, agentName }: { workspaceId: st
           <dl className="vl-facts">
             <div><dt>DATE</dt><dd>{new Date(now).toISOString().slice(0, 10)}</dd></div>
             <div><dt>SESSION</dt><dd>{speak.conversationId === undefined ? '—' : speak.conversationId.slice(-8).toUpperCase()}</dd></div>
-            <div>
-              <dt>MODEL</dt>
-              <dd>
-                <ModelPicker
-                  options={models}
-                  disabled={switching || busy || speak.phase === 'speaking'}
-                  onChange={(value) => void switchModel(value)}
-                />
-              </dd>
-            </div>
-            {modelError !== undefined && <div><dt /><dd className="vl-model-error" role="alert">{modelError}</dd></div>}
+            <div><dt>MODEL</dt><dd>{model ?? '—'}</dd></div>
             <div><dt>TURNS</dt><dd>{speak.exchanges.length}</dd></div>
             <div><dt>LAST REPLY</dt><dd>{latency === undefined ? '—' : `${(latency / 1000).toFixed(1)}S`}</dd></div>
           </dl>
@@ -371,39 +334,4 @@ function Spectrum({ analyser, active }: { analyser: () => AnalyserNode | undefin
     return () => cancelAnimationFrame(frame);
   }, [analyser, active]);
   return <canvas ref={canvas} className="vl-spectrum" aria-hidden />;
-}
-
-/**
- * The assistant's model, changeable from the voice screen: every connected
- * provider's models, grouped by provider. Changing it here changes it for
- * Chat as well; it is the one model the assistant thinks with.
- */
-function ModelPicker({ options, disabled, onChange }: {
-  options: ModelOptions | undefined; disabled: boolean; onChange: (value: string) => void;
-}) {
-  if (options === undefined) return <>—</>;
-  const current = options.current;
-  const value = current === undefined ? '' : `${current.providerConfigId}|${current.modelId}`;
-  const groups = options.providers
-    .map((p) => ({ provider: p, models: options.models.filter((m) => m.providerType === p.providerType) }))
-    .filter((g) => g.models.length > 0);
-  if (groups.length === 0) return <>{current?.displayName ?? '—'}</>;
-  const listed = groups.some((g) => g.models.some((m) => `${g.provider.id}|${m.id}` === value));
-  return (
-    <select
-      className="vl-model"
-      aria-label="The model this assistant thinks with"
-      value={value}
-      disabled={disabled}
-      onChange={(e) => onChange(e.target.value)}
-    >
-      {current === undefined && <option value="" disabled>Choose a model</option>}
-      {current !== undefined && !listed && <option value={value}>{current.displayName}</option>}
-      {groups.map(({ provider, models }) => (
-        <optgroup key={provider.id} label={provider.platform === true ? 'Yashayah' : provider.name}>
-          {models.map((m) => <option key={m.id} value={`${provider.id}|${m.id}`}>{m.displayName}</option>)}
-        </optgroup>
-      ))}
-    </select>
-  );
 }

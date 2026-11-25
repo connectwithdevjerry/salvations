@@ -60,7 +60,7 @@ const PERSONA = [
   'People talk to it by text or by voice, and their data stays in their own database.',
   'This is a demo: you cannot see anyone\'s inbox, calendar or files, and you have no tools. If asked to do',
   'something real, say in one sentence what the assistant would do once they sign up.',
-  'Your answer is read aloud: one or two short sentences, never more, plain spoken English, no lists, no markdown, no links.',
+  'Your answer is read aloud: one or two short sentences, never more and about thirty words in all, plain spoken English, no lists, no markdown, no links.',
 ].join(' ');
 
 export type DemoOutcome =

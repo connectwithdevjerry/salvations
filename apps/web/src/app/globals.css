@@ -1960,3 +1960,17 @@ button.link { background: none; border: 0; padding: 0; color: var(--accent); fon
 
 /* What the studio made, shown in the chat */
 .rt-media { display: block; max-width: min(100%, 420px); max-height: 520px; border-radius: 12px; margin: 8px 0; border: 1px solid var(--border); background: var(--bg); }
+
+/* Notifications: bottom right, above everything, stacked newest last. */
+.toaster { position: fixed; right: 16px; bottom: 16px; z-index: 1000; display: grid; gap: 10px; width: min(380px, calc(100vw - 32px)); }
+.toast { display: flex; gap: 12px; align-items: flex-start; padding: 14px 14px 14px 16px; background: var(--surface-raised); color: var(--text); border: 1px solid var(--border-strong); border-left: 3px solid var(--accent); border-radius: var(--radius); box-shadow: var(--shadow); animation: toast-in 180ms ease-out; }
+.toast.error { border-left-color: var(--danger); }
+.toast-text { flex: 1; min-width: 0; }
+.toast-text strong { display: block; font-size: 14px; }
+.toast-text p { margin: 4px 0 0; color: var(--muted); font-size: 13px; line-height: 1.45; }
+.toast-links { display: flex; gap: 14px; flex-wrap: wrap; }
+.toast-links a { color: var(--accent-hover); font-weight: 600; }
+.toast-close { background: transparent; border: 0; color: var(--faint); font-size: 18px; line-height: 1; padding: 0 2px; cursor: pointer; }
+.toast-close:hover { color: var(--text); }
+@keyframes toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .toast { animation: none; } }

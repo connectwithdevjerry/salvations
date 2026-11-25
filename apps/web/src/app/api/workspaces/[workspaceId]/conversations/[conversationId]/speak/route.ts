@@ -38,7 +38,11 @@ export const POST = workspaceRoute<{ conversationId: string }>('runs:create', as
   if (heard.kind === 'unconfigured') {
     return errorResponse(422, 'unsupported', NO_EAR);
   }
-  if (heard.kind === 'failed') return errorResponse(502, 'provider_error', heard.message);
+  if (heard.kind === 'failed') {
+    // The reason travels with the sentence: out of credit is shown as a
+    // notification, a rate limit as a "try again", and neither blocks Speak.
+    return errorResponse(502, 'provider_error', heard.message, heard.reason === undefined ? undefined : { reason: heard.reason });
+  }
 
   const modelBindingId = form.get('modelBindingId');
   const outcome = await sendUserMessage(ctx, params.conversationId, {

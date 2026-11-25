@@ -30,7 +30,7 @@ export type TranscriptionOutcome =
    * sentence to say to the person; `detail` is the vendor's own text, for the
    * log only, since it tends to carry links and status codes.
    */
-  | { readonly kind: 'failed'; readonly message: string; readonly detail?: string }
+  | { readonly kind: 'failed'; readonly message: string; readonly detail?: string; readonly reason?: FailureReason }
   /** Nothing is bound to the role. Not a failure — a deployment choice. */
   | { readonly kind: 'unconfigured' };
 
@@ -90,30 +90,61 @@ export async function transcribeAudio(
       : typeof caught === 'object' && caught !== null && typeof (caught as { message?: unknown }).message === 'string'
         ? (caught as { message: string }).message
         : 'unknown error';
-    return { kind: 'failed', message: plainFailure(detail), detail };
+    const code = vendorCode(caught);
+    return { kind: 'failed', message: plainFailure(detail, code), detail, reason: failureReason(detail, code) };
   }
 }
 
 /** Said when nothing can hear: no OpenAI key, or a text-only model bound. */
 export const NO_EAR = 'You can’t use voice notes here: the model this assistant can use does not support them.';
 
+/** Why a transcription failed, as far as the person can act on it. */
+export type FailureReason = 'out_of_credit' | 'rate_limited' | 'bad_key' | 'other';
+
+/** The vendor's own error code (`insufficient_quota`, `rate_limit_exceeded`), when the adapter kept it. */
+function vendorCode(caught: unknown): string | undefined {
+  const raw = (caught as { providerRaw?: { code?: unknown; type?: unknown } } | undefined)?.providerRaw;
+  const code = raw?.code ?? raw?.type;
+  return typeof code === 'string' ? code : undefined;
+}
+
+/**
+ * Out of credit and rate-limited both arrive as a 429, and OpenAI's
+ * rate-limit sentence ends by pointing at its billing page, so the word
+ * "billing" proves nothing. The vendor's code decides where there is one;
+ * otherwise the sentence's own words, the specific ones first.
+ */
+export function failureReason(detail: string, code?: string): FailureReason {
+  if (code === 'insufficient_quota') return 'out_of_credit';
+  if (code === 'rate_limit_exceeded') return 'rate_limited';
+  if (/insufficient_quota|exceeded your current quota|no credits remaining|credit balance|out of credit/i.test(detail)) return 'out_of_credit';
+  if (/rate.?limit|requests per min|tokens per min|\b(RPM|TPM)\b|too many requests/i.test(detail)) return 'rate_limited';
+  if (/credit|billing|quota/i.test(detail)) return 'out_of_credit';
+  if (/\b429\b/.test(detail)) return 'rate_limited';
+  if (/401|invalid.?api.?key|incorrect api key|authentication/i.test(detail)) return 'bad_key';
+  return 'other';
+}
+
 /**
  * One sentence for the person, whatever the vendor said.
  *
  * A vendor's error carries a status code, a billing link and a sentence
  * written for a developer, none of which belongs in a chat with someone who
- * just spoke into their phone. Out of credit is the one cause they can fix
- * and is named; everything else is "try again", with the vendor's text kept
- * for the log.
+ * just spoke into their phone. Out of credit is named, since it is the one
+ * cause they can fix; a rate limit is a wait, not a bill; everything else is
+ * "try again", with the vendor's text kept for the log.
  */
-export function plainFailure(detail: string): string {
-  if (/credit|billing|quota|insufficient_quota|\b429\b/i.test(detail)) {
-    return 'Your OpenAI account is out of credit, so I can’t listen to voice notes until it is topped up.';
+export function plainFailure(detail: string, code?: string): string {
+  switch (failureReason(detail, code)) {
+    case 'out_of_credit':
+      return 'Your OpenAI account is out of credit, so I can’t listen to voice notes until it is topped up.';
+    case 'rate_limited':
+      return 'OpenAI is busy right now, so I couldn’t hear that voice note. Try again in a moment.';
+    case 'bad_key':
+      return 'The OpenAI key on the Models page is not working, so I can’t listen to voice notes right now.';
+    default:
+      return 'I couldn’t make out that voice note; could you send it again or type it?';
   }
-  if (/401|invalid.?api.?key|incorrect api key|authentication/i.test(detail)) {
-    return 'The OpenAI key on the Models page is not working, so I can’t listen to voice notes right now.';
-  }
-  return 'I couldn’t make out that voice note; could you send it again or type it?';
 }
 
 /**

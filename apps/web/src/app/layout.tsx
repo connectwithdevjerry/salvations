@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import './globals.css';
 import { DialogProvider } from '@/components/dialog';
+import { Toaster } from '@/components/toaster';
 
 export const metadata = {
   title: 'YASHAYAH — agents that actually do the work',
@@ -36,7 +37,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <head>
         <script dangerouslySetInnerHTML={{ __html: APPLY_THEME }} />
       </head>
-      <body><DialogProvider>{children}</DialogProvider></body>
+      <body><DialogProvider>{children}</DialogProvider><Toaster /></body>
     </html>
   );
 }

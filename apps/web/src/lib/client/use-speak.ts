@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api, ApiError, ws } from '@/lib/client/api';
 import { useRunStream } from '@/lib/client/use-run-stream';
+import { toast } from '@/components/toaster';
 
 /**
  * Talking to an assistant: the mechanics, apart from the screen.
@@ -182,7 +183,24 @@ export function useSpeak(workspaceId: string, agentId: string) {
       note('info', 'thinking');
     } catch (caught) {
       setPhase('idle');
-      if (caught instanceof ApiError && (caught.code === 'unsupported' || caught.code === 'provider_error')) {
+      const reason = caught instanceof ApiError ? caught.details?.['reason'] : undefined;
+      if (reason === 'out_of_credit') {
+        // News about the account, not about what was said: a notification,
+        // and Speak stays open so it works again the moment credit is added.
+        toast({
+          tone: 'error',
+          title: 'OpenAI is out of credit',
+          body: 'Voice notes can’t be heard until the OpenAI account behind this workspace is topped up.',
+          links: [
+            { label: 'Top up at OpenAI', href: 'https://platform.openai.com/settings/organization/billing', external: true },
+            { label: 'Models', href: `/w/${workspaceId}/models` },
+          ],
+        });
+        note('err', 'OpenAI is out of credit');
+      } else if (reason === 'rate_limited') {
+        setError((caught as Error).message);
+        note('err', 'OpenAI is busy; try again');
+      } else if (caught instanceof ApiError && (caught.code === 'unsupported' || caught.code === 'provider_error')) {
         setBlocked(caught.message);
         note('err', caught.message);
       } else {

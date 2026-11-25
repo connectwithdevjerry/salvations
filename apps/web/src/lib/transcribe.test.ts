@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fileNameFor, plainFailure } from './transcribe';
+import { failureReason, fileNameFor, plainFailure } from './transcribe';
 
 /**
  * The filename is load-bearing, not cosmetic.
@@ -46,6 +46,21 @@ describe('what a failed transcription says', () => {
     expect(said).toContain('out of credit');
     expect(said).not.toContain('http');
     expect(said.split('. ').length).toBeLessThanOrEqual(2);
+  });
+
+  it('calls a rate limit a wait, though its sentence points at the billing page', () => {
+    const vendor = 'Rate limit reached for gpt-4o-mini-transcribe in organization org-abc on requests per min (RPM): Limit 3, Used 3, Requested 1. Please try again in 20s. Visit https://platform.openai.com/account/rate-limits to learn more. You can increase your rate limit by adding a payment method to your account at https://platform.openai.com/account/billing.';
+    expect(failureReason(vendor)).toBe('rate_limited');
+    const said = plainFailure(vendor);
+    expect(said).toContain('busy');
+    expect(said).not.toContain('credit');
+  });
+
+  it('names credit from the vendor\'s code or its own words, never from a bare 429', () => {
+    expect(failureReason('anything', 'insufficient_quota')).toBe('out_of_credit');
+    expect(failureReason('anything', 'rate_limit_exceeded')).toBe('rate_limited');
+    expect(failureReason('You have no credits remaining. Add credits to continue using the API at https://platform.openai.com/settings/organization/billing/.')).toBe('out_of_credit');
+    expect(failureReason('429 Too Many Requests')).toBe('rate_limited');
   });
 
   it('names a key that no longer works', () => {

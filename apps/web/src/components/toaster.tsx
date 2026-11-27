@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { onToast, type Toast } from '@/lib/client/toasts';
 
 /**
  * Notifications that slide in at the corner and leave by themselves.
@@ -11,25 +12,11 @@ import { useEffect, useState } from 'react';
  * client; the one `<Toaster />` in the root layout shows it.
  */
 
-export interface ToastLink { readonly label: string; readonly href: string; readonly external?: boolean }
-export interface ToastInput {
-  readonly tone?: 'error' | 'info';
-  readonly title: string;
-  readonly body?: string;
-  readonly links?: readonly ToastLink[];
-}
-interface Toast extends ToastInput { readonly id: number }
+export { toast } from '@/lib/client/toasts';
+export type { ToastInput, ToastLink } from '@/lib/client/toasts';
 
 /** Long enough to read a sentence and reach for a link. */
 const SHOW_MS = 12_000;
-
-const listeners = new Set<(toast: Toast) => void>();
-let nextId = 1;
-
-export function toast(input: ToastInput): void {
-  const shown: Toast = { ...input, id: nextId++ };
-  for (const listener of listeners) listener(shown);
-}
 
 export function Toaster() {
   const [toasts, setToasts] = useState<readonly Toast[]>([]);
@@ -45,9 +32,9 @@ export function Toaster() {
       }, SHOW_MS);
       timers.add(timer);
     };
-    listeners.add(listener);
+    const stop = onToast(listener);
     return () => {
-      listeners.delete(listener);
+      stop();
       for (const timer of timers) clearTimeout(timer);
     };
   }, []);

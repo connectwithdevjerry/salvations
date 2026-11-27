@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { WorkspaceNav } from '@/components/workspace-nav';
 import { WalkthroughProvider } from '@/components/walkthrough';
+import { PlanBanner } from '@/components/plan-banner';
 
 export default async function WorkspaceLayout({
   children,
@@ -15,7 +16,10 @@ export default async function WorkspaceLayout({
     <WalkthroughProvider workspaceId={workspaceId}>
       <div className="shell">
         <WorkspaceNav workspaceId={workspaceId} />
-        <div className="main">{children}</div>
+        <div className="main">
+          <PlanBanner workspaceId={workspaceId} />
+          {children}
+        </div>
       </div>
     </WalkthroughProvider>
   );

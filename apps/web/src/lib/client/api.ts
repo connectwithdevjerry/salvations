@@ -8,6 +8,8 @@
  * thrown, because a component that has to check a discriminant on every call
  * eventually forgets to on one of them.
  */
+import { toast } from './toasts';
+
 export class ApiError extends Error {
   readonly code: string;
   readonly status: number;
@@ -56,6 +58,30 @@ function toSignIn(): void {
 /** Endpoints that are ABOUT signing in. A 401 from these is the answer, not a lapse. */
 const isAuthPath = (path: string): boolean => path.startsWith('/api/auth/');
 
+/**
+ * Refusals nobody would otherwise see.
+ *
+ * Plenty of what a page loads is fetched quietly and dropped on failure, which
+ * is right for a hiccup and wrong for "your trial has ended": the person would
+ * see buttons that do nothing and never learn why. These few answers are
+ * about the workspace, not the request, so they are announced wherever they
+ * come from; the notifications show each one once at a time.
+ */
+function announce(path: string, status: number, code: string, message: string): void {
+  const workspace = /^\/api\/workspaces\/([^/]+)/.exec(path)?.[1];
+  const billing = workspace === undefined ? undefined : `/w/${workspace}/billing`;
+  if (status === 402 || code === 'payment_required') {
+    toast({
+      tone: 'error',
+      title: /trial/i.test(message) ? 'Your free trial has ended' : 'This workspace needs a plan',
+      body: message,
+      ...(billing !== undefined ? { links: [{ label: 'Choose a plan', href: billing }] } : {}),
+    });
+  } else if (code === 'budget_exhausted') {
+    toast({ tone: 'error', title: 'A spending limit was reached', body: message });
+  }
+}
+
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const send = () => fetch(path, {
     ...init,
@@ -67,7 +93,15 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     },
   });
 
-  let response = await send();
+  let response: Response;
+  try {
+    response = await send();
+  } catch (caught) {
+    // No answer at all: the connection, not the request. Said once, however
+    // many requests fail with it.
+    toast({ tone: 'error', title: 'Can’t reach YASHAYAH', body: 'Check your internet connection, then try again.' });
+    throw caught;
+  }
 
   if (response.status === 401 && !isAuthPath(path)) {
     if (await refreshSession()) {
@@ -82,6 +116,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const body = await response.json().catch(() => undefined);
   if (!response.ok) {
     const error = (body as { error?: { code?: string; message?: string; details?: Record<string, unknown> } })?.error;
+    announce(path, response.status, error?.code ?? 'internal', error?.message ?? '');
     throw new ApiError(
       response.status,
       error?.code ?? 'internal',

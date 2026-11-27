@@ -1975,3 +1975,13 @@ button.link { background: none; border: 0; padding: 0; color: var(--accent); fon
 .toast-close:hover { color: var(--text); }
 @keyframes toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .toast { animation: none; } }
+
+/* The plan's state across the top of a workspace page, when it is why things will not run. */
+.plan-banner { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 10px 16px; border-bottom: 1px solid var(--border); font-size: 13.5px; }
+.plan-banner p { margin: 0; flex: 1; min-width: 220px; line-height: 1.45; }
+.plan-banner.error { background: color-mix(in srgb, var(--danger) 12%, var(--surface)); border-bottom-color: color-mix(in srgb, var(--danger) 40%, var(--border)); }
+.plan-banner.warn { background: color-mix(in srgb, var(--warn) 12%, var(--surface)); border-bottom-color: color-mix(in srgb, var(--warn) 40%, var(--border)); }
+.plan-banner-action a { display: inline-block; padding: 6px 12px; border-radius: var(--radius-sm); background: var(--accent); color: var(--accent-ink); font-weight: 600; text-decoration: none; white-space: nowrap; }
+.plan-banner-action a:hover { background: var(--accent-hover); }
+.plan-banner-close { background: transparent; border: 0; color: var(--muted); font-size: 18px; line-height: 1; padding: 0 2px; cursor: pointer; }
+.plan-banner-close:hover { color: var(--text); }

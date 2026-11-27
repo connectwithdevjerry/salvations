@@ -11,9 +11,24 @@ import type { ReactNode } from 'react';
 export type IconName =
   | 'spark' | 'plug' | 'key' | 'agent' | 'server' | 'shield'
   | 'chat' | 'check' | 'chevron' | 'arrow' | 'exit' | 'gear' | 'pulse' | 'clock'
-  | 'book' | 'search' | 'plus' | 'mic' | 'trash' | 'pencil' | 'help' | 'grid' | 'download';
+  | 'book' | 'search' | 'plus' | 'mic' | 'trash' | 'pencil' | 'help' | 'grid' | 'download'
+  | 'eye' | 'eye-off';
 
 const PATHS: Readonly<Record<IconName, ReactNode>> = {
+  eye: (
+    <>
+      <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" />
+      <circle cx="12" cy="12" r="3" />
+    </>
+  ),
+  'eye-off': (
+    <>
+      <path d="M10.6 5.1A9.8 9.8 0 0 1 12 5c6.4 0 10 7 10 7a17.6 17.6 0 0 1-2.7 3.6" />
+      <path d="M6.6 6.6C3.7 8.4 2 12 2 12s3.6 7 10 7a9.6 9.6 0 0 0 5.4-1.6" />
+      <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
+      <path d="M3 3l18 18" />
+    </>
+  ),
   spark: <path d="M12 3l1.9 5.3L19 10l-5.1 1.7L12 17l-1.9-5.3L5 10l5.1-1.7L12 3z" />,
   trash: <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" />,
   pencil: <path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17v3zM13.5 6.5l3 3" />,

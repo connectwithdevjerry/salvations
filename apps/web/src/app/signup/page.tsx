@@ -7,6 +7,7 @@ import { auth } from '@/lib/client/auth';
 import { ApiError } from '@/lib/client/api';
 import { GoogleButton } from '@/components/google-button';
 import { BrandMark } from '@/components/ui';
+import { PasswordInput } from '@/components/password-input';
 
 /** Matches the server's floor, stated here so the form can say so up front. */
 const MIN_PASSWORD_LENGTH = 12;
@@ -66,8 +67,8 @@ export default function SignUpPage() {
           </div>
           <div>
             <label htmlFor="password">Password</label>
-            <input
-              id="password" type="password" autoComplete="new-password" required
+            <PasswordInput
+              id="password" autoComplete="new-password" required
               minLength={MIN_PASSWORD_LENGTH}
               value={password} onChange={(e) => setPassword(e.target.value)}
             />

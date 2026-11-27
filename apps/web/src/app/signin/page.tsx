@@ -7,6 +7,7 @@ import { SIGN_IN_ERRORS, auth } from '@/lib/client/auth';
 import { ApiError } from '@/lib/client/api';
 import { GoogleButton } from '@/components/google-button';
 import { BrandMark } from '@/components/ui';
+import { PasswordInput } from '@/components/password-input';
 
 /**
  * The reason a Google sign-in bounced back, if there was one.
@@ -86,8 +87,8 @@ export default function SignInPage() {
           </div>
           <div>
             <label htmlFor="password">Password</label>
-            <input
-              id="password" type="password" autoComplete="current-password" required
+            <PasswordInput
+              id="password" autoComplete="current-password" required
               value={password} onChange={(e) => setPassword(e.target.value)}
             />
           </div>

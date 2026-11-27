@@ -311,6 +311,12 @@ input, textarea, select {
   transition: border-color 120ms ease, box-shadow 120ms ease;
 }
 input::placeholder, textarea::placeholder { color: var(--faint); }
+/* A password box with its show/hide eye inside the right edge. */
+.password-input { position: relative; max-width: 440px; }
+.password-input input { max-width: none; padding-right: 42px; }
+.password-eye { position: absolute; top: 50%; right: 6px; transform: translateY(-50%); display: grid; place-items: center; width: 30px; height: 30px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: var(--muted); cursor: pointer; }
+.password-eye:hover { color: var(--text); background: var(--surface-raised); }
+.password-eye:focus-visible { outline: none; color: var(--text); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); }
 input:focus-visible, textarea:focus-visible, select:focus-visible {
   outline: none;
   border-color: var(--accent);

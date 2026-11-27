@@ -54,13 +54,18 @@ export function PlanBanner({ workspaceId }: { workspaceId: string }) {
             try { sessionStorage.setItem(dismissKey, '1'); } catch { /* the dismissal lasts this render only */ }
           }}
         >
-          <strong>Your free trial ends {left === 0 ? 'today' : 'tomorrow'}.</strong> Choose a plan to keep your
+          <strong>Your free trial ends {endsToday(plan.trialEndsAt) ? 'today' : 'tomorrow'}.</strong> Choose a plan to keep your
           assistants working without a break.
         </Banner>
       );
     }
   }
   return null;
+}
+
+/** Whether the trial's last moment falls on today's date where the person is, not within 24 hours. */
+function endsToday(endsAt: string | undefined): boolean {
+  return endsAt !== undefined && new Date(endsAt).toDateString() === new Date().toDateString();
 }
 
 function Banner({ tone, action, onDismiss, children }: {

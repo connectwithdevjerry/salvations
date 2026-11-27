@@ -19,6 +19,8 @@ export interface SignedInUser {
   readonly walkthroughSeen: boolean;
   /** May change the deployment's own keys from the admin dashboard. */
   readonly platformAdmin?: boolean;
+  /** Workspaces refuse this account until its address is confirmed. */
+  readonly mustVerify?: boolean;
 }
 
 export const auth = {

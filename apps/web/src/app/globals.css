@@ -1985,3 +1985,11 @@ button.link { background: none; border: 0; padding: 0; color: var(--accent); fon
 .plan-banner-action a:hover { background: var(--accent-hover); }
 .plan-banner-close { background: transparent; border: 0; color: var(--muted); font-size: 18px; line-height: 1; padding: 0 2px; cursor: pointer; }
 .plan-banner-close:hover { color: var(--text); }
+
+/* The screen in place of a workspace until the address is confirmed. */
+.verify-gate { min-height: 100vh; display: grid; place-items: center; padding: 24px 16px; background: var(--bg); }
+.verify-gate-card { width: 100%; max-width: 460px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 28px; box-shadow: var(--shadow); }
+.verify-gate-card h1 { font-size: 22px; margin: 18px 0 6px; }
+.verify-gate-card > p { margin: 0 0 16px; line-height: 1.5; }
+.verify-gate-foot { margin: 18px 0 0 !important; font-size: 12.5px; }
+.verify-gate-foot button.link { font-size: 12.5px; }

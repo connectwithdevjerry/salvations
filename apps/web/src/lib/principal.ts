@@ -9,9 +9,10 @@ import {
   Errors, asId, hasPermission,
   type ApiKeyId, type Permission, type Principal, type UserId, type WorkspaceId,
 } from '@salvations/core';
-import { ApiKeyRepository, WorkspaceRepository, AUTH_FAILURE_RESPONSE } from '@salvations/db';
+import { ApiKeyRepository, UserRepository, WorkspaceRepository, AUTH_FAILURE_RESPONSE } from '@salvations/db';
 import { db } from './db';
 import { readCaller } from './session';
+import { UNVERIFIED_MESSAGE, mustVerify, verificationRequired } from './email-verification';
 
 export { AUTH_FAILURE_RESPONSE };
 
@@ -69,6 +70,13 @@ export async function resolvePrincipal(
     // A non-member gets the same answer as a non-existent workspace, so
     // workspace ids are not enumerable by a signed-in stranger.
     throw Errors.notFound('Workspace not found.');
+  }
+
+  // A person, not a key, and an address nothing has confirmed: nothing in a
+  // workspace until it is. An API key was issued by someone who had to be.
+  if (verificationRequired()) {
+    const user = await new UserRepository(handle.db).findById(userId);
+    if (user === null || mustVerify(user)) throw Errors.forbidden(UNVERIFIED_MESSAGE, { reason: 'email_unverified' });
   }
 
   return {

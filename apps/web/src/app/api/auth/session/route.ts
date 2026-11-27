@@ -10,6 +10,7 @@ import { UserRepository } from '@salvations/db';
 import { db } from '@/lib/db';
 import { errorResponse, ok } from '@/lib/http';
 import { readCaller } from '@/lib/session';
+import { mustVerify } from '@/lib/email-verification';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -30,6 +31,8 @@ export async function GET(request: Request): Promise<Response> {
         name: user.name ?? undefined,
         imageUrl: user.imageUrl ?? undefined,
         emailVerified: user.emailVerifiedAt != null,
+        // Workspaces refuse this account until it confirms its address.
+        mustVerify: mustVerify(user),
         walkthroughSeen: user.walkthroughSeenAt != null,
         // May change the deployment's own keys from the admin dashboard.
         platformAdmin: await isPlatformAdmin(handle.db, user._id),
